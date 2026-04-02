@@ -1,0 +1,11 @@
+.next
+node_modules
+.wrangler
+.DS_Store
+dist
+coverage
+*.log
+.env
+.env.local
+.env.production
+worker/.dev.vars

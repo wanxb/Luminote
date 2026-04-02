@@ -1,0 +1,21 @@
+name = "luminote-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-02"
+
+[vars]
+SITE_TITLE = "Luminote"
+WATERMARK_ENABLED_BY_DEFAULT = "true"
+WATERMARK_TEXT = "© Luminote"
+ADMIN_PASSWORD = "changeme"
+ADMIN_SESSION_TOKEN = "local-dev-admin-token"
+
+# Add a real D1 binding before enabling persistence:
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "luminote"
+# database_id = "your-d1-database-id"
+
+# Add a real R2 binding before enabling object storage:
+# [[r2_buckets]]
+# binding = "PHOTOS_BUCKET"
+# bucket_name = "luminote-assets"
