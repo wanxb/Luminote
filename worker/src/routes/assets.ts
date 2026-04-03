@@ -2,7 +2,7 @@ import type { Env } from "../index";
 import { getPhotoObject } from "../services/storage-service";
 import { handleMockStorage } from "./mock-storage";
 
-type Variant = "thumb" | "display";
+type Variant = "thumb" | "display" | "display-watermarked";
 
 function parsePath(pathname: string): { variant: Variant; id: string } | null {
   const parts = pathname.split("/").filter(Boolean);
@@ -14,7 +14,7 @@ function parsePath(pathname: string): { variant: Variant; id: string } | null {
   const variant = parts[1];
   const id = parts[2];
 
-  if ((variant !== "thumb" && variant !== "display") || !id) {
+  if ((variant !== "thumb" && variant !== "display" && variant !== "display-watermarked") || !id) {
     return null;
   }
 
@@ -34,7 +34,12 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
   const object = await getPhotoObject(env, parsed.variant, parsed.id);
 
   if (!object?.body) {
-    const fallbackVariant = parsed.variant === "thumb" ? "thumb" : "display";
+    const fallbackVariant =
+      parsed.variant === "thumb"
+        ? "thumb"
+        : parsed.variant === "display-watermarked"
+          ? "watermarked"
+          : "display";
     return handleMockStorage(new Request(`${new URL(request.url).origin}/mock-storage/${fallbackVariant}/${parsed.id}`));
   }
 

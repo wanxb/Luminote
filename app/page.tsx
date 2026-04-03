@@ -1,5 +1,4 @@
-import { GalleryGrid } from "@/components/gallery/gallery-grid";
-import { LightboxShell } from "@/components/lightbox/lightbox-shell";
+import { GalleryExperience } from "@/components/gallery/gallery-experience";
 import { getPhotos, getSite } from "@/lib/api/client";
 
 export default async function HomePage() {
@@ -17,9 +16,7 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <GalleryGrid photos={photos} />
-
-      <LightboxShell />
+      <GalleryExperience photos={photos} />
     </main>
   );
 }

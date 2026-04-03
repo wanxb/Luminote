@@ -2,8 +2,27 @@ export type PhotoSummary = {
   id: string;
   thumbUrl: string;
   displayUrl: string;
+  watermarkedDisplayUrl?: string;
+  watermarkEnabled?: boolean;
   takenAt?: string;
   description?: string;
+};
+
+export type PhotoExif = {
+  aperture?: string;
+  shutter?: string;
+  iso?: number;
+  focalLength?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export type PhotoDetail = PhotoSummary & {
+  device?: string;
+  lens?: string;
+  location?: string;
+  exif?: PhotoExif;
+  tags: string[];
 };
 
 export type PhotosResponse = {

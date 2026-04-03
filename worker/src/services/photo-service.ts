@@ -1,11 +1,12 @@
 import type { Env } from "../index";
-import { storePhotoObjects } from "./storage-service";
+import { deletePhotoObjects, storePhotoObjects } from "./storage-service";
 
 type PersistedPhotoRow = {
   id: string;
   thumb_url: string;
   display_url: string;
   watermarked_display_url: string | null;
+  watermark_enabled: number;
   taken_at: string | null;
   description: string | null;
 };
@@ -40,6 +41,8 @@ type CreatePhotoInput = {
   fileName: string;
   file: File;
   thumbnail?: File;
+  displayFile?: File;
+  watermarkedDisplayFile?: File;
   exif?: ExifPayload;
   description: string;
   tags: string[];
@@ -101,7 +104,7 @@ export async function listPhotos(env: Env, origin: string) {
   }
 
   const result = await env.DB.prepare(
-    `SELECT id, thumb_url, display_url, watermarked_display_url, taken_at, description
+    `SELECT id, thumb_url, display_url, watermarked_display_url, watermark_enabled, taken_at, description
      FROM photos
      ORDER BY created_at DESC
      LIMIT 30`
@@ -117,7 +120,9 @@ export async function listPhotos(env: Env, origin: string) {
     id: row.id,
     thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
     displayUrl:
-      row.watermarked_display_url || row.display_url || buildMockAssetUrl(origin, "display", row.id),
+      row.display_url || buildMockAssetUrl(origin, "display", row.id),
+    watermarkedDisplayUrl: row.watermarked_display_url || undefined,
+    watermarkEnabled: Boolean(row.watermark_enabled),
     takenAt: row.taken_at ?? undefined,
     description: row.description ?? undefined
   }));
@@ -125,7 +130,55 @@ export async function listPhotos(env: Env, origin: string) {
 
 export async function getPhotoById(env: Env, origin: string, id: string) {
   if (!env.DB) {
-    return fallbackPhotos.find((photo) => photo.id === id) ?? null;
+    const photo = fallbackPhotos.find((item) => item.id === id);
+
+    if (!photo) {
+      return null;
+    }
+
+    const fallbackTags: Record<string, string[]> = {
+      photo_001: ["street", "twilight", "crowd"],
+      photo_002: ["sea", "morning", "quiet"],
+      photo_003: ["portrait", "backlight"]
+    };
+
+    const fallbackExif: Record<
+      string,
+      { aperture: string; shutter: string; iso: number; focalLength: string }
+    > = {
+      photo_001: { aperture: "f/2.0", shutter: "1/125s", iso: 800, focalLength: "28mm" },
+      photo_002: { aperture: "f/4.0", shutter: "1/500s", iso: 200, focalLength: "23mm" },
+      photo_003: { aperture: "f/1.8", shutter: "1/320s", iso: 160, focalLength: "85mm" }
+    };
+
+    const fallbackDevice: Record<string, string> = {
+      photo_001: "Leica Q3",
+      photo_002: "Fujifilm X100VI",
+      photo_003: "Sony A7C II"
+    };
+
+    const fallbackLens: Record<string, string> = {
+      photo_001: "Summilux 28mm f/1.7",
+      photo_002: "23mm f/2",
+      photo_003: "85mm f/1.8"
+    };
+
+    const fallbackLocation: Record<string, string> = {
+      photo_001: "上海",
+      photo_002: "青岛",
+      photo_003: "杭州"
+    };
+
+    return {
+      ...photo,
+      device: fallbackDevice[id],
+      lens: fallbackLens[id],
+      location: fallbackLocation[id],
+      exif: fallbackExif[id],
+      watermarkedDisplayUrl: photo.displayUrl,
+      watermarkEnabled: true,
+      tags: fallbackTags[id] ?? []
+    };
   }
 
   const row = await env.DB.prepare(
@@ -134,6 +187,7 @@ export async function getPhotoById(env: Env, origin: string, id: string) {
       thumb_url,
       display_url,
       watermarked_display_url,
+      watermark_enabled,
       taken_at,
       description,
       device,
@@ -158,8 +212,9 @@ export async function getPhotoById(env: Env, origin: string, id: string) {
   return {
     id: row.id,
     thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
-    displayUrl:
-      row.watermarked_display_url || row.display_url || buildMockAssetUrl(origin, "display", row.id),
+    displayUrl: row.display_url || buildMockAssetUrl(origin, "display", row.id),
+    watermarkedDisplayUrl: row.watermarked_display_url || undefined,
+    watermarkEnabled: Boolean(row.watermark_enabled),
     takenAt: row.taken_at ?? undefined,
     description: row.description ?? undefined,
     device: row.show_camera_info ? row.device ?? undefined : undefined,
@@ -189,7 +244,9 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
       storePhotoObjects(env, {
         id: photo.id,
         original: inputs[index].file,
-        thumbnail: inputs[index].thumbnail
+        thumbnail: inputs[index].thumbnail,
+        display: inputs[index].displayFile,
+        watermarkedDisplay: inputs[index].watermarkedDisplayFile
       })
     )
   );
@@ -204,7 +261,7 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
       : buildMockAssetUrl(origin, "display", photo.id);
     const watermarkedDisplayUrl = input.watermarkEnabled
       ? storage.persisted
-        ? `${origin}/assets/display/${photo.id}`
+        ? `${origin}/assets/display-watermarked/${photo.id}`
         : buildMockAssetUrl(origin, "watermarked", photo.id)
       : null;
 
@@ -256,4 +313,35 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
   await env.DB.batch(statements);
 
   return created;
+}
+
+export async function deletePhotoById(env: Env, id: string) {
+  if (!env.DB) {
+    return {
+      ok: false,
+      deleted: false,
+      persisted: false,
+      error: "当前环境未绑定 D1，无法执行真实删除。"
+    };
+  }
+
+  const existing = await env.DB.prepare(`SELECT id FROM photos WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
+
+  if (!existing) {
+    return {
+      ok: false,
+      deleted: false,
+      persisted: true,
+      error: "照片不存在或已被删除。"
+    };
+  }
+
+  await deletePhotoObjects(env, id);
+  await env.DB.prepare(`DELETE FROM photos WHERE id = ?`).bind(id).run();
+
+  return {
+    ok: true,
+    deleted: true,
+    persisted: true
+  };
 }

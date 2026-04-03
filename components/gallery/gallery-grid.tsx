@@ -3,15 +3,21 @@ import type { PhotoSummary } from "@/lib/api/types";
 
 type GalleryGridProps = {
   photos: PhotoSummary[];
+  activePhotoId?: string | null;
+  onSelect?: (photoId: string) => void;
 };
 
-export function GalleryGrid({ photos }: GalleryGridProps) {
+export function GalleryGrid({ photos, activePhotoId, onSelect }: GalleryGridProps) {
   return (
     <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
       {photos.map((photo) => (
-        <article
+        <button
           key={photo.id}
-          className="mb-5 break-inside-avoid overflow-hidden rounded-[28px] bg-white/75 shadow-soft backdrop-blur"
+          type="button"
+          onClick={() => onSelect?.(photo.id)}
+          className={`mb-5 block w-full break-inside-avoid overflow-hidden rounded-[28px] bg-white/75 text-left shadow-soft backdrop-blur transition duration-200 hover:-translate-y-1 hover:shadow-[0_30px_60px_rgba(21,21,21,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember/50 ${
+            activePhotoId === photo.id ? "ring-2 ring-ember/40" : ""
+          }`}
         >
           <div className="relative aspect-[4/5] w-full">
             <Image
@@ -28,7 +34,7 @@ export function GalleryGrid({ photos }: GalleryGridProps) {
               {photo.takenAt ? new Date(photo.takenAt).toLocaleDateString("zh-CN") : "No Date"}
             </p>
           </div>
-        </article>
+        </button>
       ))}
     </div>
   );

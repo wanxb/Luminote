@@ -1,14 +1,19 @@
 import type { Env } from "../index";
 
-type StoredVariant = "original" | "thumb";
-type AssetVariant = "display" | "thumb";
+type StoredVariant = "original" | "thumb" | "display" | "display-watermarked";
+type AssetVariant = "display" | "thumb" | "display-watermarked";
 
 function objectKey(id: string, variant: StoredVariant, extension = "jpg") {
-  if (variant === "thumb") {
-    return `thumbs/${id}.webp`;
+  switch (variant) {
+    case "thumb":
+      return `thumbs/${id}.webp`;
+    case "display":
+      return `display/${id}.jpg`;
+    case "display-watermarked":
+      return `display-watermarked/${id}.jpg`;
+    default:
+      return `originals/${id}.${extension}`;
   }
-
-  return `originals/${id}.${extension}`;
 }
 
 function inferExtension(name: string) {
@@ -22,19 +27,25 @@ export async function storePhotoObjects(
     id: string;
     original: File;
     thumbnail?: File;
+    display?: File;
+    watermarkedDisplay?: File;
   }
 ) {
   if (!env.PHOTOS_BUCKET) {
     return {
       persisted: false,
       originalKey: "",
-      thumbKey: ""
+      thumbKey: "",
+      displayKey: "",
+      watermarkedDisplayKey: ""
     };
   }
 
   const originalExtension = inferExtension(payload.original.name);
   const originalKey = objectKey(payload.id, "original", originalExtension);
   const thumbKey = objectKey(payload.id, "thumb");
+  const displayKey = objectKey(payload.id, "display");
+  const watermarkedDisplayKey = objectKey(payload.id, "display-watermarked");
 
   await env.PHOTOS_BUCKET.put(originalKey, payload.original.stream(), {
     httpMetadata: {
@@ -50,10 +61,28 @@ export async function storePhotoObjects(
     });
   }
 
+  if (payload.display) {
+    await env.PHOTOS_BUCKET.put(displayKey, payload.display.stream(), {
+      httpMetadata: {
+        contentType: payload.display.type || "image/jpeg"
+      }
+    });
+  }
+
+  if (payload.watermarkedDisplay) {
+    await env.PHOTOS_BUCKET.put(watermarkedDisplayKey, payload.watermarkedDisplay.stream(), {
+      httpMetadata: {
+        contentType: payload.watermarkedDisplay.type || "image/jpeg"
+      }
+    });
+  }
+
   return {
     persisted: true,
     originalKey,
-    thumbKey: payload.thumbnail ? thumbKey : ""
+    thumbKey: payload.thumbnail ? thumbKey : "",
+    displayKey: payload.display ? displayKey : "",
+    watermarkedDisplayKey: payload.watermarkedDisplay ? watermarkedDisplayKey : ""
   };
 }
 
@@ -66,16 +95,31 @@ export async function getPhotoObject(env: Env, variant: AssetVariant, id: string
     return env.PHOTOS_BUCKET.get(objectKey(id, "thumb"));
   }
 
-  const originals = await env.PHOTOS_BUCKET.list({
-    prefix: `originals/${id}.`,
-    limit: 1
-  });
-
-  const object = originals.objects[0];
-
-  if (!object) {
-    return null;
+  if (variant === "display") {
+    return env.PHOTOS_BUCKET.get(objectKey(id, "display"));
   }
 
-  return env.PHOTOS_BUCKET.get(object.key);
+  return env.PHOTOS_BUCKET.get(objectKey(id, "display-watermarked"));
+}
+
+export async function deletePhotoObjects(env: Env, id: string) {
+  if (!env.PHOTOS_BUCKET) {
+    return;
+  }
+
+  const originals = await env.PHOTOS_BUCKET.list({
+    prefix: `originals/${id}.`,
+    limit: 100
+  });
+
+  const keys = [
+    ...originals.objects.map((object) => object.key),
+    objectKey(id, "thumb"),
+    objectKey(id, "display"),
+    objectKey(id, "display-watermarked")
+  ];
+
+  const uniqueKeys = Array.from(new Set(keys));
+
+  await Promise.all(uniqueKeys.map((key) => env.PHOTOS_BUCKET!.delete(key)));
 }

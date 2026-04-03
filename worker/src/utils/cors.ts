@@ -10,7 +10,8 @@ export function applyCors(request: Request, response: Response) {
   response.headers.set("access-control-allow-origin", origin);
   response.headers.set("vary", "origin");
   response.headers.set("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
-  response.headers.set("access-control-allow-headers", "content-type,authorization");
+  response.headers.set("access-control-allow-headers", "content-type");
+  response.headers.set("access-control-allow-credentials", "true");
 
   return response;
 }

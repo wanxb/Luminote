@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { loginAdmin, uploadPhotos, type UploadResult } from "@/lib/api/admin-client";
+import { useEffect, useState } from "react";
+import {
+  deletePhoto,
+  getAdminSession,
+  loginAdmin,
+  logoutAdmin,
+  uploadPhotos,
+  type UploadPayload,
+  type UploadResult
+} from "@/lib/api/admin-client";
 import { extractExif } from "@/lib/upload/exif";
+import { createDisplayVariant } from "@/lib/upload/image-variants";
 import { createThumbnail } from "@/lib/upload/thumbnail";
 
 const initialForm = {
@@ -14,11 +23,17 @@ const initialForm = {
   watermarkEnabled: true
 };
 
-export function UploadShell() {
+type UploadShellProps = {
+  watermarkText: string;
+};
+
+export function UploadShell({ watermarkText }: UploadShellProps) {
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState("");
+  const [hasSession, setHasSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [description, setDescription] = useState(initialForm.description);
   const [tags, setTags] = useState(initialForm.tags);
@@ -28,10 +43,43 @@ export function UploadShell() {
   const [watermarkEnabled, setWatermarkEnabled] = useState(initialForm.watermarkEnabled);
   const [files, setFiles] = useState<File[]>([]);
   const [thumbnailStatus, setThumbnailStatus] = useState("");
+  const [displayStatus, setDisplayStatus] = useState("");
   const [exifStatus, setExifStatus] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploaded, setUploaded] = useState<UploadResult[]>([]);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getAdminSession()
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        setHasSession(result.authenticated);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setHasSession(false);
+      })
+      .finally(() => {
+        if (active) {
+          setIsCheckingSession(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,12 +89,15 @@ export function UploadShell() {
     try {
       const result = await loginAdmin(password);
 
-      if (!result.ok || !result.token) {
-        setLoginError(result.error ?? "登录失败，请检查管理员密码。");
+      if (!result.ok || !result.authenticated) {
+        setLoginError(
+          result.status === 401 ? result.error ?? "管理员密码错误。" : result.error ?? "登录失败，请稍后重试。"
+        );
         return;
       }
 
-      setToken(result.token);
+      setHasSession(true);
+      setPassword("");
     } catch {
       setLoginError("登录请求失败，请确认 Worker 是否已启动。");
     } finally {
@@ -54,10 +105,24 @@ export function UploadShell() {
     }
   }
 
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    setLoginError("");
+
+    try {
+      await logoutAdmin();
+      setHasSession(false);
+    } catch {
+      setLoginError("退出登录失败，请稍后重试。");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!token) {
+    if (!hasSession) {
       setUploadError("请先完成管理员登录。");
       return;
     }
@@ -69,21 +134,41 @@ export function UploadShell() {
 
     setIsUploading(true);
     setUploadError("");
+    setDeleteError("");
+    setUploadStatus("");
     setThumbnailStatus("正在生成缩略图...");
+    setDisplayStatus("正在生成展示图...");
     setExifStatus("正在提取 EXIF...");
 
     try {
-      const [thumbnails, exifRecords] = await Promise.all([
+      const [thumbnails, displayFiles, watermarkedDisplayFiles, exifRecords] = await Promise.all([
         Promise.all(files.map((file) => createThumbnail(file))),
+        Promise.all(files.map((file) => createDisplayVariant(file))),
+        Promise.all(
+          files.map((file) =>
+            watermarkEnabled
+              ? createDisplayVariant(file, {
+                  includeWatermark: true,
+                  watermarkText
+                })
+              : Promise.resolve(null)
+          )
+        ),
         Promise.all(files.map((file) => extractExif(file)))
       ]);
       setThumbnailStatus(`已生成 ${thumbnails.length} 个缩略图`);
+      setDisplayStatus(
+        watermarkEnabled
+          ? `已生成 ${displayFiles.length} 个展示图和 ${watermarkedDisplayFiles.length} 个水印图`
+          : `已生成 ${displayFiles.length} 个展示图`
+      );
       setExifStatus(`已提取 ${exifRecords.length} 份 EXIF 数据`);
 
-      const result = await uploadPhotos({
-        token,
+      const payload: UploadPayload = {
         files,
         thumbnails,
+        displayFiles,
+        watermarkedDisplayFiles,
         exifRecords,
         description,
         tags,
@@ -91,9 +176,17 @@ export function UploadShell() {
         showCameraInfo,
         showLocationInfo,
         watermarkEnabled
-      });
+      };
+
+      const result = await uploadWithRetry(payload);
 
       if (!result.ok) {
+        if (result.status === 401) {
+          setHasSession(false);
+          setUploadError("管理员会话已失效，请重新登录后再试。");
+          return;
+        }
+
         setUploadError(result.error ?? "上传失败，请稍后重试。");
         return;
       }
@@ -101,6 +194,7 @@ export function UploadShell() {
       setUploaded(result.uploaded);
       setFiles([]);
       setThumbnailStatus("");
+      setDisplayStatus("");
       setExifStatus("");
       setDescription(initialForm.description);
       setTags(initialForm.tags);
@@ -115,6 +209,68 @@ export function UploadShell() {
     }
   }
 
+  async function handleDelete(photoId: string) {
+    setDeleteError("");
+    setDeletingIds((current) => [...current, photoId]);
+
+    try {
+      const result = await deletePhoto(photoId);
+
+      if (!result.ok) {
+        if (result.status === 401) {
+          setHasSession(false);
+          setDeleteError("管理员会话已失效，请重新登录后再删除。");
+          return;
+        }
+
+        setDeleteError(result.error ?? "删除失败，请稍后重试。");
+        return;
+      }
+
+      setUploaded((current) => current.filter((item) => item.id !== photoId));
+    } catch {
+      setDeleteError("删除请求失败，请确认 Worker 是否已启动。");
+    } finally {
+      setDeletingIds((current) => current.filter((id) => id !== photoId));
+    }
+  }
+
+  async function uploadWithRetry(payload: UploadPayload) {
+    const maxAttempts = 2;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const result = await uploadPhotos(payload);
+
+        if (result.ok || !shouldRetryUpload(result.status)) {
+          return result;
+        }
+
+        if (attempt < maxAttempts) {
+          setUploadStatus(`上传暂时失败，正在进行第 ${attempt + 1} 次尝试...`);
+          await wait(800);
+          continue;
+        }
+
+        return result;
+      } catch {
+        if (attempt < maxAttempts) {
+          setUploadStatus(`网络请求失败，正在进行第 ${attempt + 1} 次尝试...`);
+          await wait(800);
+          continue;
+        }
+
+        throw new Error("upload_failed");
+      }
+    }
+
+    throw new Error("upload_failed");
+  }
+
+  function shouldRetryUpload(status?: number) {
+    return status !== undefined && status >= 500;
+  }
+
   return (
     <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="space-y-6">
@@ -122,7 +278,7 @@ export function UploadShell() {
           <p className="text-xs uppercase tracking-[0.3em] text-ember/70">Admin</p>
           <h1 className="mt-3 font-display text-4xl text-ink">上传入口</h1>
           <p className="mt-4 text-sm leading-6 text-ink/70">
-            当前版本已经接入最小登录和上传闭环。登录成功后可以提交本次上传的配置项和文件列表。
+            当前版本已升级为 HttpOnly Cookie 会话。登录成功后，上传请求会自动携带管理员会话。
           </p>
 
           <form className="mt-8 space-y-4" onSubmit={handleLogin}>
@@ -140,13 +296,21 @@ export function UploadShell() {
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={isLoggingIn}
+                disabled={isLoggingIn || hasSession}
                 className="rounded-full bg-ink px-5 py-3 text-sm uppercase tracking-[0.2em] text-paper transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoggingIn ? "登录中" : token ? "已登录" : "登录"}
+                {isCheckingSession ? "检查中" : isLoggingIn ? "登录中" : hasSession ? "已登录" : "登录"}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={!hasSession || isLoggingOut}
+                className="rounded-full border border-black/10 px-5 py-3 text-sm uppercase tracking-[0.2em] text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoggingOut ? "退出中" : "退出"}
               </button>
               <span className="text-xs tracking-[0.2em] text-ember/70">
-                {token ? "SESSION READY" : "NO SESSION"}
+                {hasSession ? "SESSION READY" : "NO SESSION"}
               </span>
             </div>
 
@@ -171,10 +335,20 @@ export function UploadShell() {
                     {item.tags.length > 0 ? item.tags.join(", ") : "无"}
                   </p>
                   <p className="mt-1 text-ink/70">持久化: {item.persisted ? "D1 已写入" : "占位模式"}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    disabled={!hasSession || deletingIds.includes(item.id)}
+                    className="mt-3 rounded-full border border-black/10 px-4 py-2 text-xs uppercase tracking-[0.18em] text-ink transition hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deletingIds.includes(item.id) ? "删除中" : "删除"}
+                  </button>
                 </li>
               ))}
             </ul>
           )}
+
+          {deleteError ? <p className="mt-4 text-sm text-red-700">{deleteError}</p> : null}
         </div>
       </div>
 
@@ -261,7 +435,9 @@ export function UploadShell() {
             </div>
 
             {thumbnailStatus ? <p className="text-sm text-ink/70">{thumbnailStatus}</p> : null}
+            {displayStatus ? <p className="text-sm text-ink/70">{displayStatus}</p> : null}
             {exifStatus ? <p className="text-sm text-ink/70">{exifStatus}</p> : null}
+            {uploadStatus ? <p className="text-sm text-ember">{uploadStatus}</p> : null}
 
             <button
               type="submit"
@@ -277,4 +453,8 @@ export function UploadShell() {
       </form>
     </section>
   );
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
