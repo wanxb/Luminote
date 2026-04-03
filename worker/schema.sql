@@ -22,3 +22,9 @@ CREATE TABLE IF NOT EXISTS photos (
 
 CREATE INDEX IF NOT EXISTS idx_photos_created_at
 ON photos(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS tag_pool (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);

@@ -1,5 +1,6 @@
 import type { ExtractedExif } from "@/lib/upload/exif";
-import { getClientApiBaseUrl } from "@/lib/api/config";
+import { getClientApiBaseUrl, getServerApiBaseUrl } from "@/lib/api/config";
+import type { PhotoDetail, PhotosResponse, SiteConfigResponse, SiteResponse } from "@/lib/api/types";
 
 export type AdminLoginResponse = {
   ok: boolean;
@@ -38,6 +39,61 @@ export type DeletePhotoResponse = {
   status?: number;
 };
 
+export type UpdateSiteResponse = {
+  ok: boolean;
+  message?: string;
+  error?: string;
+  status?: number;
+};
+
+export type UpdateSitePayload = {
+  siteTitle?: string;
+  siteDescription?: string;
+  watermarkEnabledByDefault?: boolean;
+  watermarkText?: string;
+  adminPassword?: string;
+};
+
+export type TagPool = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
+export type GetTagPoolResponse = {
+  ok: boolean;
+  tags: TagPool[];
+  status?: number;
+};
+
+export type CreateTagPayload = {
+  name: string;
+};
+
+export type CreateTagResponse = {
+  ok: boolean;
+  tag?: TagPool;
+  error?: string;
+  status?: number;
+};
+
+export type DeleteTagResponse = {
+  ok: boolean;
+  error?: string;
+  status?: number;
+};
+
+export type UpdatePhotoPayload = {
+  description?: string;
+  tags?: string[];
+};
+
+export type UpdatePhotoResponse = {
+  ok: boolean;
+  error?: string;
+  status?: number;
+};
+
 export type UploadPayload = {
   files: File[];
   thumbnails: File[];
@@ -45,7 +101,7 @@ export type UploadPayload = {
   watermarkedDisplayFiles: Array<File | null>;
   exifRecords: ExtractedExif[];
   description: string;
-  tags: string;
+  tags: string[];
   showDateInfo: boolean;
   showCameraInfo: boolean;
   showLocationInfo: boolean;
@@ -92,7 +148,7 @@ export async function logoutAdmin() {
 export async function uploadPhotos(payload: UploadPayload) {
   const formData = new FormData();
   formData.set("description", payload.description);
-  formData.set("tags", payload.tags);
+  formData.set("tags", JSON.stringify(payload.tags));
   formData.set("showDateInfo", String(payload.showDateInfo));
   formData.set("showCameraInfo", String(payload.showCameraInfo));
   formData.set("showLocationInfo", String(payload.showLocationInfo));
@@ -115,7 +171,6 @@ export async function uploadPhotos(payload: UploadPayload) {
       formData.append("watermarkedDisplayFiles[]", watermarkedDisplayFile);
       continue;
     }
-
     formData.append("watermarkedDisplayFiles[]", new Blob([]), "");
   }
 
@@ -145,4 +200,133 @@ export async function deletePhoto(id: string) {
     ...((await response.json()) as DeletePhotoResponse),
     status: response.status
   };
+}
+
+export async function getAdminTags() {
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags`, {
+    method: "GET",
+    credentials: "include"
+  });
+
+  return {
+    ...((await response.json()) as GetTagPoolResponse),
+    status: response.status
+  };
+}
+
+export async function createTag(name: string) {
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ name })
+  });
+
+  return {
+    ...((await response.json()) as CreateTagResponse),
+    status: response.status
+  };
+}
+
+export async function deleteTag(id: string) {
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags/${id}`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+
+  return {
+    ...((await response.json()) as DeleteTagResponse),
+    status: response.status
+  };
+}
+
+export async function updatePhoto(id: string, payload: UpdatePhotoPayload) {
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/photos/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return {
+    ...((await response.json()) as UpdatePhotoResponse),
+    status: response.status
+  };
+}
+
+export async function updateSiteConfig(payload: UpdateSitePayload) {
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/site`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return {
+    ...((await response.json()) as UpdateSiteResponse),
+    status: response.status
+  };
+}
+
+async function fetchJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${getServerApiBaseUrl()}${path}`, {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed for ${path}: ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function fetchClientJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${getClientApiBaseUrl()}${path}`, {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed for ${path}: ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function getSite() {
+  try {
+    return await fetchJson<SiteResponse>("/api/site");
+  } catch {
+    return {
+      siteTitle: "Luminote",
+      siteDescription: "A lightweight home for photography that lets the work breathe.",
+      watermarkEnabledByDefault: true,
+      watermarkText: "© Luminote"
+    };
+  }
+}
+
+export async function getPhotos(tag?: string) {
+  try {
+    const url = tag ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}` : "/api/photos?page=1&pageSize=30";
+    const response = await fetchClientJson<PhotosResponse>(url);
+    return response.items;
+  } catch {
+    return [];
+  }
+}
+
+export async function getPhotoDetail(id: string) {
+  try {
+    return await fetchClientJson<any>(`/api/photos/${id}`);
+  } catch {
+    return null;
+  }
 }

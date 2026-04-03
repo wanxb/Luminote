@@ -171,7 +171,10 @@ export function UploadShell({ watermarkText }: UploadShellProps) {
         watermarkedDisplayFiles,
         exifRecords,
         description,
-        tags,
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
         showDateInfo,
         showCameraInfo,
         showLocationInfo,

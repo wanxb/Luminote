@@ -3,20 +3,24 @@
 import { useEffect, useState } from "react";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
-import { getPhotoDetail } from "@/lib/api/client";
+import { getPhotoDetail, getPhotos } from "@/lib/api/client";
 import type { PhotoDetail, PhotoSummary } from "@/lib/api/types";
 
 type GalleryExperienceProps = {
   photos: PhotoSummary[];
+  allTags: string[];
 };
 
-export function GalleryExperience({ photos }: GalleryExperienceProps) {
+export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [detail, setDetail] = useState<PhotoDetail | null>(null);
   const [isImmersive, setIsImmersive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(photos);
+  const [isFiltering, setIsFiltering] = useState(false);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -59,6 +63,39 @@ export function GalleryExperience({ photos }: GalleryExperienceProps) {
       active = false;
     };
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedTag === null) {
+      setFilteredPhotos(photos);
+      return;
+    }
+
+    let active = true;
+    setIsFiltering(true);
+
+    getPhotos(selectedTag)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        setFilteredPhotos(result);
+      })
+      .catch(() => {
+        if (active) {
+          setFilteredPhotos([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsFiltering(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedTag]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -104,6 +141,39 @@ export function GalleryExperience({ photos }: GalleryExperienceProps) {
       document.body.style.overflow = overflow;
     };
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedTag === null) {
+      setFilteredPhotos(photos);
+      return;
+    }
+
+    let active = true;
+    setIsFiltering(true);
+
+    getPhotos(selectedTag)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        setFilteredPhotos(result);
+      })
+      .catch(() => {
+        if (active) {
+          setFilteredPhotos([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsFiltering(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedTag]);
 
   const selectedSummary =
     selectedIndex !== null ? photos[selectedIndex] : selectedId ? photos.find((photo) => photo.id === selectedId) : null;
@@ -151,7 +221,37 @@ export function GalleryExperience({ photos }: GalleryExperienceProps) {
 
   return (
     <>
-      <GalleryGrid photos={photos} activePhotoId={selectedId} onSelect={handleSelect} />
+      {allTags.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-ink/60">标签筛选:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedTag(null)}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              selectedTag === null
+                ? "bg-ink text-paper"
+                : "border border-black/10 bg-white text-ink/70 hover:bg-mist"
+            }`}
+          >
+            全部
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setSelectedTag(tag)}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                selectedTag === tag
+                  ? "bg-ink text-paper"
+                  : "border border-black/10 bg-white text-ink/70 hover:bg-mist"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+      <GalleryGrid photos={filteredPhotos} activePhotoId={selectedId} onSelect={handleSelect} />
       <LightboxShell
         photo={activePhoto ?? null}
         photos={photos}

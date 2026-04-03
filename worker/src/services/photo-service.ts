@@ -98,17 +98,21 @@ function createPhotoId(index: number) {
   return `photo_${Date.now()}_${index + 1}`;
 }
 
-export async function listPhotos(env: Env, origin: string) {
+export async function listPhotos(env: Env, origin: string, tag: string | null = null) {
   if (!env.DB) {
     return fallbackPhotos;
   }
 
-  const result = await env.DB.prepare(
-    `SELECT id, thumb_url, display_url, watermarked_display_url, watermark_enabled, taken_at, description
-     FROM photos
-     ORDER BY created_at DESC
-     LIMIT 30`
-  ).all<PersistedPhotoRow>();
+  let query = `SELECT id, thumb_url, display_url, watermarked_display_url, watermark_enabled, taken_at, description
+     FROM photos`;
+
+  if (tag) {
+    query += ` WHERE tags_json LIKE '%${tag}%'`;
+  }
+
+  query += ` ORDER BY created_at DESC LIMIT 30`;
+
+  const result = await env.DB.prepare(query).all<PersistedPhotoRow>();
 
   const rows = result.results ?? [];
 
@@ -342,6 +346,55 @@ export async function deletePhotoById(env: Env, id: string) {
   return {
     ok: true,
     deleted: true,
+    persisted: true
+  };
+}
+
+export async function updatePhotoById(env: Env, id: string, payload: { description?: string; tags?: string[] }) {
+  if (!env.DB) {
+    return {
+      ok: false,
+      persisted: false,
+      error: "当前环境未绑定 D1，无法执行更新。"
+    };
+  }
+
+  const existing = await env.DB.prepare(`SELECT id FROM photos WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
+
+  if (!existing) {
+    return {
+      ok: false,
+      persisted: true,
+      error: "照片不存在。"
+    };
+  }
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+
+  if (payload.description !== undefined) {
+    updates.push("description = ?");
+    values.push(payload.description);
+  }
+
+  if (payload.tags !== undefined) {
+    updates.push("tags_json = ?");
+    values.push(JSON.stringify(payload.tags));
+  }
+
+  if (updates.length === 0) {
+    return {
+      ok: true,
+      persisted: true
+    };
+  }
+
+  values.push(id);
+
+  await env.DB.prepare(`UPDATE photos SET ${updates.join(", ")} WHERE id = ?`).bind(...values).run();
+
+  return {
+    ok: true,
     persisted: true
   };
 }

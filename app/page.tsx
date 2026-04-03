@@ -1,6 +1,25 @@
 import { GalleryExperience } from "@/components/gallery/gallery-experience";
 import { getPhotos, getSite } from "@/lib/api/client";
 
+// 预定义标签列表
+const PREDEFINED_TAGS = [
+  "街景",
+  "人像",
+  "鸟类",
+  "动物",
+  "风景",
+  "建筑",
+  "夜景",
+  "黑白",
+  "纪实",
+  "自然",
+  "城市",
+  "旅行",
+  "美食",
+  "静物",
+  "微距"
+];
+
 export default async function HomePage() {
   const [site, photos] = await Promise.all([getSite(), getPhotos()]);
 
@@ -16,7 +35,7 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <GalleryExperience photos={photos} />
+      <GalleryExperience photos={photos} allTags={PREDEFINED_TAGS} />
     </main>
   );
 }

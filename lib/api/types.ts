@@ -6,6 +6,7 @@ export type PhotoSummary = {
   watermarkEnabled?: boolean;
   takenAt?: string;
   description?: string;
+  tags?: string[];
 };
 
 export type PhotoExif = {
@@ -35,6 +36,13 @@ export type PhotosResponse = {
 export type SiteResponse = {
   siteTitle: string;
   siteDescription: string;
+  watermarkEnabledByDefault: boolean;
+  watermarkText: string;
+};
+
+export type SiteConfigResponse = {
+  siteTitle: string;
+  siteDescription?: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
 };

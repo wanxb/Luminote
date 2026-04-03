@@ -9,13 +9,14 @@ WATERMARK_TEXT = "© Luminote"
 ADMIN_PASSWORD = "changeme"
 ADMIN_SESSION_TOKEN = "local-dev-admin-token"
 
-# Add a real D1 binding before enabling persistence:
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "luminote"
-# database_id = "your-d1-database-id"
+[[d1_databases]]
+binding = "DB"
+database_name = "luminote-dev"
+database_id = "5e05e500-52f8-4243-a837-1066c3c95082"
+remote = true
 
 # Add a real R2 binding before enabling object storage:
-# [[r2_buckets]]
-# binding = "PHOTOS_BUCKET"
-# bucket_name = "luminote-assets"
+[[r2_buckets]]
+binding = "PHOTOS_BUCKET"
+bucket_name = "luminote-dev"
+remote = true

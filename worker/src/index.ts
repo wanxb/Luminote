@@ -36,7 +36,7 @@ export default {
     }
 
     if (url.pathname.startsWith("/api/site")) {
-      return applyCors(request, handleSite(request, env));
+      return applyCors(request, await handleSite(request, env));
     }
 
     if (url.pathname.startsWith("/api/photos")) {

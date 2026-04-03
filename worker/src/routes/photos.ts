@@ -6,6 +6,7 @@ export async function handlePhotos(request: Request, env: Env): Promise<Response
   const origin = new URL(request.url).origin;
   const pathname = new URL(request.url).pathname;
   const parts = pathname.split("/").filter(Boolean);
+  const url = new URL(request.url);
 
   if (parts.length === 3) {
     const detail = await getPhotoById(env, origin, parts[2]);
@@ -23,12 +24,16 @@ export async function handlePhotos(request: Request, env: Env): Promise<Response
     return json(detail);
   }
 
-  const items = await listPhotos(env, origin);
+  const page = Number(url.searchParams.get("page") || "1");
+  const pageSize = Number(url.searchParams.get("pageSize") || "30");
+  const tag = url.searchParams.get("tag");
+
+  const items = await listPhotos(env, origin, tag);
 
   return json({
     items,
-    page: 1,
-    pageSize: 30,
-    hasMore: false
+    page,
+    pageSize,
+    hasMore: items.length >= pageSize
   });
 }

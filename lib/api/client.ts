@@ -36,9 +36,10 @@ export async function getSite() {
   }
 }
 
-export async function getPhotos() {
+export async function getPhotos(tag?: string) {
   try {
-    const response = await fetchJson<PhotosResponse>("/api/photos?page=1&pageSize=30");
+    const url = tag ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}` : "/api/photos?page=1&pageSize=30";
+    const response = await fetchJson<PhotosResponse>(url);
     return response.items;
   } catch {
     return fallbackPhotos;

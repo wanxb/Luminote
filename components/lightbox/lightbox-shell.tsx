@@ -148,7 +148,7 @@ export function LightboxShell({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-6 top-6 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34"
+              className="absolute right-6 top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34"
             >
               ×
             </button>
@@ -222,7 +222,7 @@ export function LightboxShell({
 
         {hasMultiple ? (
           <div
-            className={`hidden justify-center bg-[linear-gradient(180deg,rgba(41,39,34,0.78)_0%,rgba(31,30,26,0.84)_100%)] px-4 backdrop-blur-2xl lg:flex ${
+            className={`hidden justify-center bg-[linear-gradient(180deg,rgba(41,39,34,0.78)_0%,rgba(31,30,26,0.84)_100%)] backdrop-blur-2xl lg:flex ${
               isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"
             }`}
           >

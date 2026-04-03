@@ -1,6 +1,27 @@
 import type { Env } from "../index";
-import { createPhotos, deletePhotoById } from "../services/photo-service";
+import { createPhotos, deletePhotoById, updatePhotoById } from "../services/photo-service";
+import { getTagPool, createTag as createTagService, deleteTag as deleteTagService } from "../services/tag-service";
 import { json } from "../utils/json";
+import { handleSite } from "./site";
+
+// 默认标签列表（初始化时创建）
+const DEFAULT_TAGS = [
+  "街景",
+  "人像",
+  "鸟类",
+  "动物",
+  "风景",
+  "建筑",
+  "夜景",
+  "黑白",
+  "纪实",
+  "自然",
+  "城市",
+  "旅行",
+  "美食",
+  "静物",
+  "微距"
+];
 
 const sessionCookieName = "luminote_admin_session";
 
@@ -206,6 +227,116 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
     return json(result, {
       status: result.ok ? 200 : result.error === "照片不存在或已被删除。" ? 404 : 400
+    });
+  }
+
+  if (url.pathname.startsWith("/api/admin/photos/") && request.method === "PATCH") {
+    if (!isAuthenticated(request, env)) {
+      return unauthorized("请先完成管理员登录。");
+    }
+
+    const id = url.pathname.split("/").filter(Boolean)[3];
+
+    if (!id) {
+      return json(
+        {
+          ok: false,
+          error: "缺少照片 ID。"
+        },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const body = (await request.json()) as { description?: string; tags?: string[] };
+      const result = await updatePhotoById(env, id, body);
+
+      return json(result, {
+        status: result.ok ? 200 : 400
+      });
+    } catch {
+      return json(
+        {
+          ok: false,
+          error: "更新照片失败。"
+        },
+        { status: 500 }
+      );
+    }
+  }
+
+  if (url.pathname === "/api/admin/site" && request.method === "PATCH") {
+    if (!isAuthenticated(request, env)) {
+      return unauthorized("请先完成管理员登录。");
+    }
+
+    return handleSite(request, env);
+  }
+
+  if (url.pathname === "/api/admin/tags" && request.method === "GET") {
+    if (!isAuthenticated(request, env)) {
+      return unauthorized("请先完成管理员登录。");
+    }
+
+    const tags = await getTagPool(env);
+    return json({
+      ok: true,
+      tags
+    });
+  }
+
+  if (url.pathname === "/api/admin/tags" && request.method === "POST") {
+    if (!isAuthenticated(request, env)) {
+      return unauthorized("请先完成管理员登录。");
+    }
+
+    try {
+      const body = (await request.json()) as { name: string };
+
+      if (!body.name || body.name.trim().length === 0) {
+        return json(
+          {
+            ok: false,
+            error: "标签名称不能为空。"
+          },
+          { status: 400 }
+        );
+      }
+
+      const tag = await createTagService(env, body.name.trim());
+      return json({ ok: true, tag });
+    } catch {
+      return json(
+        {
+          ok: false,
+          error: "创建标签失败。"
+        },
+        { status: 500 }
+      );
+    }
+  }
+
+  if (url.pathname.startsWith("/api/admin/tags/") && request.method === "DELETE") {
+    if (!isAuthenticated(request, env)) {
+      return unauthorized("请先完成管理员登录。");
+    }
+
+    const id = url.pathname.split("/").filter(Boolean)[3];
+
+    if (!id) {
+      return json(
+        {
+          ok: false,
+          error: "缺少标签 ID。"
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await deleteTagService(env, id);
+
+    return json(result, {
+      status: result.ok ? 200 : 404
     });
   }
 
