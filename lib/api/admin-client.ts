@@ -202,10 +202,13 @@ export async function getAdminSession() {
 }
 
 export async function logoutAdmin() {
-  const { data } = await requestClientJson<{ ok: boolean }>("/api/admin/logout", {
-    method: "POST",
-    credentials: "include",
-  });
+  const { data } = await requestClientJson<{ ok: boolean }>(
+    "/api/admin/logout",
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
 
   return data;
 }
@@ -377,14 +380,15 @@ export async function uploadPhotographerAvatar(file: File) {
   const formData = new FormData();
   formData.set("file", file);
 
-  const { response, data } = await requestClientJson<UploadPhotographerAvatarResponse>(
-    "/api/admin/site/avatar",
-    {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    },
-  );
+  const { response, data } =
+    await requestClientJson<UploadPhotographerAvatarResponse>(
+      "/api/admin/site/avatar",
+      {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      },
+    );
 
   return {
     ...data,
