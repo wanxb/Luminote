@@ -25,7 +25,7 @@ function parsePath(pathname: string): ParsedAsset | null {
   if (parts.length === 3 && parts[1] === "avatar" && parts[2]) {
     return {
       kind: "avatar",
-      fileName: parts[2]
+      fileName: parts[2],
     };
   }
 
@@ -36,18 +36,26 @@ function parsePath(pathname: string): ParsedAsset | null {
   const variant = parts[1];
   const id = parts[2];
 
-  if ((variant !== "thumb" && variant !== "display" && variant !== "display-watermarked") || !id) {
+  if (
+    (variant !== "thumb" &&
+      variant !== "display" &&
+      variant !== "display-watermarked") ||
+    !id
+  ) {
     return null;
   }
 
   return {
     kind: "photo",
     variant,
-    id
+    id,
   };
 }
 
-export async function handleAssets(request: Request, env: Env): Promise<Response> {
+export async function handleAssets(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const parsed = parsePath(new URL(request.url).pathname);
 
   if (!parsed) {
@@ -58,7 +66,11 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
     const object = await getAvatarObject(env, parsed.fileName);
 
     if (!object?.body) {
-      return handleMockStorage(new Request(`${new URL(request.url).origin}/mock-storage/avatar/${parsed.fileName}`));
+      return handleMockStorage(
+        new Request(
+          `${new URL(request.url).origin}/mock-storage/avatar/${parsed.fileName}`,
+        ),
+      );
     }
 
     const headers = new Headers();
@@ -67,7 +79,7 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
     headers.set("cache-control", "public, max-age=3600");
 
     return new Response(object.body, {
-      headers
+      headers,
     });
   }
 
@@ -80,7 +92,11 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
         : parsed.variant === "display-watermarked"
           ? "watermarked"
           : "display";
-    return handleMockStorage(new Request(`${new URL(request.url).origin}/mock-storage/${fallbackVariant}/${parsed.id}`));
+    return handleMockStorage(
+      new Request(
+        `${new URL(request.url).origin}/mock-storage/${fallbackVariant}/${parsed.id}`,
+      ),
+    );
   }
 
   const headers = new Headers();
@@ -89,6 +105,6 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
   headers.set("cache-control", "public, max-age=3600");
 
   return new Response(object.body, {
-    headers
+    headers,
   });
 }

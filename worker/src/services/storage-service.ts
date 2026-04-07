@@ -28,7 +28,7 @@ export async function storePhotoObjects(
     thumbnail?: File;
     display?: File;
     watermarkedDisplay?: File;
-  }
+  },
 ) {
   if (!env.PHOTOS_BUCKET) {
     return {
@@ -36,12 +36,16 @@ export async function storePhotoObjects(
       originalKey: "",
       thumbKey: "",
       displayKey: "",
-      watermarkedDisplayKey: ""
+      watermarkedDisplayKey: "",
     };
   }
 
-  const originalExtension = payload.original ? inferExtension(payload.original.name) : "jpg";
-  const originalKey = payload.original ? objectKey(payload.id, "original", originalExtension) : "";
+  const originalExtension = payload.original
+    ? inferExtension(payload.original.name)
+    : "jpg";
+  const originalKey = payload.original
+    ? objectKey(payload.id, "original", originalExtension)
+    : "";
   const thumbKey = objectKey(payload.id, "thumb");
   const displayKey = objectKey(payload.id, "display");
   const watermarkedDisplayKey = objectKey(payload.id, "display-watermarked");
@@ -49,33 +53,37 @@ export async function storePhotoObjects(
   if (payload.original) {
     await env.PHOTOS_BUCKET.put(originalKey, payload.original.stream(), {
       httpMetadata: {
-        contentType: payload.original.type || "application/octet-stream"
-      }
+        contentType: payload.original.type || "application/octet-stream",
+      },
     });
   }
 
   if (payload.thumbnail) {
     await env.PHOTOS_BUCKET.put(thumbKey, payload.thumbnail.stream(), {
       httpMetadata: {
-        contentType: payload.thumbnail.type || "image/webp"
-      }
+        contentType: payload.thumbnail.type || "image/webp",
+      },
     });
   }
 
   if (payload.display) {
     await env.PHOTOS_BUCKET.put(displayKey, payload.display.stream(), {
       httpMetadata: {
-        contentType: payload.display.type || "image/jpeg"
-      }
+        contentType: payload.display.type || "image/jpeg",
+      },
     });
   }
 
   if (payload.watermarkedDisplay) {
-    await env.PHOTOS_BUCKET.put(watermarkedDisplayKey, payload.watermarkedDisplay.stream(), {
-      httpMetadata: {
-        contentType: payload.watermarkedDisplay.type || "image/jpeg"
-      }
-    });
+    await env.PHOTOS_BUCKET.put(
+      watermarkedDisplayKey,
+      payload.watermarkedDisplay.stream(),
+      {
+        httpMetadata: {
+          contentType: payload.watermarkedDisplay.type || "image/jpeg",
+        },
+      },
+    );
   }
 
   return {
@@ -83,7 +91,9 @@ export async function storePhotoObjects(
     originalKey,
     thumbKey: payload.thumbnail ? thumbKey : "",
     displayKey: payload.display ? displayKey : "",
-    watermarkedDisplayKey: payload.watermarkedDisplay ? watermarkedDisplayKey : ""
+    watermarkedDisplayKey: payload.watermarkedDisplay
+      ? watermarkedDisplayKey
+      : "",
   };
 }
 
@@ -92,7 +102,11 @@ function inferExtension(name: string) {
   return match?.[1] ?? "jpg";
 }
 
-export async function getPhotoObject(env: Env, variant: AssetVariant, id: string) {
+export async function getPhotoObject(
+  env: Env,
+  variant: AssetVariant,
+  id: string,
+) {
   if (!env.PHOTOS_BUCKET) {
     return null;
   }
@@ -112,7 +126,7 @@ export async function storePhotographerAvatar(env: Env, file: File) {
   if (!env.PHOTOS_BUCKET) {
     return {
       persisted: false,
-      fileName: ""
+      fileName: "",
     };
   }
 
@@ -121,13 +135,13 @@ export async function storePhotographerAvatar(env: Env, file: File) {
 
   await env.PHOTOS_BUCKET.put(avatarObjectKey(fileName), file.stream(), {
     httpMetadata: {
-      contentType: file.type || "application/octet-stream"
-    }
+      contentType: file.type || "application/octet-stream",
+    },
   });
 
   return {
     persisted: true,
-    fileName
+    fileName,
   };
 }
 
@@ -154,14 +168,14 @@ export async function deletePhotoObjects(env: Env, id: string) {
 
   const originals = await env.PHOTOS_BUCKET.list({
     prefix: `originals/${id}.`,
-    limit: 100
+    limit: 100,
   });
 
   const keys = [
     ...originals.objects.map((object) => object.key),
     objectKey(id, "thumb"),
     objectKey(id, "display"),
-    objectKey(id, "display-watermarked")
+    objectKey(id, "display-watermarked"),
   ];
 
   const uniqueKeys = Array.from(new Set(keys));

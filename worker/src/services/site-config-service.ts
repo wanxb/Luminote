@@ -1,6 +1,7 @@
 import type { Env } from "../index";
 
-export const DEFAULT_SITE_DESCRIPTION = "A lightweight home for photography that lets the work breathe.";
+export const DEFAULT_SITE_DESCRIPTION =
+  "A lightweight home for photography that lets the work breathe.";
 export const DEFAULT_UPLOAD_ORIGINAL_ENABLED = false;
 export const DEFAULT_MAX_TAG_POOL_SIZE = 20;
 export const DEFAULT_MAX_UPLOAD_FILES = 20;
@@ -106,7 +107,7 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     photographerInstagram: DEFAULT_PHOTOGRAPHER_INSTAGRAM,
     photographerInstagramUrl: DEFAULT_PHOTOGRAPHER_INSTAGRAM_URL,
     photographerCustomAccount: DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT,
-    photographerCustomAccountUrl: DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT_URL
+    photographerCustomAccountUrl: DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT_URL,
   };
 }
 
@@ -119,8 +120,9 @@ async function ensureSiteConfig(env: Env) {
     ensureSiteConfigPromise = (async () => {
       const defaults = buildDefaultSiteConfig(env);
 
-      await env.DB!.prepare(
-        `CREATE TABLE IF NOT EXISTS site_config (
+      await env
+        .DB!.prepare(
+          `CREATE TABLE IF NOT EXISTS site_config (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           site_title TEXT NOT NULL,
           site_description TEXT NOT NULL,
@@ -144,8 +146,9 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account TEXT NOT NULL DEFAULT '',
           photographer_custom_account_url TEXT NOT NULL DEFAULT '',
           updated_at TEXT NOT NULL
-        )`
-      ).run();
+        )`,
+        )
+        .run();
 
       const alterStatements = [
         "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
@@ -159,7 +162,7 @@ async function ensureSiteConfig(env: Env) {
         "ALTER TABLE site_config ADD COLUMN photographer_instagram TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_instagram_url TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_custom_account TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE site_config ADD COLUMN photographer_custom_account_url TEXT NOT NULL DEFAULT ''"
+        "ALTER TABLE site_config ADD COLUMN photographer_custom_account_url TEXT NOT NULL DEFAULT ''",
       ];
 
       for (const statement of alterStatements) {
@@ -170,8 +173,9 @@ async function ensureSiteConfig(env: Env) {
         }
       }
 
-      await env.DB!.prepare(
-        `INSERT OR IGNORE INTO site_config (
+      await env
+        .DB!.prepare(
+          `INSERT OR IGNORE INTO site_config (
           id,
           site_title,
           site_description,
@@ -195,8 +199,8 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
         .bind(
           1,
           defaults.siteTitle,
@@ -220,7 +224,7 @@ async function ensureSiteConfig(env: Env) {
           defaults.photographerInstagramUrl,
           defaults.photographerCustomAccount,
           defaults.photographerCustomAccountUrl,
-          new Date().toISOString()
+          new Date().toISOString(),
         )
         .run();
     })().catch((error) => {
@@ -240,7 +244,10 @@ function isMissingTableError(error: unknown) {
   return error instanceof Error && error.message.includes("no such table");
 }
 
-function mapSiteConfigRowToConfig(env: Env, row: Partial<SiteConfigRow> | null) {
+function mapSiteConfigRowToConfig(
+  env: Env,
+  row: Partial<SiteConfigRow> | null,
+) {
   const defaults = buildDefaultSiteConfig(env);
 
   if (!row) {
@@ -260,24 +267,39 @@ function mapSiteConfigRowToConfig(env: Env, row: Partial<SiteConfigRow> | null) 
       row.upload_original_enabled !== undefined
         ? Boolean(row.upload_original_enabled)
         : defaults.uploadOriginalEnabled,
-    maxTagPoolSize: sanitizePositiveInt(row.max_tag_pool_size ?? defaults.maxTagPoolSize, defaults.maxTagPoolSize),
-    maxUploadFiles: sanitizePositiveInt(row.max_upload_files ?? defaults.maxUploadFiles, defaults.maxUploadFiles),
+    maxTagPoolSize: sanitizePositiveInt(
+      row.max_tag_pool_size ?? defaults.maxTagPoolSize,
+      defaults.maxTagPoolSize,
+    ),
+    maxUploadFiles: sanitizePositiveInt(
+      row.max_upload_files ?? defaults.maxUploadFiles,
+      defaults.maxUploadFiles,
+    ),
     maxTagsPerPhoto: sanitizePositiveInt(
       row.max_tags_per_photo ?? defaults.maxTagsPerPhoto,
-      defaults.maxTagsPerPhoto
+      defaults.maxTagsPerPhoto,
     ),
-    photographerAvatarUrl: row.photographer_avatar_url ?? defaults.photographerAvatarUrl,
+    photographerAvatarUrl:
+      row.photographer_avatar_url ?? defaults.photographerAvatarUrl,
     photographerName: row.photographer_name ?? defaults.photographerName,
     photographerBio: row.photographer_bio ?? defaults.photographerBio,
     photographerEmail: row.photographer_email ?? defaults.photographerEmail,
-    photographerXiaohongshu: row.photographer_xiaohongshu ?? defaults.photographerXiaohongshu,
-    photographerXiaohongshuUrl: row.photographer_xiaohongshu_url ?? defaults.photographerXiaohongshuUrl,
+    photographerXiaohongshu:
+      row.photographer_xiaohongshu ?? defaults.photographerXiaohongshu,
+    photographerXiaohongshuUrl:
+      row.photographer_xiaohongshu_url ?? defaults.photographerXiaohongshuUrl,
     photographerDouyin: row.photographer_douyin ?? defaults.photographerDouyin,
-    photographerDouyinUrl: row.photographer_douyin_url ?? defaults.photographerDouyinUrl,
-    photographerInstagram: row.photographer_instagram ?? defaults.photographerInstagram,
-    photographerInstagramUrl: row.photographer_instagram_url ?? defaults.photographerInstagramUrl,
-    photographerCustomAccount: row.photographer_custom_account ?? defaults.photographerCustomAccount,
-    photographerCustomAccountUrl: row.photographer_custom_account_url ?? defaults.photographerCustomAccountUrl
+    photographerDouyinUrl:
+      row.photographer_douyin_url ?? defaults.photographerDouyinUrl,
+    photographerInstagram:
+      row.photographer_instagram ?? defaults.photographerInstagram,
+    photographerInstagramUrl:
+      row.photographer_instagram_url ?? defaults.photographerInstagramUrl,
+    photographerCustomAccount:
+      row.photographer_custom_account ?? defaults.photographerCustomAccount,
+    photographerCustomAccountUrl:
+      row.photographer_custom_account_url ??
+      defaults.photographerCustomAccountUrl,
   };
 }
 
@@ -314,7 +336,7 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         photographer_custom_account_url
        FROM site_config
        WHERE id = 1
-       LIMIT 1`
+       LIMIT 1`,
     ).first<SiteConfigRow>();
 
     return mapSiteConfigRowToConfig(env, row);
@@ -338,10 +360,13 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         max_tags_per_photo
        FROM site_config
        WHERE id = 1
-       LIMIT 1`
+       LIMIT 1`,
     ).first<LegacySiteConfigRow>();
 
-    return mapSiteConfigRowToConfig(env, legacyRow as Partial<SiteConfigRow> | null);
+    return mapSiteConfigRowToConfig(
+      env,
+      legacyRow as Partial<SiteConfigRow> | null,
+    );
   } catch {
     return defaults;
   }
@@ -358,12 +383,14 @@ export async function getAdminPassword(env: Env) {
 
 export async function updateSiteConfig(
   env: Env,
-  updates: Partial<Omit<SiteConfig, "adminPassword">> & { adminPassword?: string }
+  updates: Partial<Omit<SiteConfig, "adminPassword">> & {
+    adminPassword?: string;
+  },
 ) {
   if (!env.DB) {
     return {
       ok: false,
-      error: "当前环境未绑定 D1，无法保存配置。"
+      error: "当前环境未绑定 D1，无法保存配置。",
     };
   }
 
@@ -485,7 +512,11 @@ export async function updateSiteConfig(
   values.push(new Date().toISOString());
   values.push(1);
 
-  await env.DB.prepare(`UPDATE site_config SET ${statements.join(", ")} WHERE id = ?`).bind(...values).run();
+  await env.DB.prepare(
+    `UPDATE site_config SET ${statements.join(", ")} WHERE id = ?`,
+  )
+    .bind(...values)
+    .run();
 
   return { ok: true };
 }

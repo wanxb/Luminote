@@ -5,7 +5,12 @@ function getVariantConfig(variant: string) {
     case "thumb":
       return { width: 720, height: 900, label: "THUMB", fill: "#d9c8ad" };
     case "watermarked":
-      return { width: 1600, height: 1100, label: "WATERMARKED", fill: "#b48263" };
+      return {
+        width: 1600,
+        height: 1100,
+        label: "WATERMARKED",
+        fill: "#b48263",
+      };
     case "display":
     default:
       return { width: 1600, height: 1100, label: "DISPLAY", fill: "#8f5838" };
@@ -52,7 +57,7 @@ export function handleMockStorage(request: Request): Response {
   return new Response(svg.trim(), {
     headers: {
       "content-type": "image/svg+xml; charset=utf-8",
-      "cache-control": "public, max-age=60"
-    }
+      "cache-control": "public, max-age=60",
+    },
   });
 }

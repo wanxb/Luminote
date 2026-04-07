@@ -1,8 +1,24 @@
 import type { Env } from "../index";
-import { createPhotos, deletePhotoById, listPhotos, updatePhotoById } from "../services/photo-service";
-import { getAdminPassword, getSiteConfig, updateSiteConfig } from "../services/site-config-service";
-import { deleteAvatarObject, storePhotographerAvatar } from "../services/storage-service";
-import { getTagPool, createTag as createTagService, deleteTag as deleteTagService } from "../services/tag-service";
+import {
+  createPhotos,
+  deletePhotoById,
+  listPhotos,
+  updatePhotoById,
+} from "../services/photo-service";
+import {
+  getAdminPassword,
+  getSiteConfig,
+  updateSiteConfig,
+} from "../services/site-config-service";
+import {
+  deleteAvatarObject,
+  storePhotographerAvatar,
+} from "../services/storage-service";
+import {
+  getTagPool,
+  createTag as createTagService,
+  deleteTag as deleteTagService,
+} from "../services/tag-service";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
 import { handleSite } from "./site";
@@ -14,9 +30,9 @@ function unauthorized(message = "Unauthorized") {
   return json(
     {
       ok: false,
-      error: message
+      error: message,
     },
-    { status: 401 }
+    { status: 401 },
   );
 }
 
@@ -28,7 +44,9 @@ function getSessionToken(request: Request) {
   }
 
   const cookies = cookieHeader.split(";").map((item) => item.trim());
-  const target = cookies.find((item) => item.startsWith(`${sessionCookieName}=`));
+  const target = cookies.find((item) =>
+    item.startsWith(`${sessionCookieName}=`),
+  );
 
   if (!target) {
     return "";
@@ -47,7 +65,7 @@ function createSessionCookie(request: Request, env: Env) {
     "HttpOnly",
     "SameSite=Lax",
     isHttps ? "Secure" : "",
-    `Max-Age=${sessionIdleTimeoutSeconds}`
+    `Max-Age=${sessionIdleTimeoutSeconds}`,
   ]
     .filter(Boolean)
     .join("; ");
@@ -63,7 +81,7 @@ function clearSessionCookie(request: Request) {
     "HttpOnly",
     "SameSite=Lax",
     isHttps ? "Secure" : "",
-    "Max-Age=0"
+    "Max-Age=0",
   ]
     .filter(Boolean)
     .join("; ");
@@ -74,7 +92,10 @@ function isAuthenticated(request: Request, env: Env) {
   return Boolean(token && token === env.ADMIN_SESSION_TOKEN);
 }
 
-function parseTagsInput(rawValue: FormDataEntryValue | null, maxTagsPerPhoto: number) {
+function parseTagsInput(
+  rawValue: FormDataEntryValue | null,
+  maxTagsPerPhoto: number,
+) {
   if (typeof rawValue !== "string") {
     return [] as string[];
   }
@@ -83,10 +104,9 @@ function parseTagsInput(rawValue: FormDataEntryValue | null, maxTagsPerPhoto: nu
     const parsed = JSON.parse(rawValue) as unknown;
 
     if (Array.isArray(parsed)) {
-      return Array.from(new Set(parsed.map((tag) => String(tag).trim()).filter(Boolean))).slice(
-        0,
-        maxTagsPerPhoto
-      );
+      return Array.from(
+        new Set(parsed.map((tag) => String(tag).trim()).filter(Boolean)),
+      ).slice(0, maxTagsPerPhoto);
     }
   } catch {
     // Fallback to comma-separated tags for older clients.
@@ -118,7 +138,10 @@ function parseFileNames(rawValue: FormDataEntryValue | null) {
   return [];
 }
 
-function parsePhotoDrafts(rawValue: FormDataEntryValue | null, maxTagsPerPhoto: number) {
+function parsePhotoDrafts(
+  rawValue: FormDataEntryValue | null,
+  maxTagsPerPhoto: number,
+) {
   if (typeof rawValue !== "string") {
     return [] as Array<{ description?: string; tags: string[] }>;
   }
@@ -138,13 +161,15 @@ function parsePhotoDrafts(rawValue: FormDataEntryValue | null, maxTagsPerPhoto: 
       const draft = item as { description?: unknown; tags?: unknown };
 
       return {
-        description: typeof draft.description === "string" ? draft.description : undefined,
+        description:
+          typeof draft.description === "string" ? draft.description : undefined,
         tags: Array.isArray(draft.tags)
-          ? Array.from(new Set(draft.tags.map((tag) => String(tag).trim()).filter(Boolean))).slice(
-              0,
-              maxTagsPerPhoto
-            )
-          : []
+          ? Array.from(
+              new Set(
+                draft.tags.map((tag) => String(tag).trim()).filter(Boolean),
+              ),
+            ).slice(0, maxTagsPerPhoto)
+          : [],
       };
     });
   } catch {
@@ -158,7 +183,9 @@ function hasTagLengthOverflow(tags: string[]) {
 
 function extractAvatarFileName(avatarUrl: string) {
   try {
-    const pathname = avatarUrl.startsWith("http") ? new URL(avatarUrl).pathname : avatarUrl;
+    const pathname = avatarUrl.startsWith("http")
+      ? new URL(avatarUrl).pathname
+      : avatarUrl;
 
     if (!pathname.startsWith("/assets/avatar/")) {
       return "";
@@ -184,14 +211,17 @@ function resolvePublicAssetUrl(request: Request, assetUrl: string) {
   return new URL(trimmed, request.url).toString();
 }
 
-export async function handleAdmin(request: Request, env: Env): Promise<Response> {
+export async function handleAdmin(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const url = new URL(request.url);
 
   if (url.pathname === "/api/admin/session" && request.method === "GET") {
     const authenticated = isAuthenticated(request, env);
     const response = json({
       ok: true,
-      authenticated
+      authenticated,
     });
 
     if (authenticated) {
@@ -211,7 +241,7 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
     const response = json({
       ok: true,
-      authenticated: true
+      authenticated: true,
     });
     response.headers.append("set-cookie", createSessionCookie(request, env));
     return response;
@@ -219,7 +249,7 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
   if (url.pathname === "/api/admin/logout" && request.method === "POST") {
     const response = json({
-      ok: true
+      ok: true,
     });
     response.headers.append("set-cookie", clearSessionCookie(request));
     return response;
@@ -232,7 +262,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
     const siteConfig = await getSiteConfig(env);
     const formData = await request.formData();
-    const legacyFiles = formData.getAll("files[]").filter((entry): entry is File => entry instanceof File);
+    const legacyFiles = formData
+      .getAll("files[]")
+      .filter((entry): entry is File => entry instanceof File);
     const fileNames = parseFileNames(formData.get("fileNames"));
     const thumbnails = formData
       .getAll("thumbnails[]")
@@ -242,35 +274,42 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       .filter((entry): entry is File => entry instanceof File);
     const watermarkedDisplayFiles = formData
       .getAll("watermarkedDisplayFiles[]")
-      .map((entry) => (entry instanceof File && entry.size > 0 ? entry : undefined));
-    const exifRecords = formData
-      .getAll("exif[]")
-      .map((entry) => {
-        if (typeof entry !== "string") {
-          return {};
-        }
+      .map((entry) =>
+        entry instanceof File && entry.size > 0 ? entry : undefined,
+      );
+    const exifRecords = formData.getAll("exif[]").map((entry) => {
+      if (typeof entry !== "string") {
+        return {};
+      }
 
-        try {
-          return JSON.parse(entry) as {
-            takenAt?: string;
-            device?: string;
-            lens?: string;
-            location?: string;
-            exif?: Record<string, unknown>;
-          };
-        } catch {
-          return {};
-        }
-      });
+      try {
+        return JSON.parse(entry) as {
+          takenAt?: string;
+          device?: string;
+          lens?: string;
+          location?: string;
+          exif?: Record<string, unknown>;
+        };
+      } catch {
+        return {};
+      }
+    });
     const watermarkEnabled = formData.get("watermarkEnabled") === "true";
     const storeOriginalFiles = formData.get("storeOriginalFiles") === "true";
     const description = String(formData.get("description") ?? "");
     const showDateInfo = formData.get("showDateInfo") === "true";
     const showCameraInfo = formData.get("showCameraInfo") === "true";
     const showLocationInfo = formData.get("showLocationInfo") === "true";
-    const tags = parseTagsInput(formData.get("tags"), siteConfig.maxTagsPerPhoto);
-    const photoDrafts = parsePhotoDrafts(formData.get("photoDrafts"), siteConfig.maxTagsPerPhoto);
-    const normalizedFileNames = fileNames.length > 0 ? fileNames : legacyFiles.map((file) => file.name);
+    const tags = parseTagsInput(
+      formData.get("tags"),
+      siteConfig.maxTagsPerPhoto,
+    );
+    const photoDrafts = parsePhotoDrafts(
+      formData.get("photoDrafts"),
+      siteConfig.maxTagsPerPhoto,
+    );
+    const normalizedFileNames =
+      fileNames.length > 0 ? fileNames : legacyFiles.map((file) => file.name);
 
     if (!isWithinTextLimit(description.trim(), TEXT_LIMITS.photoDescription)) {
       return json(
@@ -278,9 +317,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           ok: false,
           uploaded: [],
           failed: [],
-          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。`
+          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -290,17 +329,21 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           ok: false,
           uploaded: [],
           failed: [],
-          error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`
+          error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (
       photoDrafts.some(
         (draft) =>
-          (draft.description && !isWithinTextLimit(draft.description.trim(), TEXT_LIMITS.photoDescription)) ||
-          hasTagLengthOverflow(draft.tags)
+          (draft.description &&
+            !isWithinTextLimit(
+              draft.description.trim(),
+              TEXT_LIMITS.photoDescription,
+            )) ||
+          hasTagLengthOverflow(draft.tags),
       )
     ) {
       return json(
@@ -308,9 +351,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           ok: false,
           uploaded: [],
           failed: [],
-          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符，单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`
+          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符，单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -320,9 +363,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           ok: false,
           uploaded: [],
           failed: [],
-          error: "未接收到任何图片文件。"
+          error: "未接收到任何图片文件。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -332,9 +375,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           ok: false,
           uploaded: [],
           failed: [],
-          error: `单次最多上传 ${siteConfig.maxUploadFiles} 张照片。`
+          error: `单次最多上传 ${siteConfig.maxUploadFiles} 张照片。`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -344,7 +387,10 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       normalizedFileNames.map((fileName, index) => ({
         ...(photoDrafts[index] ?? {}),
         fileName,
-        originalFile: siteConfig.uploadOriginalEnabled && storeOriginalFiles ? legacyFiles[index] : undefined,
+        originalFile:
+          siteConfig.uploadOriginalEnabled && storeOriginalFiles
+            ? legacyFiles[index]
+            : undefined,
         thumbnail: thumbnails[index],
         displayFile: displayFiles[index],
         watermarkedDisplayFile: watermarkedDisplayFiles[index],
@@ -354,14 +400,14 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
         showDateInfo,
         showCameraInfo,
         showLocationInfo,
-        watermarkEnabled
-      }))
+        watermarkEnabled,
+      })),
     );
 
     return json({
       ok: true,
       uploaded,
-      failed: []
+      failed: [],
     });
   }
 
@@ -372,26 +418,31 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
     const tag = url.searchParams.get("tag");
     try {
-      const items = await listPhotos(env, new URL(request.url).origin, tag, { includeHidden: true });
+      const items = await listPhotos(env, new URL(request.url).origin, tag, {
+        includeHidden: true,
+      });
 
       return json({
         items,
         page: 1,
         pageSize: 30,
-        hasMore: items.length >= 30
+        hasMore: items.length >= 30,
       });
     } catch {
       return json(
         {
           ok: false,
-          error: "加载现有照片失败。"
+          error: "加载现有照片失败。",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
 
-  if (url.pathname.startsWith("/api/admin/photos/") && request.method === "DELETE") {
+  if (
+    url.pathname.startsWith("/api/admin/photos/") &&
+    request.method === "DELETE"
+  ) {
     if (!isAuthenticated(request, env)) {
       return unauthorized("请先完成管理员登录。");
     }
@@ -402,20 +453,27 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: "缺少照片 ID。"
+          error: "缺少照片 ID。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const result = await deletePhotoById(env, id);
 
     return json(result, {
-      status: result.ok ? 200 : result.error === "照片不存在或已被删除。" ? 404 : 400
+      status: result.ok
+        ? 200
+        : result.error === "照片不存在或已被删除。"
+          ? 404
+          : 400,
     });
   }
 
-  if (url.pathname.startsWith("/api/admin/photos/") && request.method === "PATCH") {
+  if (
+    url.pathname.startsWith("/api/admin/photos/") &&
+    request.method === "PATCH"
+  ) {
     if (!isAuthenticated(request, env)) {
       return unauthorized("请先完成管理员登录。");
     }
@@ -426,24 +484,39 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: "缺少照片 ID。"
+          error: "缺少照片 ID。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     try {
-      const body = (await request.json()) as { description?: string; tags?: string[]; isHidden?: boolean };
+      const body = (await request.json()) as {
+        description?: string;
+        tags?: string[];
+        isHidden?: boolean;
+      };
 
       if (body.description !== undefined) {
         if (typeof body.description !== "string") {
-          return json({ ok: false, error: "照片备注格式错误。" }, { status: 400 });
+          return json(
+            { ok: false, error: "照片备注格式错误。" },
+            { status: 400 },
+          );
         }
 
-        if (!isWithinTextLimit(body.description.trim(), TEXT_LIMITS.photoDescription)) {
+        if (
+          !isWithinTextLimit(
+            body.description.trim(),
+            TEXT_LIMITS.photoDescription,
+          )
+        ) {
           return json(
-            { ok: false, error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。` },
-            { status: 400 }
+            {
+              ok: false,
+              error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。`,
+            },
+            { status: 400 },
           );
         }
       }
@@ -453,24 +526,32 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
           return json({ ok: false, error: "标签格式错误。" }, { status: 400 });
         }
 
-        const normalizedTags = body.tags.map((tag) => String(tag).trim()).filter(Boolean);
+        const normalizedTags = body.tags
+          .map((tag) => String(tag).trim())
+          .filter(Boolean);
         if (hasTagLengthOverflow(normalizedTags)) {
-          return json({ ok: false, error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。` }, { status: 400 });
+          return json(
+            {
+              ok: false,
+              error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
+            },
+            { status: 400 },
+          );
         }
       }
 
       const result = await updatePhotoById(env, id, body);
 
       return json(result, {
-        status: result.ok ? 200 : 400
+        status: result.ok ? 200 : 400,
       });
     } catch {
       return json(
         {
           ok: false,
-          error: "更新照片失败。"
+          error: "更新照片失败。",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
@@ -495,9 +576,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: "请先选择头像图片。"
+          error: "请先选择头像图片。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -505,29 +586,31 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: "头像必须是图片文件。"
+          error: "头像必须是图片文件。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const currentConfig = await getSiteConfig(env);
-    const previousFileName = extractAvatarFileName(currentConfig.photographerAvatarUrl);
+    const previousFileName = extractAvatarFileName(
+      currentConfig.photographerAvatarUrl,
+    );
     const stored = await storePhotographerAvatar(env, file);
 
     if (!stored.persisted || !stored.fileName) {
       return json(
         {
           ok: false,
-          error: "头像上传失败，当前环境未绑定对象存储。"
+          error: "头像上传失败，当前环境未绑定对象存储。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const avatarUrl = `/assets/avatar/${encodeURIComponent(stored.fileName)}`;
     const updateResult = await updateSiteConfig(env, {
-      photographerAvatarUrl: avatarUrl
+      photographerAvatarUrl: avatarUrl,
     });
 
     if (!updateResult.ok) {
@@ -535,9 +618,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: updateResult.error ?? "头像保存失败。"
+          error: updateResult.error ?? "头像保存失败。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -547,7 +630,7 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
 
     return json({
       ok: true,
-      url: resolvePublicAssetUrl(request, avatarUrl)
+      url: resolvePublicAssetUrl(request, avatarUrl),
     });
   }
 
@@ -559,7 +642,7 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
     const tags = await getTagPool(env);
     return json({
       ok: true,
-      tags
+      tags,
     });
   }
 
@@ -575,9 +658,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
         return json(
           {
             ok: false,
-            error: "标签名称不能为空。"
+            error: "标签名称不能为空。",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -585,9 +668,9 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
         return json(
           {
             ok: false,
-            error: `标签名称不能超过 ${TEXT_LIMITS.tagName} 个字符。`
+            error: `标签名称不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -598,26 +681,33 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
         return json(
           {
             ok: false,
-            error: `标签总数最多 ${siteConfig.maxTagPoolSize} 个。`
+            error: `标签总数最多 ${siteConfig.maxTagPoolSize} 个。`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
-      const tag = await createTagService(env, body.name.trim(), siteConfig.maxTagPoolSize);
+      const tag = await createTagService(
+        env,
+        body.name.trim(),
+        siteConfig.maxTagPoolSize,
+      );
       return json({ ok: true, tag });
     } catch {
       return json(
         {
           ok: false,
-          error: "创建标签失败。"
+          error: "创建标签失败。",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }
 
-  if (url.pathname.startsWith("/api/admin/tags/") && request.method === "DELETE") {
+  if (
+    url.pathname.startsWith("/api/admin/tags/") &&
+    request.method === "DELETE"
+  ) {
     if (!isAuthenticated(request, env)) {
       return unauthorized("请先完成管理员登录。");
     }
@@ -628,24 +718,24 @@ export async function handleAdmin(request: Request, env: Env): Promise<Response>
       return json(
         {
           ok: false,
-          error: "缺少标签 ID。"
+          error: "缺少标签 ID。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const result = await deleteTagService(env, id);
 
     return json(result, {
-      status: result.ok ? 200 : 400
+      status: result.ok ? 200 : 400,
     });
   }
 
   return json(
     {
       ok: false,
-      error: "Admin route scaffolded but not implemented"
+      error: "Admin route scaffolded but not implemented",
     },
-    { status: 501 }
+    { status: 501 },
   );
 }

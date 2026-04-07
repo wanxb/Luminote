@@ -6,7 +6,10 @@ import { getAdminSession, logoutAdmin } from "@/lib/api/admin-client";
 export const ADMIN_SESSION_IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const SESSION_REFRESH_THROTTLE_MS = 5 * 60 * 1000;
 
-export function useAdminSessionTimeout(hasSession: boolean, onExpired: () => void) {
+export function useAdminSessionTimeout(
+  hasSession: boolean,
+  onExpired: () => void,
+) {
   const timeoutIdRef = useRef<number | null>(null);
   const lastRefreshAtRef = useRef<number>(Date.now());
   const isHandlingExpiryRef = useRef(false);
@@ -75,7 +78,12 @@ export function useAdminSessionTimeout(hasSession: boolean, onExpired: () => voi
     lastRefreshAtRef.current = Date.now();
     resetIdleTimer();
 
-    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "wheel", "touchstart"];
+    const events: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "wheel",
+      "touchstart",
+    ];
 
     for (const eventName of events) {
       window.addEventListener(eventName, handleActivity, { passive: true });

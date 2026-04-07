@@ -1,5 +1,8 @@
 import type { Env } from "../index";
-import { getSiteConfig, updateSiteConfig } from "../services/site-config-service";
+import {
+  getSiteConfig,
+  updateSiteConfig,
+} from "../services/site-config-service";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
 
@@ -22,7 +25,7 @@ function validateTextField(
   maxLength: number,
   emptyMessage: string,
   tooLongMessage: string,
-  options?: { allowEmpty?: boolean }
+  options?: { allowEmpty?: boolean },
 ) {
   const trimmed = value.trim();
 
@@ -37,7 +40,10 @@ function validateTextField(
   return { ok: true as const, value: trimmed };
 }
 
-export async function handleSite(request: Request, env: Env): Promise<Response> {
+export async function handleSite(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   if (request.method === "PATCH") {
     return handleSiteUpdate(request, env);
   }
@@ -53,7 +59,10 @@ export async function handleSite(request: Request, env: Env): Promise<Response> 
     maxTagPoolSize: config.maxTagPoolSize,
     maxUploadFiles: config.maxUploadFiles,
     maxTagsPerPhoto: config.maxTagsPerPhoto,
-    photographerAvatarUrl: resolvePublicAssetUrl(request, config.photographerAvatarUrl),
+    photographerAvatarUrl: resolvePublicAssetUrl(
+      request,
+      config.photographerAvatarUrl,
+    ),
     photographerName: config.photographerName,
     photographerBio: config.photographerBio,
     photographerEmail: config.photographerEmail,
@@ -64,7 +73,7 @@ export async function handleSite(request: Request, env: Env): Promise<Response> 
     photographerInstagram: config.photographerInstagram,
     photographerInstagramUrl: config.photographerInstagramUrl,
     photographerCustomAccount: config.photographerCustomAccount,
-    photographerCustomAccountUrl: config.photographerCustomAccountUrl
+    photographerCustomAccountUrl: config.photographerCustomAccountUrl,
   });
 }
 
@@ -120,14 +129,17 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     const errors: string[] = [];
 
     if (body.siteTitle !== undefined) {
-      if (typeof body.siteTitle !== "string" || body.siteTitle.trim().length === 0) {
+      if (
+        typeof body.siteTitle !== "string" ||
+        body.siteTitle.trim().length === 0
+      ) {
         errors.push("站点标题不能为空。");
       } else {
         const result = validateTextField(
           body.siteTitle,
           TEXT_LIMITS.siteTitle,
           "站点标题不能为空。",
-          `站点标题不能超过 ${TEXT_LIMITS.siteTitle} 个字符。`
+          `站点标题不能超过 ${TEXT_LIMITS.siteTitle} 个字符。`,
         );
 
         if (!result.ok) {
@@ -147,7 +159,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.siteDescription,
           "站点简介格式错误。",
           `站点简介不能超过 ${TEXT_LIMITS.siteDescription} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -167,14 +179,17 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     }
 
     if (body.watermarkText !== undefined) {
-      if (typeof body.watermarkText !== "string" || body.watermarkText.trim().length === 0) {
+      if (
+        typeof body.watermarkText !== "string" ||
+        body.watermarkText.trim().length === 0
+      ) {
         errors.push("水印文本不能为空。");
       } else {
         const result = validateTextField(
           body.watermarkText,
           TEXT_LIMITS.watermarkText,
           "水印文本不能为空。",
-          `水印文本不能超过 ${TEXT_LIMITS.watermarkText} 个字符。`
+          `水印文本不能超过 ${TEXT_LIMITS.watermarkText} 个字符。`,
         );
 
         if (!result.ok) {
@@ -186,7 +201,10 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     }
 
     if (body.adminPassword !== undefined) {
-      if (typeof body.adminPassword !== "string" || body.adminPassword.length < 6) {
+      if (
+        typeof body.adminPassword !== "string" ||
+        body.adminPassword.length < 6
+      ) {
         errors.push("管理员密码至少需要 6 个字符。");
       } else if (!isWithinTextLimit(body.adminPassword, TEXT_LIMITS.password)) {
         errors.push(`管理员密码不能超过 ${TEXT_LIMITS.password} 个字符。`);
@@ -220,7 +238,10 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     }
 
     if (body.maxTagsPerPhoto !== undefined) {
-      if (!Number.isInteger(body.maxTagsPerPhoto) || body.maxTagsPerPhoto <= 0) {
+      if (
+        !Number.isInteger(body.maxTagsPerPhoto) ||
+        body.maxTagsPerPhoto <= 0
+      ) {
         errors.push("单张图片标签上限必须是正整数。");
       } else {
         updates.maxTagsPerPhoto = body.maxTagsPerPhoto;
@@ -236,7 +257,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.url,
           "摄影师头像链接格式错误。",
           `摄影师头像链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -256,7 +277,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.photographerName,
           "摄影师姓名格式错误。",
           `摄影师姓名不能超过 ${TEXT_LIMITS.photographerName} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -276,7 +297,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.photographerBio,
           "摄影师简介格式错误。",
           `摄影师简介不能超过 ${TEXT_LIMITS.photographerBio} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -296,7 +317,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.email,
           "邮箱格式错误。",
           `邮箱不能超过 ${TEXT_LIMITS.email} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -316,7 +337,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.accountName,
           "小红书账号格式错误。",
           `小红书账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -336,7 +357,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.url,
           "小红书链接格式错误。",
           `小红书链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -356,7 +377,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.accountName,
           "抖音账号格式错误。",
           `抖音账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -376,7 +397,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.url,
           "抖音链接格式错误。",
           `抖音链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -396,7 +417,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.accountName,
           "Instagram 账号格式错误。",
           `Instagram 账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -416,7 +437,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.url,
           "Instagram 链接格式错误。",
           `Instagram 链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -436,7 +457,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.accountName,
           "自定义账号名称格式错误。",
           `自定义账号名称不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -456,7 +477,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           TEXT_LIMITS.url,
           "自定义账号链接格式错误。",
           `自定义账号链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
-          { allowEmpty: true }
+          { allowEmpty: true },
         );
 
         if (!result.ok) {
@@ -471,9 +492,9 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       return json(
         {
           ok: false,
-          error: errors.join(" ")
+          error: errors.join(" "),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -483,23 +504,23 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       return json(
         {
           ok: false,
-          error: result.error ?? "保存配置失败。"
+          error: result.error ?? "保存配置失败。",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return json({
       ok: true,
-      message: "站点配置已更新。"
+      message: "站点配置已更新。",
     });
   } catch {
     return json(
       {
         ok: false,
-        error: "请求格式错误。"
+        error: "请求格式错误。",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

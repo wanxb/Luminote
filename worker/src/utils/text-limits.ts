@@ -9,7 +9,7 @@ export const TEXT_LIMITS = {
   accountName: 60,
   url: 500,
   tagName: 24,
-  photoDescription: 200
+  photoDescription: 200,
 } as const;
 
 export function isWithinTextLimit(value: string, maxLength: number) {

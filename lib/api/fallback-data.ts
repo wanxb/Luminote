@@ -20,5 +20,5 @@ export const fallbackSite: SiteResponse = {
   photographerInstagram: "",
   photographerInstagramUrl: "",
   photographerCustomAccount: "",
-  photographerCustomAccountUrl: ""
+  photographerCustomAccountUrl: "",
 };

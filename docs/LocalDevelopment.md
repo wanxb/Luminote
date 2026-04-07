@@ -4,8 +4,8 @@
 
 Luminote currently runs as two local processes:
 
-* Next.js front-end at `http://localhost:3000`
-* Cloudflare Worker API at `http://localhost:8787`
+- Next.js front-end at `http://localhost:3000`
+- Cloudflare Worker API at `http://localhost:8787`
 
 The front-end reads `NEXT_PUBLIC_API_BASE_URL` / `API_BASE_URL` and talks to the Worker for site data, gallery data, uploads and asset delivery.
 Admin APIs now use an `HttpOnly` session cookie, so front-end requests must include credentials.
@@ -68,11 +68,11 @@ API_BASE_URL=http://localhost:8787
 
 Current local defaults live in [`worker/wrangler.toml`](/e:/Projects/Luminote/worker/wrangler.toml):
 
-* `SITE_TITLE`
-* `WATERMARK_ENABLED_BY_DEFAULT`
-* `WATERMARK_TEXT`
-* `ADMIN_PASSWORD`
-* `ADMIN_SESSION_TOKEN`
+- `SITE_TITLE`
+- `WATERMARK_ENABLED_BY_DEFAULT`
+- `WATERMARK_TEXT`
+- `ADMIN_PASSWORD`
+- `ADMIN_SESSION_TOKEN`
 
 For local-only overrides, prefer `worker/.dev.vars` and keep secrets out of git.
 
@@ -125,10 +125,10 @@ bucket_name = "luminote-assets"
 
 With R2 bound, uploads will persist:
 
-* original image: `originals/{photoId}.{ext}`
-* thumbnail: `thumbs/{photoId}.webp`
-* display image: `display/{photoId}.jpg`
-* watermarked display image: `display-watermarked/{photoId}.jpg`
+- original image: `originals/{photoId}.{ext}`
+- thumbnail: `thumbs/{photoId}.webp`
+- display image: `display/{photoId}.jpg`
+- watermarked display image: `display-watermarked/{photoId}.jpg`
 
 Without R2, the Worker falls back to mock asset responses so the UI can still be developed.
 
@@ -136,25 +136,25 @@ Without R2, the Worker falls back to mock asset responses so the UI can still be
 
 The upload page currently performs image processing in the browser before submit:
 
-* generates thumbnail files
-* generates display files
-* optionally generates watermarked display files
-* extracts EXIF metadata
+- generates thumbnail files
+- generates display files
+- optionally generates watermarked display files
+- extracts EXIF metadata
 
 The Worker then:
 
-* validates admin auth
-* stores image variants into R2 when bound
-* writes metadata into D1 when bound
-* serves assets through `/assets/*`
+- validates admin auth
+- stores image variants into R2 when bound
+- writes metadata into D1 when bound
+- serves assets through `/assets/*`
 
 Current admin session endpoints:
 
-* `POST /api/admin/login`
-* `GET /api/admin/session`
-* `POST /api/admin/logout`
-* `POST /api/admin/photos`
-* `DELETE /api/admin/photos/:id`
+- `POST /api/admin/login`
+- `GET /api/admin/session`
+- `POST /api/admin/logout`
+- `POST /api/admin/photos`
+- `DELETE /api/admin/photos/:id`
 
 ## 9. Quick verification
 

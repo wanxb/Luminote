@@ -1,6 +1,11 @@
 import type { ExtractedExif } from "@/lib/upload/exif";
 import { getClientApiBaseUrl, getServerApiBaseUrl } from "@/lib/api/config";
-import type { PhotoDetail, PhotosResponse, SiteConfigResponse, SiteResponse } from "@/lib/api/types";
+import type {
+  PhotoDetail,
+  PhotosResponse,
+  SiteConfigResponse,
+  SiteResponse,
+} from "@/lib/api/types";
 
 export type AdminLoginResponse = {
   ok: boolean;
@@ -142,33 +147,33 @@ export async function loginAdmin(password: string) {
     method: "POST",
     credentials: "include",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
     },
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ password }),
   });
 
   return {
     ...((await response.json()) as AdminLoginResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function getAdminSession() {
   const response = await fetch(`${getClientApiBaseUrl()}/api/admin/session`, {
     method: "GET",
-    credentials: "include"
+    credentials: "include",
   });
 
   return {
     ...((await response.json()) as AdminSessionResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function logoutAdmin() {
   const response = await fetch(`${getClientApiBaseUrl()}/api/admin/logout`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
   });
 
   return (await response.json()) as { ok: boolean };
@@ -177,7 +182,10 @@ export async function logoutAdmin() {
 export async function uploadPhotos(payload: UploadPayload) {
   const formData = new FormData();
   formData.set("description", payload.description);
-  formData.set("fileNames", JSON.stringify(payload.files.map((file) => file.name)));
+  formData.set(
+    "fileNames",
+    JSON.stringify(payload.files.map((file) => file.name)),
+  );
   formData.set("tags", JSON.stringify(payload.tags));
   if (payload.photoDrafts) {
     formData.set("photoDrafts", JSON.stringify(payload.photoDrafts));
@@ -186,7 +194,10 @@ export async function uploadPhotos(payload: UploadPayload) {
   formData.set("showCameraInfo", String(payload.showCameraInfo));
   formData.set("showLocationInfo", String(payload.showLocationInfo));
   formData.set("watermarkEnabled", String(payload.watermarkEnabled));
-  formData.set("storeOriginalFiles", String(payload.storeOriginalFiles ?? false));
+  formData.set(
+    "storeOriginalFiles",
+    String(payload.storeOriginalFiles ?? false),
+  );
 
   if (payload.storeOriginalFiles) {
     for (const file of payload.files) {
@@ -217,36 +228,39 @@ export async function uploadPhotos(payload: UploadPayload) {
   const response = await fetch(`${getClientApiBaseUrl()}/api/admin/photos`, {
     method: "POST",
     credentials: "include",
-    body: formData
+    body: formData,
   });
 
   return {
     ...((await response.json()) as UploadPhotosResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function deletePhoto(id: string) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/photos/${id}`, {
-    method: "DELETE",
-    credentials: "include"
-  });
+  const response = await fetch(
+    `${getClientApiBaseUrl()}/api/admin/photos/${id}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
 
   return {
     ...((await response.json()) as DeletePhotoResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function getAdminTags() {
   const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags`, {
     method: "GET",
-    credentials: "include"
+    credentials: "include",
   });
 
   return {
     ...((await response.json()) as GetTagPoolResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
@@ -255,42 +269,48 @@ export async function createTag(name: string) {
     method: "POST",
     credentials: "include",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
     },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name }),
   });
 
   return {
     ...((await response.json()) as CreateTagResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function deleteTag(id: string) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags/${id}`, {
-    method: "DELETE",
-    credentials: "include"
-  });
+  const response = await fetch(
+    `${getClientApiBaseUrl()}/api/admin/tags/${id}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
 
   return {
     ...((await response.json()) as DeleteTagResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 export async function updatePhoto(id: string, payload: UpdatePhotoPayload) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/photos/${id}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: {
-      "content-type": "application/json"
+  const response = await fetch(
+    `${getClientApiBaseUrl()}/api/admin/photos/${id}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload)
-  });
+  );
 
   return {
     ...((await response.json()) as UpdatePhotoResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
@@ -299,14 +319,14 @@ export async function updateSiteConfig(payload: UpdateSitePayload) {
     method: "PATCH",
     credentials: "include",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
   return {
     ...((await response.json()) as UpdateSiteResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
@@ -314,22 +334,25 @@ export async function uploadPhotographerAvatar(file: File) {
   const formData = new FormData();
   formData.set("file", file);
 
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/site/avatar`, {
-    method: "POST",
-    credentials: "include",
-    body: formData
-  });
+  const response = await fetch(
+    `${getClientApiBaseUrl()}/api/admin/site/avatar`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    },
+  );
 
   return {
     ...((await response.json()) as UploadPhotographerAvatarResponse),
-    status: response.status
+    status: response.status,
   };
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getServerApiBaseUrl()}${path}`, {
     method: "GET",
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -342,7 +365,7 @@ async function fetchJson<T>(path: string): Promise<T> {
 async function fetchClientJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getClientApiBaseUrl()}${path}`, {
     method: "GET",
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -358,7 +381,8 @@ export async function getSite() {
   } catch {
     return {
       siteTitle: "Luminote",
-      siteDescription: "A lightweight home for photography that lets the work breathe.",
+      siteDescription:
+        "A lightweight home for photography that lets the work breathe.",
       watermarkEnabledByDefault: true,
       watermarkText: "© Luminote",
       uploadOriginalEnabled: false,
@@ -376,7 +400,7 @@ export async function getSite() {
       photographerInstagram: "",
       photographerInstagramUrl: "",
       photographerCustomAccount: "",
-      photographerCustomAccountUrl: ""
+      photographerCustomAccountUrl: "",
     };
   }
 }
@@ -388,7 +412,7 @@ export async function getPhotos(tag?: string) {
   const rawResponse = await fetch(url, {
     method: "GET",
     credentials: "include",
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!rawResponse.ok) {

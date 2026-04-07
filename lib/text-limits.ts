@@ -11,5 +11,5 @@ export const TEXT_LIMITS = {
   url: 500,
   tagName: 24,
   photoDescription: 200,
-  photoTagsInput: 200
+  photoTagsInput: 200,
 } as const;

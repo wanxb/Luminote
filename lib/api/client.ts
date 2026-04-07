@@ -1,11 +1,18 @@
 import { fallbackSite } from "@/lib/api/fallback-data";
 import { getClientApiBaseUrl, getServerApiBaseUrl } from "@/lib/api/config";
-import type { PhotoDetail, PhotosResponse, SiteResponse } from "@/lib/api/types";
+import type {
+  PhotoDetail,
+  PhotosResponse,
+  SiteResponse,
+} from "@/lib/api/types";
 
 const API_TIMEOUT_MS = 8000;
 
 function createAbortSignal(timeoutMs: number) {
-  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+  if (
+    typeof AbortSignal !== "undefined" &&
+    typeof AbortSignal.timeout === "function"
+  ) {
     return AbortSignal.timeout(timeoutMs);
   }
 
@@ -16,7 +23,7 @@ async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getServerApiBaseUrl()}${path}`, {
     method: "GET",
     cache: "no-store",
-    signal: createAbortSignal(API_TIMEOUT_MS)
+    signal: createAbortSignal(API_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -30,7 +37,7 @@ async function fetchClientJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getClientApiBaseUrl()}${path}`, {
     method: "GET",
     cache: "no-store",
-    signal: createAbortSignal(API_TIMEOUT_MS)
+    signal: createAbortSignal(API_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -50,7 +57,9 @@ export async function getSite() {
 
 export async function getPhotos(tag?: string) {
   try {
-    const url = tag ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}` : "/api/photos?page=1&pageSize=30";
+    const url = tag
+      ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}`
+      : "/api/photos?page=1&pageSize=30";
     const response = await fetchJson<PhotosResponse>(url);
     return response.items;
   } catch {

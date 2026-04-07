@@ -64,11 +64,19 @@ type CreatedPhoto = {
   persisted: boolean;
 };
 
-function buildMockAssetUrl(origin: string, variant: "thumb" | "display" | "watermarked", id: string) {
+function buildMockAssetUrl(
+  origin: string,
+  variant: "thumb" | "display" | "watermarked",
+  id: string,
+) {
   return `${origin}/mock-storage/${variant}/${id}`;
 }
 
-function buildAssetUrl(origin: string, variant: "thumb" | "display" | "display-watermarked", id: string) {
+function buildAssetUrl(
+  origin: string,
+  variant: "thumb" | "display" | "display-watermarked",
+  id: string,
+) {
   return `${origin}/assets/${variant}/${id}`;
 }
 
@@ -90,7 +98,9 @@ function parseTagsJson(tagsJson: string | null) {
 }
 
 function extractPhotoIdFromObjectKey(key: string) {
-  const match = key.match(/^(?:thumbs|display|display-watermarked)\/(photo_[^./]+(?:_[^./]+)?)\.(?:webp|jpg)$/);
+  const match = key.match(
+    /^(?:thumbs|display|display-watermarked)\/(photo_[^./]+(?:_[^./]+)?)\.(?:webp|jpg)$/,
+  );
   return match?.[1] ?? null;
 }
 
@@ -111,7 +121,7 @@ async function listPhotosFromBucket(env: Env, origin: string) {
   const [watermarkedObjects, displayObjects, thumbObjects] = await Promise.all([
     env.PHOTOS_BUCKET.list({ prefix: "display-watermarked/", limit: 1000 }),
     env.PHOTOS_BUCKET.list({ prefix: "display/", limit: 1000 }),
-    env.PHOTOS_BUCKET.list({ prefix: "thumbs/", limit: 1000 })
+    env.PHOTOS_BUCKET.list({ prefix: "thumbs/", limit: 1000 }),
   ]);
 
   const photoMap = new Map<
@@ -137,7 +147,7 @@ async function listPhotosFromBucket(env: Env, origin: string) {
       uploadedAt: new Date(object.uploaded).getTime(),
       hasThumb: photoMap.get(id)?.hasThumb ?? false,
       hasDisplay: photoMap.get(id)?.hasDisplay ?? false,
-      hasWatermarked: true
+      hasWatermarked: true,
     });
   }
 
@@ -154,7 +164,7 @@ async function listPhotosFromBucket(env: Env, origin: string) {
       uploadedAt: current?.uploadedAt ?? new Date(object.uploaded).getTime(),
       hasThumb: current?.hasThumb ?? false,
       hasDisplay: true,
-      hasWatermarked: current?.hasWatermarked ?? false
+      hasWatermarked: current?.hasWatermarked ?? false,
     });
   }
 
@@ -171,7 +181,7 @@ async function listPhotosFromBucket(env: Env, origin: string) {
       uploadedAt: current?.uploadedAt ?? new Date(object.uploaded).getTime(),
       hasThumb: true,
       hasDisplay: current?.hasDisplay ?? false,
-      hasWatermarked: current?.hasWatermarked ?? false
+      hasWatermarked: current?.hasWatermarked ?? false,
     });
   }
 
@@ -180,13 +190,17 @@ async function listPhotosFromBucket(env: Env, origin: string) {
     .slice(0, 30)
     .map((item) => ({
       id: item.id,
-      thumbUrl: item.hasThumb ? buildAssetUrl(origin, "thumb", item.id) : buildAssetUrl(origin, "display", item.id),
+      thumbUrl: item.hasThumb
+        ? buildAssetUrl(origin, "thumb", item.id)
+        : buildAssetUrl(origin, "display", item.id),
       displayUrl: buildAssetUrl(origin, "display", item.id),
-      watermarkedDisplayUrl: item.hasWatermarked ? buildAssetUrl(origin, "display-watermarked", item.id) : undefined,
+      watermarkedDisplayUrl: item.hasWatermarked
+        ? buildAssetUrl(origin, "display-watermarked", item.id)
+        : undefined,
       watermarkEnabled: item.hasWatermarked,
       isHidden: false,
       description: undefined,
-      tags: []
+      tags: [],
     }));
 }
 
@@ -198,7 +212,11 @@ async function ensurePhotoVisibilityColumn(env: Env) {
   if (!ensurePhotoVisibilityColumnPromise) {
     ensurePhotoVisibilityColumnPromise = (async () => {
       try {
-        await env.DB!.prepare("ALTER TABLE photos ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0").run();
+        await env
+          .DB!.prepare(
+            "ALTER TABLE photos ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0",
+          )
+          .run();
       } catch {
         // Ignore if the column already exists or the database is managed elsewhere.
       }
@@ -212,7 +230,7 @@ export async function listPhotos(
   env: Env,
   origin: string,
   tag: string | null = null,
-  options?: { includeHidden?: boolean }
+  options?: { includeHidden?: boolean },
 ) {
   if (!env.DB) {
     return tag ? [] : listPhotosFromBucket(env, origin);
@@ -242,7 +260,9 @@ export async function listPhotos(
   query += ` ORDER BY created_at DESC LIMIT 30`;
 
   try {
-    const result = await env.DB.prepare(query).bind(...values).all<PersistedPhotoRow>();
+    const result = await env.DB.prepare(query)
+      .bind(...values)
+      .all<PersistedPhotoRow>();
     const rows = result.results ?? [];
 
     if (rows.length === 0 && !tag) {
@@ -252,20 +272,26 @@ export async function listPhotos(
     return rows.map((row) => ({
       id: row.id,
       thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
-      displayUrl: row.display_url || buildMockAssetUrl(origin, "display", row.id),
+      displayUrl:
+        row.display_url || buildMockAssetUrl(origin, "display", row.id),
       watermarkedDisplayUrl: row.watermarked_display_url || undefined,
       watermarkEnabled: Boolean(row.watermark_enabled),
       isHidden: Boolean(row.is_hidden),
       takenAt: row.taken_at ?? undefined,
       description: row.description ?? undefined,
-      tags: parseTagsJson(row.tags_json)
+      tags: parseTagsJson(row.tags_json),
     }));
   } catch {
     return tag ? [] : listPhotosFromBucket(env, origin);
   }
 }
 
-export async function getPhotoById(env: Env, origin: string, id: string, options?: { includeHidden?: boolean }) {
+export async function getPhotoById(
+  env: Env,
+  origin: string,
+  id: string,
+  options?: { includeHidden?: boolean },
+) {
   if (!env.DB) {
     const bucketPhotos = await listPhotosFromBucket(env, origin);
     const bucketPhoto = bucketPhotos.find((photo) => photo.id === id);
@@ -297,7 +323,7 @@ export async function getPhotoById(env: Env, origin: string, id: string, options
         show_location_info
        FROM photos
        WHERE id = ?
-       LIMIT 1`
+       LIMIT 1`,
     )
       .bind(id)
       .first<PhotoDetailRow>();
@@ -326,21 +352,25 @@ export async function getPhotoById(env: Env, origin: string, id: string, options
     isHidden: Boolean(row.is_hidden),
     takenAt: row.taken_at ?? undefined,
     description: row.description ?? undefined,
-    device: row.show_camera_info ? row.device ?? undefined : undefined,
-    lens: row.show_camera_info ? row.lens ?? undefined : undefined,
-    location: row.show_location_info ? row.location ?? undefined : undefined,
+    device: row.show_camera_info ? (row.device ?? undefined) : undefined,
+    lens: row.show_camera_info ? (row.lens ?? undefined) : undefined,
+    location: row.show_location_info ? (row.location ?? undefined) : undefined,
     exif: row.exif_json ? JSON.parse(row.exif_json) : {},
-    tags: parseTagsJson(row.tags_json)
+    tags: parseTagsJson(row.tags_json),
   };
 }
 
-export async function createPhotos(env: Env, origin: string, inputs: CreatePhotoInput[]) {
+export async function createPhotos(
+  env: Env,
+  origin: string,
+  inputs: CreatePhotoInput[],
+) {
   const created: CreatedPhoto[] = inputs.map((input, index) => ({
     id: createPhotoId(index),
     fileName: input.fileName,
     watermarkEnabled: input.watermarkEnabled,
     tags: input.tags,
-    persisted: Boolean(env.DB)
+    persisted: Boolean(env.DB),
   }));
 
   if (!env.DB || created.length === 0) {
@@ -357,9 +387,9 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
         original: inputs[index].originalFile,
         thumbnail: inputs[index].thumbnail,
         display: inputs[index].displayFile,
-        watermarkedDisplay: inputs[index].watermarkedDisplayFile
-      })
-    )
+        watermarkedDisplay: inputs[index].watermarkedDisplayFile,
+      }),
+    ),
   );
   const statements = created.map((photo, index) => {
     const input = inputs[index];
@@ -376,8 +406,9 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
         : buildMockAssetUrl(origin, "watermarked", photo.id)
       : null;
 
-    return env.DB!.prepare(
-      `INSERT INTO photos (
+    return env
+      .DB!.prepare(
+        `INSERT INTO photos (
         id,
         original_file_name,
         title,
@@ -398,29 +429,30 @@ export async function createPhotos(env: Env, origin: string, inputs: CreatePhoto
         show_location_info,
         watermark_enabled,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      photo.id,
-      input.fileName,
-      "",
-      input.description,
-      storage.originalKey ? storage.originalKey : displayUrl,
-      thumbUrl,
-      displayUrl,
-      watermarkedDisplayUrl,
-      input.exif?.takenAt ?? null,
-      input.exif?.device ?? null,
-      input.exif?.lens ?? null,
-      input.exif?.location ?? null,
-      input.exif?.exif ? JSON.stringify(input.exif.exif) : null,
-      JSON.stringify(input.tags),
-      0,
-      input.showCameraInfo ? 1 : 0,
-      input.showDateInfo ? 1 : 0,
-      input.showLocationInfo ? 1 : 0,
-      input.watermarkEnabled ? 1 : 0,
-      createdAt
-    );
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        photo.id,
+        input.fileName,
+        "",
+        input.description,
+        storage.originalKey ? storage.originalKey : displayUrl,
+        thumbUrl,
+        displayUrl,
+        watermarkedDisplayUrl,
+        input.exif?.takenAt ?? null,
+        input.exif?.device ?? null,
+        input.exif?.lens ?? null,
+        input.exif?.location ?? null,
+        input.exif?.exif ? JSON.stringify(input.exif.exif) : null,
+        JSON.stringify(input.tags),
+        0,
+        input.showCameraInfo ? 1 : 0,
+        input.showDateInfo ? 1 : 0,
+        input.showLocationInfo ? 1 : 0,
+        input.watermarkEnabled ? 1 : 0,
+        createdAt,
+      );
   });
 
   await env.DB.batch(statements);
@@ -434,18 +466,22 @@ export async function deletePhotoById(env: Env, id: string) {
       ok: false,
       deleted: false,
       persisted: false,
-      error: "当前环境未绑定 D1，无法执行真实删除。"
+      error: "当前环境未绑定 D1，无法执行真实删除。",
     };
   }
 
-  const existing = await env.DB.prepare(`SELECT id FROM photos WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
+  const existing = await env.DB.prepare(
+    `SELECT id FROM photos WHERE id = ? LIMIT 1`,
+  )
+    .bind(id)
+    .first<{ id: string }>();
 
   if (!existing) {
     return {
       ok: false,
       deleted: false,
       persisted: true,
-      error: "照片不存在或已被删除。"
+      error: "照片不存在或已被删除。",
     };
   }
 
@@ -455,32 +491,36 @@ export async function deletePhotoById(env: Env, id: string) {
   return {
     ok: true,
     deleted: true,
-    persisted: true
+    persisted: true,
   };
 }
 
 export async function updatePhotoById(
   env: Env,
   id: string,
-  payload: { description?: string; tags?: string[]; isHidden?: boolean }
+  payload: { description?: string; tags?: string[]; isHidden?: boolean },
 ) {
   if (!env.DB) {
     return {
       ok: false,
       persisted: false,
-      error: "当前环境未绑定 D1，无法执行更新。"
+      error: "当前环境未绑定 D1，无法执行更新。",
     };
   }
 
   await ensurePhotoVisibilityColumn(env);
 
-  const existing = await env.DB.prepare(`SELECT id FROM photos WHERE id = ? LIMIT 1`).bind(id).first<{ id: string }>();
+  const existing = await env.DB.prepare(
+    `SELECT id FROM photos WHERE id = ? LIMIT 1`,
+  )
+    .bind(id)
+    .first<{ id: string }>();
 
   if (!existing) {
     return {
       ok: false,
       persisted: true,
-      error: "照片不存在。"
+      error: "照片不存在。",
     };
   }
 
@@ -505,16 +545,18 @@ export async function updatePhotoById(
   if (updates.length === 0) {
     return {
       ok: true,
-      persisted: true
+      persisted: true,
     };
   }
 
   values.push(id);
 
-  await env.DB.prepare(`UPDATE photos SET ${updates.join(", ")} WHERE id = ?`).bind(...values).run();
+  await env.DB.prepare(`UPDATE photos SET ${updates.join(", ")} WHERE id = ?`)
+    .bind(...values)
+    .run();
 
   return {
     ok: true,
-    persisted: true
+    persisted: true,
   };
 }
