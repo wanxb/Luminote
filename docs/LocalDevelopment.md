@@ -162,5 +162,5 @@ Recommended checks after local setup:
 
 1. Open `/` and confirm gallery data loads from Worker.
 2. Open a photo and confirm Lightbox requests `/api/photos/:id`.
-3. Open `/upload`, log in, upload one image, and confirm the Worker returns a persisted photo id.
+3. Open `/admin`, log in, jump to `/dashboard`, upload one image, and confirm the Worker returns a persisted photo id.
 4. If R2 is bound, open `/assets/display/{id}` and `/assets/display-watermarked/{id}` to confirm both variants are reachable.

@@ -1,5 +1,7 @@
 function getVariantConfig(variant: string) {
   switch (variant) {
+    case "avatar":
+      return { width: 640, height: 640, label: "AVATAR", fill: "#b69073" };
     case "thumb":
       return { width: 720, height: 900, label: "THUMB", fill: "#d9c8ad" };
     case "watermarked":

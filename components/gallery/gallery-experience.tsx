@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
 import { getPhotoDetail, getPhotos } from "@/lib/api/client";
+import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
 import type { PhotoDetail, PhotoSummary } from "@/lib/api/types";
 
 type GalleryExperienceProps = {
@@ -21,6 +22,7 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(photos);
   const [isFiltering, setIsFiltering] = useState(false);
+  const activePhotos = selectedTag === null ? photos : filteredPhotos;
 
   useEffect(() => {
     if (selectedId === null) {
@@ -30,6 +32,14 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
     let active = true;
     setIsLoading(true);
     setError(null);
+
+    if (isDefaultGalleryPhotoId(selectedId)) {
+      setDetail(getDefaultGalleryPhotoDetail(selectedId));
+      setIsLoading(false);
+      return () => {
+        active = false;
+      };
+    }
 
     void getPhotoDetail(selectedId)
       .then((response) => {
@@ -65,37 +75,21 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
   }, [selectedId]);
 
   useEffect(() => {
+    setFilteredPhotos(photos);
+  }, [photos]);
+
+  useEffect(() => {
     if (selectedTag === null) {
       setFilteredPhotos(photos);
+      setIsFiltering(false);
       return;
     }
 
-    let active = true;
     setIsFiltering(true);
 
-    getPhotos(selectedTag)
-      .then((result) => {
-        if (!active) {
-          return;
-        }
-
-        setFilteredPhotos(result);
-      })
-      .catch(() => {
-        if (active) {
-          setFilteredPhotos([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setIsFiltering(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedTag]);
+    setFilteredPhotos(photos.filter((photo) => photo.tags?.includes(selectedTag)));
+    setIsFiltering(false);
+  }, [photos, selectedTag]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -142,57 +136,28 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
     };
   }, [selectedId]);
 
-  useEffect(() => {
-    if (selectedTag === null) {
-      setFilteredPhotos(photos);
-      return;
-    }
-
-    let active = true;
-    setIsFiltering(true);
-
-    getPhotos(selectedTag)
-      .then((result) => {
-        if (!active) {
-          return;
-        }
-
-        setFilteredPhotos(result);
-      })
-      .catch(() => {
-        if (active) {
-          setFilteredPhotos([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setIsFiltering(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedTag]);
-
   const selectedSummary =
-    selectedIndex !== null ? photos[selectedIndex] : selectedId ? photos.find((photo) => photo.id === selectedId) : null;
+    selectedIndex !== null
+      ? activePhotos[selectedIndex]
+      : selectedId
+        ? activePhotos.find((photo) => photo.id === selectedId) ?? photos.find((photo) => photo.id === selectedId)
+        : null;
 
   const activePhoto = detail && detail.id === selectedId ? detail : selectedSummary;
 
   function selectPhoto(nextIndex: number) {
-    if (nextIndex < 0 || nextIndex >= photos.length) {
+    if (nextIndex < 0 || nextIndex >= activePhotos.length) {
       return;
     }
 
     setSelectedIndex(nextIndex);
-    setSelectedId(photos[nextIndex].id);
+    setSelectedId(activePhotos[nextIndex].id);
     setDetail(null);
     setError(null);
   }
 
   function handleSelect(photoId: string) {
-    selectPhoto(photos.findIndex((photo) => photo.id === photoId));
+    selectPhoto(activePhotos.findIndex((photo) => photo.id === photoId));
   }
 
   function handleClose() {
@@ -208,7 +173,7 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
       return;
     }
 
-    selectPhoto((selectedIndex + 1) % photos.length);
+    selectPhoto((selectedIndex + 1) % activePhotos.length);
   }
 
   function handlePrevious() {
@@ -216,7 +181,7 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
       return;
     }
 
-    selectPhoto((selectedIndex - 1 + photos.length) % photos.length);
+    selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
   }
 
   return (
@@ -251,10 +216,11 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
           ))}
         </div>
       )}
-      <GalleryGrid photos={filteredPhotos} activePhotoId={selectedId} onSelect={handleSelect} />
+      {isFiltering ? <p className="mb-4 text-sm text-ink/70">正在筛选...</p> : null}
+      <GalleryGrid photos={activePhotos} activePhotoId={selectedId} onSelect={handleSelect} />
       <LightboxShell
         photo={activePhoto ?? null}
-        photos={photos}
+        photos={activePhotos}
         activeIndex={selectedIndex}
         isImmersive={isImmersive}
         isOpen={selectedId !== null}
@@ -265,7 +231,7 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
         onPrevious={handlePrevious}
         onSelect={selectPhoto}
         onToggleImmersive={() => setIsImmersive((current) => !current)}
-        hasMultiple={photos.length > 1}
+        hasMultiple={activePhotos.length > 1}
       />
     </>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loginAdmin, getAdminSession } from "@/lib/api/admin-client";
+import { TEXT_LIMITS } from "@/lib/text-limits";
 
 export function AdminLoginShell() {
   const [username, setUsername] = useState("");
@@ -21,7 +22,7 @@ export function AdminLoginShell() {
         }
 
         if (result.authenticated) {
-          window.location.href = "/admin/dashboard";
+          window.location.href = "/dashboard";
           return;
         }
 
@@ -58,7 +59,7 @@ export function AdminLoginShell() {
         return;
       }
 
-      window.location.href = "/admin/dashboard";
+      window.location.href = "/dashboard";
     } catch {
       setLoginError("登录请求失败，请确认 Worker 是否已启动。");
     } finally {
@@ -89,6 +90,7 @@ export function AdminLoginShell() {
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
+              maxLength={TEXT_LIMITS.adminUsername}
               className="w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ember"
               placeholder="输入管理员账号"
             />
@@ -100,6 +102,7 @@ export function AdminLoginShell() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              maxLength={TEXT_LIMITS.password}
               className="w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ember"
               placeholder="输入管理员密码"
             />

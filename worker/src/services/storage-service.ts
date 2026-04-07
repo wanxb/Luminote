@@ -16,16 +16,15 @@ function objectKey(id: string, variant: StoredVariant, extension = "jpg") {
   }
 }
 
-function inferExtension(name: string) {
-  const match = name.toLowerCase().match(/\.([a-z0-9]+)$/);
-  return match?.[1] ?? "jpg";
+function avatarObjectKey(fileName: string) {
+  return `avatars/${fileName}`;
 }
 
 export async function storePhotoObjects(
   env: Env,
   payload: {
     id: string;
-    original: File;
+    original?: File;
     thumbnail?: File;
     display?: File;
     watermarkedDisplay?: File;
@@ -41,17 +40,19 @@ export async function storePhotoObjects(
     };
   }
 
-  const originalExtension = inferExtension(payload.original.name);
-  const originalKey = objectKey(payload.id, "original", originalExtension);
+  const originalExtension = payload.original ? inferExtension(payload.original.name) : "jpg";
+  const originalKey = payload.original ? objectKey(payload.id, "original", originalExtension) : "";
   const thumbKey = objectKey(payload.id, "thumb");
   const displayKey = objectKey(payload.id, "display");
   const watermarkedDisplayKey = objectKey(payload.id, "display-watermarked");
 
-  await env.PHOTOS_BUCKET.put(originalKey, payload.original.stream(), {
-    httpMetadata: {
-      contentType: payload.original.type || "application/octet-stream"
-    }
-  });
+  if (payload.original) {
+    await env.PHOTOS_BUCKET.put(originalKey, payload.original.stream(), {
+      httpMetadata: {
+        contentType: payload.original.type || "application/octet-stream"
+      }
+    });
+  }
 
   if (payload.thumbnail) {
     await env.PHOTOS_BUCKET.put(thumbKey, payload.thumbnail.stream(), {
@@ -86,6 +87,11 @@ export async function storePhotoObjects(
   };
 }
 
+function inferExtension(name: string) {
+  const match = name.toLowerCase().match(/\.([a-z0-9]+)$/);
+  return match?.[1] ?? "jpg";
+}
+
 export async function getPhotoObject(env: Env, variant: AssetVariant, id: string) {
   if (!env.PHOTOS_BUCKET) {
     return null;
@@ -100,6 +106,45 @@ export async function getPhotoObject(env: Env, variant: AssetVariant, id: string
   }
 
   return env.PHOTOS_BUCKET.get(objectKey(id, "display-watermarked"));
+}
+
+export async function storePhotographerAvatar(env: Env, file: File) {
+  if (!env.PHOTOS_BUCKET) {
+    return {
+      persisted: false,
+      fileName: ""
+    };
+  }
+
+  const extension = inferExtension(file.name);
+  const fileName = `avatar_${Date.now()}_${crypto.randomUUID()}.${extension}`;
+
+  await env.PHOTOS_BUCKET.put(avatarObjectKey(fileName), file.stream(), {
+    httpMetadata: {
+      contentType: file.type || "application/octet-stream"
+    }
+  });
+
+  return {
+    persisted: true,
+    fileName
+  };
+}
+
+export async function getAvatarObject(env: Env, fileName: string) {
+  if (!env.PHOTOS_BUCKET) {
+    return null;
+  }
+
+  return env.PHOTOS_BUCKET.get(avatarObjectKey(fileName));
+}
+
+export async function deleteAvatarObject(env: Env, fileName: string) {
+  if (!env.PHOTOS_BUCKET || !fileName) {
+    return;
+  }
+
+  await env.PHOTOS_BUCKET.delete(avatarObjectKey(fileName));
 }
 
 export async function deletePhotoObjects(env: Env, id: string) {

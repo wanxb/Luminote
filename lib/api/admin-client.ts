@@ -46,12 +46,35 @@ export type UpdateSiteResponse = {
   status?: number;
 };
 
+export type UploadPhotographerAvatarResponse = {
+  ok: boolean;
+  url?: string;
+  error?: string;
+  status?: number;
+};
+
 export type UpdateSitePayload = {
   siteTitle?: string;
   siteDescription?: string;
   watermarkEnabledByDefault?: boolean;
   watermarkText?: string;
   adminPassword?: string;
+  uploadOriginalEnabled?: boolean;
+  maxTagPoolSize?: number;
+  maxUploadFiles?: number;
+  maxTagsPerPhoto?: number;
+  photographerAvatarUrl?: string;
+  photographerName?: string;
+  photographerBio?: string;
+  photographerEmail?: string;
+  photographerXiaohongshu?: string;
+  photographerXiaohongshuUrl?: string;
+  photographerDouyin?: string;
+  photographerDouyinUrl?: string;
+  photographerInstagram?: string;
+  photographerInstagramUrl?: string;
+  photographerCustomAccount?: string;
+  photographerCustomAccountUrl?: string;
 };
 
 export type TagPool = {
@@ -86,6 +109,7 @@ export type DeleteTagResponse = {
 export type UpdatePhotoPayload = {
   description?: string;
   tags?: string[];
+  isHidden?: boolean;
 };
 
 export type UpdatePhotoResponse = {
@@ -102,10 +126,15 @@ export type UploadPayload = {
   exifRecords: ExtractedExif[];
   description: string;
   tags: string[];
+  photoDrafts?: Array<{
+    description?: string;
+    tags: string[];
+  }>;
   showDateInfo: boolean;
   showCameraInfo: boolean;
   showLocationInfo: boolean;
   watermarkEnabled: boolean;
+  storeOriginalFiles?: boolean;
 };
 
 export async function loginAdmin(password: string) {
@@ -148,14 +177,21 @@ export async function logoutAdmin() {
 export async function uploadPhotos(payload: UploadPayload) {
   const formData = new FormData();
   formData.set("description", payload.description);
+  formData.set("fileNames", JSON.stringify(payload.files.map((file) => file.name)));
   formData.set("tags", JSON.stringify(payload.tags));
+  if (payload.photoDrafts) {
+    formData.set("photoDrafts", JSON.stringify(payload.photoDrafts));
+  }
   formData.set("showDateInfo", String(payload.showDateInfo));
   formData.set("showCameraInfo", String(payload.showCameraInfo));
   formData.set("showLocationInfo", String(payload.showLocationInfo));
   formData.set("watermarkEnabled", String(payload.watermarkEnabled));
+  formData.set("storeOriginalFiles", String(payload.storeOriginalFiles ?? false));
 
-  for (const file of payload.files) {
-    formData.append("files[]", file);
+  if (payload.storeOriginalFiles) {
+    for (const file of payload.files) {
+      formData.append("files[]", file);
+    }
   }
 
   for (const thumbnail of payload.thumbnails) {
@@ -274,6 +310,22 @@ export async function updateSiteConfig(payload: UpdateSitePayload) {
   };
 }
 
+export async function uploadPhotographerAvatar(file: File) {
+  const formData = new FormData();
+  formData.set("file", file);
+
+  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/site/avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: formData
+  });
+
+  return {
+    ...((await response.json()) as UploadPhotographerAvatarResponse),
+    status: response.status
+  };
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getServerApiBaseUrl()}${path}`, {
     method: "GET",
@@ -308,19 +360,43 @@ export async function getSite() {
       siteTitle: "Luminote",
       siteDescription: "A lightweight home for photography that lets the work breathe.",
       watermarkEnabledByDefault: true,
-      watermarkText: "© Luminote"
+      watermarkText: "© Luminote",
+      uploadOriginalEnabled: false,
+      maxTagPoolSize: 20,
+      maxUploadFiles: 20,
+      maxTagsPerPhoto: 5,
+      photographerAvatarUrl: "",
+      photographerName: "",
+      photographerBio: "",
+      photographerEmail: "",
+      photographerXiaohongshu: "",
+      photographerXiaohongshuUrl: "",
+      photographerDouyin: "",
+      photographerDouyinUrl: "",
+      photographerInstagram: "",
+      photographerInstagramUrl: "",
+      photographerCustomAccount: "",
+      photographerCustomAccountUrl: ""
     };
   }
 }
 
 export async function getPhotos(tag?: string) {
-  try {
-    const url = tag ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}` : "/api/photos?page=1&pageSize=30";
-    const response = await fetchClientJson<PhotosResponse>(url);
-    return response.items;
-  } catch {
-    return [];
+  const url = tag
+    ? `${getClientApiBaseUrl()}/api/admin/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}`
+    : `${getClientApiBaseUrl()}/api/admin/photos?page=1&pageSize=30`;
+  const rawResponse = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store"
+  });
+
+  if (!rawResponse.ok) {
+    throw new Error(`Request failed for ${url}: ${rawResponse.status}`);
   }
+
+  const response = (await rawResponse.json()) as PhotosResponse;
+  return response.items;
 }
 
 export async function getPhotoDetail(id: string) {

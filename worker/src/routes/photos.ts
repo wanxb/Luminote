@@ -2,7 +2,10 @@ import type { Env } from "../index";
 import { getPhotoById, listPhotos } from "../services/photo-service";
 import { json } from "../utils/json";
 
-export async function handlePhotos(request: Request, env: Env): Promise<Response> {
+export async function handlePhotos(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const origin = new URL(request.url).origin;
   const pathname = new URL(request.url).pathname;
   const parts = pathname.split("/").filter(Boolean);
@@ -15,9 +18,9 @@ export async function handlePhotos(request: Request, env: Env): Promise<Response
       return json(
         {
           ok: false,
-          error: "Photo not found"
+          error: "Photo not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -28,12 +31,22 @@ export async function handlePhotos(request: Request, env: Env): Promise<Response
   const pageSize = Number(url.searchParams.get("pageSize") || "30");
   const tag = url.searchParams.get("tag");
 
-  const items = await listPhotos(env, origin, tag);
+  try {
+    const items = await listPhotos(env, origin, tag);
 
-  return json({
-    items,
-    page,
-    pageSize,
-    hasMore: items.length >= pageSize
-  });
+    return json({
+      items,
+      page,
+      pageSize,
+      hasMore: items.length >= pageSize,
+    });
+  } catch {
+    return json(
+      {
+        ok: false,
+        error: "加载照片列表失败。",
+      },
+      { status: 500 },
+    );
+  }
 }

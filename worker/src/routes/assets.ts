@@ -1,13 +1,35 @@
 import type { Env } from "../index";
-import { getPhotoObject } from "../services/storage-service";
+import { getAvatarObject, getPhotoObject } from "../services/storage-service";
 import { handleMockStorage } from "./mock-storage";
 
 type Variant = "thumb" | "display" | "display-watermarked";
 
-function parsePath(pathname: string): { variant: Variant; id: string } | null {
+type ParsedAsset =
+  | {
+      kind: "photo";
+      variant: Variant;
+      id: string;
+    }
+  | {
+      kind: "avatar";
+      fileName: string;
+    };
+
+function parsePath(pathname: string): ParsedAsset | null {
   const parts = pathname.split("/").filter(Boolean);
 
-  if (parts.length !== 3 || parts[0] !== "assets") {
+  if (parts[0] !== "assets") {
+    return null;
+  }
+
+  if (parts.length === 3 && parts[1] === "avatar" && parts[2]) {
+    return {
+      kind: "avatar",
+      fileName: parts[2]
+    };
+  }
+
+  if (parts.length !== 3) {
     return null;
   }
 
@@ -19,6 +41,7 @@ function parsePath(pathname: string): { variant: Variant; id: string } | null {
   }
 
   return {
+    kind: "photo",
     variant,
     id
   };
@@ -29,6 +52,23 @@ export async function handleAssets(request: Request, env: Env): Promise<Response
 
   if (!parsed) {
     return new Response("Not Found", { status: 404 });
+  }
+
+  if (parsed.kind === "avatar") {
+    const object = await getAvatarObject(env, parsed.fileName);
+
+    if (!object?.body) {
+      return handleMockStorage(new Request(`${new URL(request.url).origin}/mock-storage/avatar/${parsed.fileName}`));
+    }
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("etag", object.httpEtag);
+    headers.set("cache-control", "public, max-age=3600");
+
+    return new Response(object.body, {
+      headers
+    });
   }
 
   const object = await getPhotoObject(env, parsed.variant, parsed.id);

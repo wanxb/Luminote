@@ -4,6 +4,7 @@ export type PhotoSummary = {
   displayUrl: string;
   watermarkedDisplayUrl?: string;
   watermarkEnabled?: boolean;
+  isHidden?: boolean;
   takenAt?: string;
   description?: string;
   tags?: string[];
@@ -38,6 +39,22 @@ export type SiteResponse = {
   siteDescription: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
+  uploadOriginalEnabled: boolean;
+  maxTagPoolSize: number;
+  maxUploadFiles: number;
+  maxTagsPerPhoto: number;
+  photographerAvatarUrl: string;
+  photographerName: string;
+  photographerBio: string;
+  photographerEmail: string;
+  photographerXiaohongshu: string;
+  photographerXiaohongshuUrl: string;
+  photographerDouyin: string;
+  photographerDouyinUrl: string;
+  photographerInstagram: string;
+  photographerInstagramUrl: string;
+  photographerCustomAccount: string;
+  photographerCustomAccountUrl: string;
 };
 
 export type SiteConfigResponse = {
@@ -45,4 +62,20 @@ export type SiteConfigResponse = {
   siteDescription?: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
+  uploadOriginalEnabled: boolean;
+  maxTagPoolSize: number;
+  maxUploadFiles: number;
+  maxTagsPerPhoto: number;
+  photographerAvatarUrl: string;
+  photographerName: string;
+  photographerBio: string;
+  photographerEmail: string;
+  photographerXiaohongshu: string;
+  photographerXiaohongshuUrl: string;
+  photographerDouyin: string;
+  photographerDouyinUrl: string;
+  photographerInstagram: string;
+  photographerInstagramUrl: string;
+  photographerCustomAccount: string;
+  photographerCustomAccountUrl: string;
 };
