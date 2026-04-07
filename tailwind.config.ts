@@ -16,8 +16,8 @@ const config: Config = {
         mist: "#ece7df"
       },
       fontFamily: {
-        display: ["Georgia", "Times New Roman", "serif"],
-        body: ["ui-sans-serif", "system-ui", "sans-serif"]
+        display: ["Baskerville", "Georgia", "STSong", "Songti SC", "serif"],
+        body: ["Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Arial", "sans-serif"]
       },
       boxShadow: {
         soft: "0 18px 50px rgba(0, 0, 0, 0.12)"

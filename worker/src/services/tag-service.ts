@@ -126,7 +126,7 @@ export async function deleteTag(env: Env, id: string) {
       .run();
 
     return {
-      ok: result.success !== false,
+      ok: result.success,
       deleted: true,
     };
   } catch {

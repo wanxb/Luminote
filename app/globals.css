@@ -3,19 +3,23 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  --page-bg: #050505;
+  --page-ink: #f4f1ea;
+  --page-warm: #d1a46e;
+  --page-panel: rgba(18, 18, 18, 0.82);
 }
 
 html {
-  background:
-    radial-gradient(circle at top, rgba(223, 210, 189, 0.42), transparent 40%),
-    linear-gradient(180deg, #f7f3ea 0%, #f1ebdf 100%);
+  background: #050505;
 }
 
 body {
   min-height: 100vh;
-  color: #151515;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--page-ink);
+  background: #050505;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Arial", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -25,4 +29,13 @@ a {
 
 * {
   box-sizing: border-box;
+}
+
+*::selection {
+  background: rgba(209, 164, 110, 0.24);
+  color: #f4f1ea;
+}
+
+img {
+  -webkit-user-drag: none;
 }

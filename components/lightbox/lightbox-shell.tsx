@@ -86,14 +86,14 @@ export function LightboxShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/88 backdrop-blur-xl"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(24,19,16,0.86)] backdrop-blur-2xl"
       role="dialog"
       aria-modal="true"
       aria-label="照片详情"
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#302f2a] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${
+        className={`grid h-screen w-screen overflow-hidden bg-[#261d18] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${
           isImmersive
             ? "grid-rows-[minmax(0,1fr)_72px]"
             : "lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"
@@ -101,7 +101,7 @@ export function LightboxShell({
         onClick={(event) => event.stopPropagation()}
       >
         <section
-          className={`relative min-h-0 overflow-hidden bg-[#2b2925] ${
+          className={`relative min-h-0 overflow-hidden bg-[#211915] ${
             isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"
           }`}
           onDoubleClick={onToggleImmersive}
@@ -112,11 +112,11 @@ export function LightboxShell({
               alt=""
               fill
               aria-hidden="true"
-              className="scale-125 object-cover blur-[72px] saturate-[0.9] brightness-[0.38] opacity-[0.16]"
+              className="scale-125 object-cover blur-[72px] saturate-[0.92] brightness-[0.42] opacity-[0.22]"
               sizes="100vw"
               priority
             />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,248,232,0.08),transparent_26%),linear-gradient(180deg,rgba(48,45,40,0.74)_0%,rgba(35,34,30,0.78)_54%,rgba(24,23,20,0.88)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,234,205,0.12),transparent_28%),linear-gradient(180deg,rgba(42,31,25,0.62)_0%,rgba(28,22,19,0.72)_54%,rgba(18,15,13,0.9)_100%)]" />
           </div>
 
           {hasMultiple ? (
@@ -125,7 +125,7 @@ export function LightboxShell({
                   type="button"
                   aria-label="上一张"
                   onClick={onPrevious}
-                  className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/16 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/28 ${
+                  className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${
                     isImmersive ? "hidden" : "hidden lg:flex"
                   }`}
                 >
@@ -135,7 +135,7 @@ export function LightboxShell({
                   type="button"
                   aria-label="下一张"
                   onClick={onNext}
-                  className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/16 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/28 ${
+                  className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${
                     isImmersive ? "hidden" : "hidden lg:flex"
                   }`}
                 >
@@ -148,7 +148,7 @@ export function LightboxShell({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-6 top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34"
+              className="absolute right-6 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34"
             >
               ×
             </button>
@@ -175,20 +175,20 @@ export function LightboxShell({
           </section>
 
           {isImmersive ? null : (
-            <aside className="flex min-h-0 flex-col bg-[linear-gradient(180deg,rgba(47,45,40,0.82)_0%,rgba(37,36,31,0.86)_56%,rgba(29,28,24,0.9)_100%)] p-5 backdrop-blur-2xl lg:col-start-2 lg:row-span-2 lg:overflow-hidden">
+            <aside className="flex min-h-0 flex-col bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-5 backdrop-blur-2xl lg:col-start-2 lg:row-span-2 lg:overflow-hidden">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
             </div>
 
             <div className="mt-5 flex-1 space-y-5 overflow-hidden text-[12px] leading-5 text-paper/76">
               {isLoading ? (
-                <p className="rounded-2xl bg-white/[0.045] px-4 py-3 text-paper/70 backdrop-blur-md">
+                <p className="rounded-2xl border border-white/6 bg-white/[0.045] px-4 py-3 text-paper/70 backdrop-blur-md">
                   正在拉取这张照片的完整信息…
                 </p>
               ) : null}
 
               {error ? (
-                <p className="rounded-2xl bg-[#c96b51]/12 px-4 py-3 leading-5 text-[#ffd7cc] backdrop-blur-md">
+                <p className="rounded-2xl border border-[#c96b51]/18 bg-[#c96b51]/12 px-4 py-3 leading-5 text-[#ffd7cc] backdrop-blur-md">
                   {error}
                 </p>
               ) : null}
@@ -222,7 +222,7 @@ export function LightboxShell({
 
         {hasMultiple ? (
           <div
-            className={`hidden justify-center bg-[linear-gradient(180deg,rgba(41,39,34,0.78)_0%,rgba(31,30,26,0.84)_100%)] backdrop-blur-2xl lg:flex ${
+            className={`hidden justify-center bg-[linear-gradient(180deg,rgba(42,34,29,0.82)_0%,rgba(29,24,21,0.88)_100%)] backdrop-blur-2xl lg:flex ${
               isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"
             }`}
           >

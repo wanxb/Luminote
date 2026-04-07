@@ -3,16 +3,53 @@
 import { useEffect, useState } from "react";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
-import { getPhotoDetail, getPhotos } from "@/lib/api/client";
+import { getPhotoDetail } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
-import type { PhotoDetail, PhotoSummary } from "@/lib/api/types";
+import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type GalleryExperienceProps = {
+  site: SiteResponse;
   photos: PhotoSummary[];
   allTags: string[];
 };
 
-export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
+function formatPhotoCount(count: number) {
+  return count.toString().padStart(2, "0");
+}
+
+function getTopTags(photos: PhotoSummary[]) {
+  const counts = new Map<string, number>();
+
+  photos.forEach((photo) => {
+    photo.tags?.forEach((tag) => {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    });
+  });
+
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3);
+}
+
+function getTimeRangeLabel(photos: PhotoSummary[]) {
+  const timestamps = photos
+    .map((photo) => photo.takenAt)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => !Number.isNaN(value))
+    .sort((left, right) => left - right);
+
+  if (timestamps.length === 0) {
+    return "持续更新";
+  }
+
+  const first = new Date(timestamps[0]).getFullYear();
+  const last = new Date(timestamps[timestamps.length - 1]).getFullYear();
+
+  return first === last ? String(first) : `${first} - ${last}`;
+}
+
+export function GalleryExperience({ site, photos, allTags }: GalleryExperienceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [detail, setDetail] = useState<PhotoDetail | null>(null);
@@ -23,6 +60,16 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
   const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(photos);
   const [isFiltering, setIsFiltering] = useState(false);
   const activePhotos = selectedTag === null ? photos : filteredPhotos;
+  const topTags = getTopTags(photos);
+  const displayTitle = site.siteTitle || site.photographerName || "Luminote";
+  const displayDescription =
+    site.siteDescription || site.photographerBio || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
+  const tagOptions = Array.from(new Set([...topTags.map(([tag]) => tag), ...allTags])).slice(0, 12);
+  const stats = [
+    { label: "Archive", value: formatPhotoCount(activePhotos.length), description: "当前在站作品" },
+    { label: "Topics", value: formatPhotoCount(tagOptions.length), description: "可浏览标签" },
+    { label: "Years", value: getTimeRangeLabel(photos), description: "拍摄时间跨度" }
+  ];
 
   useEffect(() => {
     if (selectedId === null) {
@@ -108,11 +155,11 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
       }
 
       if (event.key === "ArrowRight") {
-        selectPhoto((selectedIndex + 1) % photos.length);
+        selectPhoto((selectedIndex + 1) % activePhotos.length);
       }
 
       if (event.key === "ArrowLeft") {
-        selectPhoto((selectedIndex - 1 + photos.length) % photos.length);
+        selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
       }
     };
 
@@ -121,7 +168,7 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isImmersive, photos, selectedIndex]);
+  }, [activePhotos.length, isImmersive, selectedIndex]);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -186,38 +233,22 @@ export function GalleryExperience({ photos, allTags }: GalleryExperienceProps) {
 
   return (
     <>
-      {allTags.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-ink/60">标签筛选:</span>
-          <button
-            type="button"
-            onClick={() => setSelectedTag(null)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              selectedTag === null
-                ? "bg-ink text-paper"
-                : "border border-black/10 bg-white text-ink/70 hover:bg-mist"
-            }`}
-          >
-            全部
-          </button>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => setSelectedTag(tag)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedTag === tag
-                  ? "bg-ink text-paper"
-                  : "border border-black/10 bg-white text-ink/70 hover:bg-mist"
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      )}
-      {isFiltering ? <p className="mb-4 text-sm text-ink/70">正在筛选...</p> : null}
-      <GalleryGrid photos={activePhotos} activePhotoId={selectedId} onSelect={handleSelect} />
+      <div className="space-y-[2px]">
+        {isFiltering ? <p className="px-1 py-2 text-sm text-white/50">正在筛选...</p> : null}
+
+        <GalleryGrid
+          site={site}
+          photos={activePhotos}
+          activePhotoId={selectedId}
+          onSelect={handleSelect}
+          filterTags={tagOptions}
+          selectedTag={selectedTag}
+          onSelectTag={setSelectedTag}
+          heading={displayTitle}
+          description={displayDescription}
+          stats={stats}
+        />
+      </div>
       <LightboxShell
         photo={activePhoto ?? null}
         photos={activePhotos}

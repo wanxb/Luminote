@@ -1,0 +1,41 @@
+import { json } from "./utils/json";
+import { applyCors, createCorsPreflight } from "./utils/cors";
+import { handleSite } from "./routes/site";
+import { handlePhotos } from "./routes/photos";
+import { handleAdmin } from "./routes/admin";
+import { handleMockStorage } from "./routes/mock-storage";
+import { handleAssets } from "./routes/assets";
+export default {
+    async fetch(request, env) {
+        const url = new URL(request.url);
+        if (request.method === "OPTIONS") {
+            return createCorsPreflight(request);
+        }
+        if (url.pathname === "/api/health") {
+            return applyCors(request, json({
+                ok: true,
+                service: "luminote-api",
+                date: "2026-04-02"
+            }));
+        }
+        if (url.pathname.startsWith("/api/site")) {
+            return applyCors(request, await handleSite(request, env));
+        }
+        if (url.pathname.startsWith("/api/photos")) {
+            return applyCors(request, await handlePhotos(request, env));
+        }
+        if (url.pathname.startsWith("/api/admin")) {
+            return applyCors(request, await handleAdmin(request, env));
+        }
+        if (url.pathname.startsWith("/assets/")) {
+            return handleAssets(request, env);
+        }
+        if (url.pathname.startsWith("/mock-storage/")) {
+            return handleMockStorage(request);
+        }
+        return applyCors(request, json({
+            ok: false,
+            error: "Not Found"
+        }, { status: 404 }));
+    }
+};
