@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS site_config (
   site_description TEXT NOT NULL,
   watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
   watermark_text TEXT NOT NULL,
+  watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
   admin_password TEXT NOT NULL,
   upload_original_enabled INTEGER NOT NULL DEFAULT 0,
   max_tag_pool_size INTEGER NOT NULL DEFAULT 20,

@@ -10,6 +10,17 @@ export type PhotoSummary = {
   tags?: string[];
 };
 
+export type WatermarkPosition =
+  | "top-left"
+  | "top"
+  | "top-right"
+  | "left"
+  | "center"
+  | "right"
+  | "bottom-left"
+  | "bottom"
+  | "bottom-right";
+
 export type PhotoExif = {
   aperture?: string;
   shutter?: string;
@@ -39,6 +50,7 @@ export type SiteResponse = {
   siteDescription: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
+  watermarkPosition: WatermarkPosition;
   uploadOriginalEnabled: boolean;
   maxTagPoolSize: number;
   maxUploadFiles: number;
@@ -62,6 +74,7 @@ export type SiteConfigResponse = {
   siteDescription?: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
+  watermarkPosition: WatermarkPosition;
   uploadOriginalEnabled: boolean;
   maxTagPoolSize: number;
   maxUploadFiles: number;

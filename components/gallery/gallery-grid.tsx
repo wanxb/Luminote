@@ -7,11 +7,9 @@ type GalleryGridProps = {
   activePhotoId?: string | null;
   onSelect?: (photoId: string) => void;
   filterTags?: string[];
-  selectedTag?: string | null;
-  onSelectTag?: (tag: string | null) => void;
-  heading?: string;
+  selectedTags?: string[];
+  onSelectTags?: (tags: string[]) => void;
   description?: string;
-  stats?: Array<{ label: string; value: string; description: string }>;
 };
 
 function formatTakenAt(takenAt?: string) {
@@ -36,12 +34,30 @@ export function GalleryGrid({
   activePhotoId,
   onSelect,
   filterTags = [],
-  selectedTag = null,
-  onSelectTag,
-  heading,
-  description,
-  stats = []
+  selectedTags = [],
+  onSelectTags,
+  description
 }: GalleryGridProps) {
+  if (photos.length === 0 && selectedTags.length > 0) {
+    return (
+      <div className="grid gap-[2px] lg:grid-cols-[minmax(0,320px)_1fr] lg:items-stretch">
+        <div>
+          <PhotographerProfileCard
+            site={site}
+            variant="masonry"
+            filterTags={filterTags}
+            selectedTags={selectedTags}
+            onSelectTags={onSelectTags}
+            description={description}
+          />
+        </div>
+        <div className="flex min-h-[220px] items-center justify-center bg-[#070707] px-8 py-12 text-center text-white/36">
+          <p className="text-3xl font-semibold tracking-[0.18em] sm:text-4xl">无图片</p>
+        </div>
+      </div>
+    );
+  }
+
   if (photos.length === 0) {
     return (
       <section className="border border-white/10 bg-[#0d0d0d] px-6 py-12 text-center">
@@ -61,11 +77,9 @@ export function GalleryGrid({
           site={site}
           variant="masonry"
           filterTags={filterTags}
-          selectedTag={selectedTag}
-          onSelectTag={onSelectTag}
-          heading={heading}
+          selectedTags={selectedTags}
+          onSelectTags={onSelectTags}
           description={description}
-          stats={stats}
         />
       </div>
       {photos.map((photo) => (
@@ -73,8 +87,8 @@ export function GalleryGrid({
           key={photo.id}
           type="button"
           onClick={() => onSelect?.(photo.id)}
-          className={`group relative mb-[2px] block w-full break-inside-avoid overflow-hidden border border-white/10 bg-[#080808] text-left transition duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
-            activePhotoId === photo.id ? "ring-2 ring-white/70 ring-offset-0" : ""
+          className={`group relative mb-[2px] block w-full break-inside-avoid overflow-hidden bg-[#080808] text-left transition duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
+            activePhotoId === photo.id ? "ring-1 ring-white/55 ring-offset-0" : ""
           }`}
         >
           <img

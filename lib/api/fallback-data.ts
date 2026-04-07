@@ -5,6 +5,7 @@ export const fallbackSite: SiteResponse = {
   siteDescription: "Personal Photography Portfolio",
   watermarkEnabledByDefault: true,
   watermarkText: "© Luminote",
+  watermarkPosition: "bottom-right",
   uploadOriginalEnabled: false,
   maxTagPoolSize: 20,
   maxUploadFiles: 20,

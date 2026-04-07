@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import type { PhotoDetail, PhotoSummary } from "@/lib/api/types";
+import type { PhotoDetail, PhotoSummary, WatermarkPosition } from "@/lib/api/types";
 
 type LightboxShellProps = {
   photo: PhotoDetail | PhotoSummary | null;
   photos: PhotoSummary[];
+  watermarkEnabled: boolean;
+  watermarkText: string;
+  watermarkPosition: WatermarkPosition;
   activeIndex: number | null;
   isImmersive: boolean;
   isOpen: boolean;
@@ -51,6 +54,9 @@ function formatMetaValue(label: string, value: string) {
 export function LightboxShell({
   photo,
   photos,
+  watermarkEnabled,
+  watermarkText,
+  watermarkPosition,
   activeIndex,
   isImmersive,
   isOpen,
@@ -68,7 +74,7 @@ export function LightboxShell({
   }
 
   const detail = isPhotoDetail(photo) ? photo : null;
-  const displaySrc = photo.watermarkedDisplayUrl ?? photo.displayUrl;
+  const displaySrc = photo.displayUrl;
   const metaItems = detail
     ? metaLabels
         .map(({ label, value }) => {
@@ -170,6 +176,9 @@ export function LightboxShell({
                   sizes={isImmersive ? "100vw" : "(max-width: 1024px) 100vw, 78vw"}
                   priority
                 />
+                {watermarkEnabled && watermarkText ? (
+                  <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
+                ) : null}
               </div>
             </div>
           </section>
@@ -198,7 +207,7 @@ export function LightboxShell({
                 <dl className="space-y-2.5">
                   <MetaRow label="文件名" value={`${photo.id}.jpg`} />
                   <MetaRow label="备注" value={photo.description ?? "暂无备注"} />
-                  <MetaRow label="水印" value={photo.watermarkEnabled ? "已启用" : "未启用"} />
+                  <MetaRow label="水印" value={watermarkEnabled ? "已启用" : "未启用"} />
                   {detail?.location ? <MetaRow label="位置" value={detail.location} /> : null}
                   {detail?.tags.length ? <MetaRow label="标签" value={detail.tags.join(", ")} /> : null}
                 </dl>
@@ -270,6 +279,28 @@ function MetaRow({ label, value }: { label: string; value: string }) {
     <div className="grid grid-cols-[76px_minmax(0,1fr)] items-start gap-3">
       <dt className="text-paper/42">{label}</dt>
       <dd className="break-words text-right font-medium text-paper/88">{value}</dd>
+    </div>
+  );
+}
+
+function WatermarkOverlay({ text, position }: { text: string; position: WatermarkPosition }) {
+  const positionClassMap: Record<WatermarkPosition, string> = {
+    "top-left": "left-6 top-6 items-start justify-start text-left",
+    top: "left-1/2 top-6 -translate-x-1/2 items-start justify-center text-center",
+    "top-right": "right-6 top-6 items-start justify-end text-right",
+    left: "left-6 top-1/2 -translate-y-1/2 items-center justify-start text-left",
+    center: "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center",
+    right: "right-6 top-1/2 -translate-y-1/2 items-center justify-end text-right",
+    "bottom-left": "bottom-6 left-6 items-end justify-start text-left",
+    bottom: "bottom-6 left-1/2 -translate-x-1/2 items-end justify-center text-center",
+    "bottom-right": "bottom-6 right-6 items-end justify-end text-right",
+  };
+
+  return (
+    <div className={`pointer-events-none absolute inset-0 z-[2] flex ${positionClassMap[position]}`}>
+      <div className="max-w-[58vw] rounded-full border border-white/10 bg-black/16 px-4 py-2 text-[clamp(12px,1.3vw,18px)] font-semibold tracking-[0.28em] text-white/58 shadow-[0_12px_30px_rgba(0,0,0,0.2)] backdrop-blur-[2px]">
+        {text}
+      </div>
     </div>
   );
 }

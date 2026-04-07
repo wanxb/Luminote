@@ -2,11 +2,26 @@ type ImageVariantOptions = {
   maxWidth?: number;
   watermarkText?: string;
   includeWatermark?: boolean;
+  watermarkPosition?:
+    | "top-left"
+    | "top"
+    | "top-right"
+    | "left"
+    | "center"
+    | "right"
+    | "bottom-left"
+    | "bottom"
+    | "bottom-right";
 };
 
 export async function createDisplayVariant(
   file: File,
-  { maxWidth = 1800, watermarkText, includeWatermark = false }: ImageVariantOptions = {}
+  {
+    maxWidth = 1800,
+    watermarkText,
+    includeWatermark = false,
+    watermarkPosition = "bottom-right",
+  }: ImageVariantOptions = {}
 ): Promise<File> {
   const imageUrl = URL.createObjectURL(file);
 
@@ -28,7 +43,7 @@ export async function createDisplayVariant(
     context.drawImage(image, 0, 0, width, height);
 
     if (includeWatermark && watermarkText) {
-      drawWatermark(context, width, height, watermarkText);
+      drawWatermark(context, width, height, watermarkText, watermarkPosition);
     }
 
     const blob = await new Promise<Blob>((resolve, reject) => {
@@ -61,23 +76,40 @@ function drawWatermark(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
-  watermarkText: string
+  watermarkText: string,
+  watermarkPosition: NonNullable<ImageVariantOptions["watermarkPosition"]>
 ) {
   const fontSize = Math.max(18, Math.round(width * 0.026));
   const paddingX = Math.max(20, Math.round(width * 0.032));
   const paddingY = Math.max(18, Math.round(height * 0.04));
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  const positionMap = {
+    "top-left": { x: paddingX, y: paddingY, textAlign: "left", textBaseline: "top" },
+    top: { x: centerX, y: paddingY, textAlign: "center", textBaseline: "top" },
+    "top-right": { x: width - paddingX, y: paddingY, textAlign: "right", textBaseline: "top" },
+    left: { x: paddingX, y: centerY, textAlign: "left", textBaseline: "middle" },
+    center: { x: centerX, y: centerY, textAlign: "center", textBaseline: "middle" },
+    right: { x: width - paddingX, y: centerY, textAlign: "right", textBaseline: "middle" },
+    "bottom-left": { x: paddingX, y: height - paddingY, textAlign: "left", textBaseline: "bottom" },
+    bottom: { x: centerX, y: height - paddingY, textAlign: "center", textBaseline: "bottom" },
+    "bottom-right": { x: width - paddingX, y: height - paddingY, textAlign: "right", textBaseline: "bottom" },
+  } as const;
+
+  const { x, y, textAlign, textBaseline } = positionMap[watermarkPosition];
 
   context.save();
   context.font = `600 ${fontSize}px Georgia, serif`;
-  context.textAlign = "right";
-  context.textBaseline = "bottom";
+  context.textAlign = textAlign;
+  context.textBaseline = textBaseline;
   context.shadowColor = "rgba(0, 0, 0, 0.35)";
   context.shadowBlur = 18;
   context.lineWidth = Math.max(1.5, fontSize * 0.06);
   context.strokeStyle = "rgba(0, 0, 0, 0.22)";
   context.fillStyle = "rgba(255, 255, 255, 0.58)";
-  context.strokeText(watermarkText, width - paddingX, height - paddingY);
-  context.fillText(watermarkText, width - paddingX, height - paddingY);
+  context.strokeText(watermarkText, x, y);
+  context.fillText(watermarkText, x, y);
   context.restore();
 }
 

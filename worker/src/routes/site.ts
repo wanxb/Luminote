@@ -55,6 +55,7 @@ export async function handleSite(
     siteDescription: config.siteDescription,
     watermarkEnabledByDefault: config.watermarkEnabledByDefault,
     watermarkText: config.watermarkText,
+    watermarkPosition: config.watermarkPosition,
     uploadOriginalEnabled: config.uploadOriginalEnabled,
     maxTagPoolSize: config.maxTagPoolSize,
     maxUploadFiles: config.maxUploadFiles,
@@ -84,6 +85,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       siteDescription?: string;
       watermarkEnabledByDefault?: boolean;
       watermarkText?: string;
+      watermarkPosition?: string;
       adminPassword?: string;
       uploadOriginalEnabled?: boolean;
       maxTagPoolSize?: number;
@@ -108,6 +110,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       siteDescription?: string;
       watermarkEnabledByDefault?: boolean;
       watermarkText?: string;
+      watermarkPosition?: string;
       adminPassword?: string;
       uploadOriginalEnabled?: boolean;
       maxTagPoolSize?: number;
@@ -197,6 +200,27 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         } else {
           updates.watermarkText = result.value;
         }
+      }
+    }
+
+    if (body.watermarkPosition !== undefined) {
+      if (
+        typeof body.watermarkPosition !== "string" ||
+        ![
+          "top-left",
+          "top",
+          "top-right",
+          "left",
+          "center",
+          "right",
+          "bottom-left",
+          "bottom",
+          "bottom-right",
+        ].includes(body.watermarkPosition)
+      ) {
+        errors.push("水印位置格式错误。");
+      } else {
+        updates.watermarkPosition = body.watermarkPosition;
       }
     }
 

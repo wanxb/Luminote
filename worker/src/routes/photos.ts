@@ -40,7 +40,8 @@ export async function handlePhotos(
       pageSize,
       hasMore: items.length >= pageSize,
     });
-  } catch {
+  } catch (error) {
+    console.error("[handlePhotos] listPhotos failed", error);
     return json(
       {
         ok: false,

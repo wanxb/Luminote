@@ -118,11 +118,20 @@ async function listPhotosFromBucket(env: Env, origin: string) {
     }>;
   }
 
-  const [watermarkedObjects, displayObjects, thumbObjects] = await Promise.all([
-    env.PHOTOS_BUCKET.list({ prefix: "display-watermarked/", limit: 1000 }),
-    env.PHOTOS_BUCKET.list({ prefix: "display/", limit: 1000 }),
-    env.PHOTOS_BUCKET.list({ prefix: "thumbs/", limit: 1000 }),
-  ]);
+  let watermarkedObjects;
+  let displayObjects;
+  let thumbObjects;
+
+  try {
+    [watermarkedObjects, displayObjects, thumbObjects] = await Promise.all([
+      env.PHOTOS_BUCKET.list({ prefix: "display-watermarked/", limit: 1000 }),
+      env.PHOTOS_BUCKET.list({ prefix: "display/", limit: 1000 }),
+      env.PHOTOS_BUCKET.list({ prefix: "thumbs/", limit: 1000 }),
+    ]);
+  } catch (error) {
+    console.error("[listPhotosFromBucket] R2 list failed", error);
+    throw error;
+  }
 
   const photoMap = new Map<
     string,
@@ -259,14 +268,41 @@ export async function listPhotos(
 
   query += ` ORDER BY created_at DESC LIMIT 30`;
 
+  const fallbackToBucket = async () => {
+    if (tag) {
+      return [] as Array<{
+        id: string;
+        thumbUrl: string;
+        displayUrl: string;
+        watermarkedDisplayUrl?: string;
+        watermarkEnabled: boolean;
+        isHidden: boolean;
+        takenAt?: string;
+        description?: string;
+        tags: string[];
+      }>;
+    }
+
+    try {
+      return await listPhotosFromBucket(env, origin);
+    } catch (error) {
+      console.error("[listPhotos] bucket fallback failed", error);
+      return [];
+    }
+  };
+
   try {
-    const result = await env.DB.prepare(query)
-      .bind(...values)
-      .all<PersistedPhotoRow>();
+    let statement = env.DB.prepare(query);
+
+    if (values.length > 0) {
+      statement = statement.bind(...values);
+    }
+
+    const result = await statement.all<PersistedPhotoRow>();
     const rows = result.results ?? [];
 
     if (rows.length === 0 && !tag) {
-      return listPhotosFromBucket(env, origin);
+      return fallbackToBucket();
     }
 
     return rows.map((row) => ({
@@ -281,8 +317,9 @@ export async function listPhotos(
       description: row.description ?? undefined,
       tags: parseTagsJson(row.tags_json),
     }));
-  } catch {
-    return tag ? [] : listPhotosFromBucket(env, origin);
+  } catch (error) {
+    console.error("[listPhotos] D1 query failed, falling back to R2", error);
+    return fallbackToBucket();
   }
 }
 

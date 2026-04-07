@@ -6,6 +6,7 @@ export const DEFAULT_UPLOAD_ORIGINAL_ENABLED = false;
 export const DEFAULT_MAX_TAG_POOL_SIZE = 20;
 export const DEFAULT_MAX_UPLOAD_FILES = 20;
 export const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
+export const DEFAULT_WATERMARK_POSITION = "bottom-right";
 export const DEFAULT_PHOTOGRAPHER_AVATAR_URL = "";
 export const DEFAULT_PHOTOGRAPHER_NAME = "";
 export const DEFAULT_PHOTOGRAPHER_BIO = "";
@@ -24,6 +25,7 @@ type SiteConfigRow = {
   site_description: string;
   watermark_enabled_by_default: number;
   watermark_text: string;
+  watermark_position: string;
   admin_password: string;
   upload_original_enabled: number;
   max_tag_pool_size: number;
@@ -48,6 +50,7 @@ export type SiteConfig = {
   siteDescription: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
+  watermarkPosition: string;
   adminPassword: string;
   uploadOriginalEnabled: boolean;
   maxTagPoolSize: number;
@@ -74,6 +77,7 @@ type LegacySiteConfigRow = {
   site_description: string;
   watermark_enabled_by_default: number;
   watermark_text: string;
+  watermark_position?: string;
   admin_password: string;
   upload_original_enabled?: number;
   max_tag_pool_size?: number;
@@ -91,6 +95,7 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     siteDescription: DEFAULT_SITE_DESCRIPTION,
     watermarkEnabledByDefault: env.WATERMARK_ENABLED_BY_DEFAULT === "true",
     watermarkText: env.WATERMARK_TEXT,
+    watermarkPosition: DEFAULT_WATERMARK_POSITION,
     adminPassword: env.ADMIN_PASSWORD,
     uploadOriginalEnabled: DEFAULT_UPLOAD_ORIGINAL_ENABLED,
     maxTagPoolSize: DEFAULT_MAX_TAG_POOL_SIZE,
@@ -128,6 +133,7 @@ async function ensureSiteConfig(env: Env) {
           site_description TEXT NOT NULL,
           watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
           watermark_text TEXT NOT NULL,
+          watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
           admin_password TEXT NOT NULL,
           upload_original_enabled INTEGER NOT NULL DEFAULT 0,
           max_tag_pool_size INTEGER NOT NULL DEFAULT 20,
@@ -152,6 +158,7 @@ async function ensureSiteConfig(env: Env) {
 
       const alterStatements = [
         "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE site_config ADD COLUMN watermark_position TEXT NOT NULL DEFAULT 'bottom-right'",
         "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_bio TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_email TEXT NOT NULL DEFAULT ''",
@@ -181,6 +188,7 @@ async function ensureSiteConfig(env: Env) {
           site_description,
           watermark_enabled_by_default,
           watermark_text,
+          watermark_position,
           admin_password,
           upload_original_enabled,
           max_tag_pool_size,
@@ -207,6 +215,7 @@ async function ensureSiteConfig(env: Env) {
           defaults.siteDescription,
           defaults.watermarkEnabledByDefault ? 1 : 0,
           defaults.watermarkText,
+          defaults.watermarkPosition,
           defaults.adminPassword,
           defaults.uploadOriginalEnabled ? 1 : 0,
           defaults.maxTagPoolSize,
@@ -262,6 +271,7 @@ function mapSiteConfigRowToConfig(
         ? Boolean(row.watermark_enabled_by_default)
         : defaults.watermarkEnabledByDefault,
     watermarkText: row.watermark_text ?? defaults.watermarkText,
+    watermarkPosition: row.watermark_position ?? defaults.watermarkPosition,
     adminPassword: row.admin_password ?? defaults.adminPassword,
     uploadOriginalEnabled:
       row.upload_original_enabled !== undefined
@@ -317,6 +327,7 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         site_description,
         watermark_enabled_by_default,
         watermark_text,
+        watermark_position,
         admin_password,
         upload_original_enabled,
         max_tag_pool_size,
@@ -417,6 +428,11 @@ export async function updateSiteConfig(
   if (updates.watermarkText !== undefined) {
     statements.push("watermark_text = ?");
     values.push(updates.watermarkText);
+  }
+
+  if (updates.watermarkPosition !== undefined) {
+    statements.push("watermark_position = ?");
+    values.push(updates.watermarkPosition);
   }
 
   if (updates.adminPassword !== undefined) {

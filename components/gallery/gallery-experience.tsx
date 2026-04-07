@@ -13,10 +13,6 @@ type GalleryExperienceProps = {
   allTags: string[];
 };
 
-function formatPhotoCount(count: number) {
-  return count.toString().padStart(2, "0");
-}
-
 function getTopTags(photos: PhotoSummary[]) {
   const counts = new Map<string, number>();
 
@@ -31,24 +27,6 @@ function getTopTags(photos: PhotoSummary[]) {
     .slice(0, 3);
 }
 
-function getTimeRangeLabel(photos: PhotoSummary[]) {
-  const timestamps = photos
-    .map((photo) => photo.takenAt)
-    .filter((value): value is string => Boolean(value))
-    .map((value) => new Date(value).getTime())
-    .filter((value) => !Number.isNaN(value))
-    .sort((left, right) => left - right);
-
-  if (timestamps.length === 0) {
-    return "持续更新";
-  }
-
-  const first = new Date(timestamps[0]).getFullYear();
-  const last = new Date(timestamps[timestamps.length - 1]).getFullYear();
-
-  return first === last ? String(first) : `${first} - ${last}`;
-}
-
 export function GalleryExperience({ site, photos, allTags }: GalleryExperienceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -56,20 +34,14 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
   const [isImmersive, setIsImmersive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(photos);
   const [isFiltering, setIsFiltering] = useState(false);
-  const activePhotos = selectedTag === null ? photos : filteredPhotos;
+  const activePhotos = selectedTags.length === 0 ? photos : filteredPhotos;
   const topTags = getTopTags(photos);
-  const displayTitle = site.siteTitle || site.photographerName || "Luminote";
   const displayDescription =
-    site.siteDescription || site.photographerBio || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
+    site.photographerBio || site.siteDescription || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
   const tagOptions = Array.from(new Set([...topTags.map(([tag]) => tag), ...allTags])).slice(0, 12);
-  const stats = [
-    { label: "Archive", value: formatPhotoCount(activePhotos.length), description: "当前在站作品" },
-    { label: "Topics", value: formatPhotoCount(tagOptions.length), description: "可浏览标签" },
-    { label: "Years", value: getTimeRangeLabel(photos), description: "拍摄时间跨度" }
-  ];
 
   useEffect(() => {
     if (selectedId === null) {
@@ -126,7 +98,7 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
   }, [photos]);
 
   useEffect(() => {
-    if (selectedTag === null) {
+    if (selectedTags.length === 0) {
       setFilteredPhotos(photos);
       setIsFiltering(false);
       return;
@@ -134,9 +106,9 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
 
     setIsFiltering(true);
 
-    setFilteredPhotos(photos.filter((photo) => photo.tags?.includes(selectedTag)));
+    setFilteredPhotos(photos.filter((photo) => photo.tags?.some((tag) => selectedTags.includes(tag))));
     setIsFiltering(false);
-  }, [photos, selectedTag]);
+  }, [photos, selectedTags]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -242,16 +214,17 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
           activePhotoId={selectedId}
           onSelect={handleSelect}
           filterTags={tagOptions}
-          selectedTag={selectedTag}
-          onSelectTag={setSelectedTag}
-          heading={displayTitle}
+          selectedTags={selectedTags}
+          onSelectTags={setSelectedTags}
           description={displayDescription}
-          stats={stats}
         />
       </div>
       <LightboxShell
         photo={activePhoto ?? null}
         photos={activePhotos}
+        watermarkEnabled={site.watermarkEnabledByDefault}
+        watermarkText={site.watermarkText}
+        watermarkPosition={site.watermarkPosition}
         activeIndex={selectedIndex}
         isImmersive={isImmersive}
         isOpen={selectedId !== null}

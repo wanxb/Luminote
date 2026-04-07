@@ -20,7 +20,7 @@ import { createDisplayVariant } from "@/lib/upload/image-variants";
 import { createThumbnail } from "@/lib/upload/thumbnail";
 import { TEXT_LIMITS } from "@/lib/text-limits";
 import { useAdminSessionTimeout } from "@/lib/use-admin-session-timeout";
-import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
+import type { PhotoSummary, SiteResponse, WatermarkPosition } from "@/lib/api/types";
 
 type Tab = "photos" | "settings";
 
@@ -35,6 +35,19 @@ type UploadQueueItem = {
 const DEFAULT_MAX_QUEUE_ITEMS = 20;
 const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
 const DEFAULT_MAX_TAG_POOL_SIZE = 20;
+const DEFAULT_WATERMARK_POSITION: WatermarkPosition = "bottom-right";
+
+const WATERMARK_POSITION_OPTIONS: Array<{ value: WatermarkPosition; label: string }> = [
+  { value: "top-left", label: "左上" },
+  { value: "top", label: "上" },
+  { value: "top-right", label: "右上" },
+  { value: "left", label: "左" },
+  { value: "center", label: "居中" },
+  { value: "right", label: "右" },
+  { value: "bottom-left", label: "左下" },
+  { value: "bottom", label: "下" },
+  { value: "bottom-right", label: "右下" },
+];
 
 const initialForm = {
   batchTags: [] as string[]
@@ -99,6 +112,8 @@ export function AdminDashboardShell() {
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [uploadError, setUploadError] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploaded, setUploaded] = useState<UploadResult[]>([]);
   const [activePreview, setActivePreview] = useState<{ src: string; name: string } | null>(null);
@@ -116,6 +131,7 @@ export function AdminDashboardShell() {
   const [siteDescription, setSiteDescription] = useState("");
   const [watermarkEnabledByDefault, setWatermarkEnabledByDefault] = useState(true);
   const [watermarkText, setWatermarkText] = useState("");
+  const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(DEFAULT_WATERMARK_POSITION);
   const [uploadOriginalEnabled, setUploadOriginalEnabled] = useState(false);
   const [maxTagPoolSize, setMaxTagPoolSize] = useState(DEFAULT_MAX_TAG_POOL_SIZE);
   const [maxUploadFiles, setMaxUploadFiles] = useState(DEFAULT_MAX_QUEUE_ITEMS);
@@ -162,6 +178,13 @@ export function AdminDashboardShell() {
       URL.revokeObjectURL(avatarObjectUrlRef.current);
       avatarObjectUrlRef.current = null;
     }
+  }
+
+  function resetUploadFeedback() {
+    setUploadError("");
+    setUploadStatus("");
+    setUploadProgress(0);
+    setUploadStage("");
   }
 
   useEffect(() => {
@@ -302,6 +325,7 @@ export function AdminDashboardShell() {
       setSiteDescription(site.siteDescription ?? "");
       setWatermarkEnabledByDefault(site.watermarkEnabledByDefault);
       setWatermarkText(site.watermarkText);
+      setWatermarkPosition(site.watermarkPosition);
       setUploadOriginalEnabled(site.uploadOriginalEnabled);
       setMaxTagPoolSize(site.maxTagPoolSize);
       setMaxUploadFiles(site.maxUploadFiles);
@@ -340,25 +364,65 @@ export function AdminDashboardShell() {
 
     const files = uploadQueue.map((item) => item.file);
     const watermarkEnabled = config?.watermarkEnabledByDefault ?? true;
+    const nextWatermarkPosition = config?.watermarkPosition ?? DEFAULT_WATERMARK_POSITION;
+    const processingStepsPerFile = watermarkEnabled ? 4 : 3;
+    const totalProcessingSteps = Math.max(1, files.length * processingStepsPerFile);
+    let completedProcessingSteps = 0;
+
+    const reportProcessingProgress = (label: string) => {
+      completedProcessingSteps += 1;
+      setUploadStage(label);
+      setUploadProgress(Math.min(82, Math.round((completedProcessingSteps / totalProcessingSteps) * 82)));
+    };
 
     setIsUploading(true);
     setUploadError("");
     setUploadNotice("");
     setUploadStatus("");
+    setUploadStage("准备图片...");
+    setUploadProgress(0);
 
     try {
+      const thumbnailPromises = files.map((file) =>
+        createThumbnail(file).then((result) => {
+          reportProcessingProgress(`正在生成缩略图 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
+          return result;
+        })
+      );
+      const displayPromises = files.map((file) =>
+        createDisplayVariant(file).then((result) => {
+          reportProcessingProgress(`正在生成展示图 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
+          return result;
+        })
+      );
+      const watermarkedDisplayPromises = files.map((file) =>
+        watermarkEnabled
+          ? createDisplayVariant(file, {
+              includeWatermark: true,
+              watermarkText,
+              watermarkPosition: nextWatermarkPosition,
+            }).then((result) => {
+              reportProcessingProgress(`正在生成水印图 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
+              return result;
+            })
+          : Promise.resolve(null)
+      );
+      const exifPromises = files.map((file) =>
+        extractExif(file).then((result) => {
+          reportProcessingProgress(`正在读取参数 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
+          return result;
+        })
+      );
+
       const [thumbnails, displayFiles, watermarkedDisplayFiles, exifRecords] = await Promise.all([
-        Promise.all(files.map((file) => createThumbnail(file))),
-        Promise.all(files.map((file) => createDisplayVariant(file))),
-        Promise.all(
-          files.map((file) =>
-            watermarkEnabled
-              ? createDisplayVariant(file, { includeWatermark: true, watermarkText })
-              : Promise.resolve(null)
-          )
-        ),
-        Promise.all(files.map((file) => extractExif(file)))
+        Promise.all(thumbnailPromises),
+        Promise.all(displayPromises),
+        Promise.all(watermarkedDisplayPromises),
+        Promise.all(exifPromises)
       ]);
+
+      setUploadStage("正在上传文件...");
+      setUploadProgress(84);
 
       const result = await uploadPhotos({
         files,
@@ -376,6 +440,11 @@ export function AdminDashboardShell() {
         showLocationInfo: true,
         watermarkEnabled,
         storeOriginalFiles: uploadOriginalEnabled
+      }, {
+        onProgress: (progress) => {
+          setUploadStage("正在上传文件...");
+          setUploadProgress(84 + Math.round(progress * 0.16));
+        }
       });
 
       if (!result.ok) {
@@ -393,6 +462,8 @@ export function AdminDashboardShell() {
       setUploadQueue([]);
       setBatchTags(initialForm.batchTags);
       setUploadStatus(`上传成功，共 ${result.uploaded.length} 张。`);
+      setUploadStage("上传完成");
+      setUploadProgress(100);
 
       await loadPhotos();
     } catch {
@@ -552,6 +623,8 @@ export function AdminDashboardShell() {
     if (selectedFiles.length === 0) {
       return;
     }
+
+    resetUploadFeedback();
 
     setUploadQueue((current) => {
       const existingKeys = new Set(current.map((item) => item.key));
@@ -814,6 +887,7 @@ export function AdminDashboardShell() {
         siteDescription?: string;
         watermarkEnabledByDefault?: boolean;
         watermarkText?: string;
+        watermarkPosition?: WatermarkPosition;
         uploadOriginalEnabled?: boolean;
         maxTagPoolSize?: number;
         maxUploadFiles?: number;
@@ -847,6 +921,10 @@ export function AdminDashboardShell() {
 
       if (watermarkText !== config?.watermarkText) {
         payload.watermarkText = watermarkText;
+      }
+
+      if (watermarkPosition !== config?.watermarkPosition) {
+        payload.watermarkPosition = watermarkPosition;
       }
 
       if (uploadOriginalEnabled !== config?.uploadOriginalEnabled) {
@@ -1175,6 +1253,20 @@ export function AdminDashboardShell() {
 
                 {uploadStatus ? <p className="text-sm text-emerald-700">{uploadStatus}</p> : null}
                 {uploadError ? <p className="text-sm text-red-700">{uploadError}</p> : null}
+                {isUploading || uploadProgress > 0 ? (
+                  <div className="space-y-2">
+                    <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                      <div
+                        className="h-full rounded-full bg-ink transition-[width] duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-ink/60">
+                      <span>{uploadStage || "等待上传"}</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                  </div>
+                ) : null}
 
                 <button
                   type="submit"
@@ -1428,6 +1520,21 @@ export function AdminDashboardShell() {
                           />
                         </label>
 
+                        <label className="flex min-h-[104px] flex-col rounded-2xl border border-black/6 bg-white px-4 py-4 text-sm text-ink">
+                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">水印位置</span>
+                          <select
+                            value={watermarkPosition}
+                            onChange={(event) => setWatermarkPosition(event.target.value as WatermarkPosition)}
+                            className="mt-2 w-full rounded-xl border border-black/10 bg-mist px-3 py-2.5 text-sm outline-none transition focus:border-ember"
+                          >
+                            {WATERMARK_POSITION_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
                         <label className="group relative flex min-h-[104px] items-start gap-3 rounded-2xl border border-black/6 bg-white px-4 py-4 text-sm text-ink">
                           <input
                             type="checkbox"
@@ -1445,7 +1552,7 @@ export function AdminDashboardShell() {
                             <span className="mt-1 block text-xs leading-5 text-ink/55">关闭时只保留网页展示图和缩略图。</span>
                           </span>
                           <span className="pointer-events-none absolute left-4 top-full z-10 mt-2 hidden w-72 rounded-2xl border border-black/8 bg-ink px-3 py-2 text-xs leading-5 text-white shadow-xl group-hover:block">
-                            未勾选时，不保存原图。系统会生成最长边 1800px 的 JPEG 展示图，压缩质量 0.9；同时生成 640px 的 WebP 缩略图。
+                            未勾选时，不保存原图。系统会生成最长边 1800px 的 JPEG 展示图，压缩质量 0.9；同时生成 640px 的 WebP 缩略图。前台大图水印显示由上方开关和位置统一控制。
                           </span>
                         </label>
                       </div>

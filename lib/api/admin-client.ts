@@ -5,6 +5,7 @@ import type {
   PhotosResponse,
   SiteConfigResponse,
   SiteResponse,
+  WatermarkPosition,
 } from "@/lib/api/types";
 
 const API_TIMEOUT_MS = 8000;
@@ -88,6 +89,7 @@ export type UpdateSitePayload = {
   siteDescription?: string;
   watermarkEnabledByDefault?: boolean;
   watermarkText?: string;
+  watermarkPosition?: WatermarkPosition;
   adminPassword?: string;
   uploadOriginalEnabled?: boolean;
   maxTagPoolSize?: number;
@@ -167,6 +169,48 @@ export type UploadPayload = {
   storeOriginalFiles?: boolean;
 };
 
+type UploadPhotosOptions = {
+  onProgress?: (progress: number) => void;
+};
+
+function uploadFormDataWithProgress<T>(
+  path: string,
+  formData: FormData,
+  options?: UploadPhotosOptions,
+) {
+  return new Promise<{ response: { status: number }; data: T }>(
+    (resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${getClientApiBaseUrl()}${path}`);
+      xhr.withCredentials = true;
+      xhr.responseType = "json";
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return;
+        }
+
+        options?.onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      };
+
+      xhr.onerror = () => {
+        reject(new Error(`Request failed for ${path}`));
+      };
+
+      xhr.onload = () => {
+        const data = (xhr.response ?? JSON.parse(xhr.responseText || "{}")) as T;
+        options?.onProgress?.(100);
+        resolve({
+          response: { status: xhr.status },
+          data,
+        });
+      };
+
+      xhr.send(formData);
+    },
+  );
+}
+
 export async function loginAdmin(password: string) {
   const { response, data } = await requestClientJson<AdminLoginResponse>(
     "/api/admin/login",
@@ -213,7 +257,10 @@ export async function logoutAdmin() {
   return data;
 }
 
-export async function uploadPhotos(payload: UploadPayload) {
+export async function uploadPhotos(
+  payload: UploadPayload,
+  options?: UploadPhotosOptions,
+) {
   const formData = new FormData();
   formData.set("description", payload.description);
   formData.set(
@@ -259,13 +306,10 @@ export async function uploadPhotos(payload: UploadPayload) {
     formData.append("exif[]", JSON.stringify(exifRecord));
   }
 
-  const { response, data } = await requestClientJson<UploadPhotosResponse>(
+  const { response, data } = await uploadFormDataWithProgress<UploadPhotosResponse>(
     "/api/admin/photos",
-    {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    },
+    formData,
+    options,
   );
 
   return {
@@ -424,7 +468,7 @@ async function fetchClientJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function getSite() {
+export async function getSite(): Promise<SiteResponse> {
   try {
     return await fetchJson<SiteResponse>("/api/site");
   } catch {
@@ -434,6 +478,7 @@ export async function getSite() {
         "A lightweight home for photography that lets the work breathe.",
       watermarkEnabledByDefault: true,
       watermarkText: "© Luminote",
+      watermarkPosition: "bottom-right" as WatermarkPosition,
       uploadOriginalEnabled: false,
       maxTagPoolSize: 20,
       maxUploadFiles: 20,
