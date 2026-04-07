@@ -7,6 +7,31 @@ import type {
   SiteResponse,
 } from "@/lib/api/types";
 
+const API_TIMEOUT_MS = 8000;
+
+function createAbortSignal(timeoutMs: number) {
+  if (
+    typeof AbortSignal !== "undefined" &&
+    typeof AbortSignal.timeout === "function"
+  ) {
+    return AbortSignal.timeout(timeoutMs);
+  }
+
+  return undefined;
+}
+
+async function requestClientJson<T>(path: string, init?: RequestInit) {
+  const response = await fetch(`${getClientApiBaseUrl()}${path}`, {
+    ...init,
+    signal: createAbortSignal(API_TIMEOUT_MS),
+  });
+
+  return {
+    response,
+    data: (await response.json()) as T,
+  };
+}
+
 export type AdminLoginResponse = {
   ok: boolean;
   authenticated?: boolean;
@@ -143,40 +168,46 @@ export type UploadPayload = {
 };
 
 export async function loginAdmin(password: string) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/login`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "content-type": "application/json",
+  const { response, data } = await requestClientJson<AdminLoginResponse>(
+    "/api/admin/login",
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ password }),
     },
-    body: JSON.stringify({ password }),
-  });
+  );
 
   return {
-    ...((await response.json()) as AdminLoginResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function getAdminSession() {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/session`, {
-    method: "GET",
-    credentials: "include",
-  });
+  const { response, data } = await requestClientJson<AdminSessionResponse>(
+    "/api/admin/session",
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
 
   return {
-    ...((await response.json()) as AdminSessionResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function logoutAdmin() {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/logout`, {
+  const { data } = await requestClientJson<{ ok: boolean }>("/api/admin/logout", {
     method: "POST",
     credentials: "include",
   });
 
-  return (await response.json()) as { ok: boolean };
+  return data;
 }
 
 export async function uploadPhotos(payload: UploadPayload) {
@@ -225,21 +256,24 @@ export async function uploadPhotos(payload: UploadPayload) {
     formData.append("exif[]", JSON.stringify(exifRecord));
   }
 
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/photos`, {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  const { response, data } = await requestClientJson<UploadPhotosResponse>(
+    "/api/admin/photos",
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    },
+  );
 
   return {
-    ...((await response.json()) as UploadPhotosResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function deletePhoto(id: string) {
-  const response = await fetch(
-    `${getClientApiBaseUrl()}/api/admin/photos/${id}`,
+  const { response, data } = await requestClientJson<DeletePhotoResponse>(
+    `/api/admin/photos/${id}`,
     {
       method: "DELETE",
       credentials: "include",
@@ -247,42 +281,48 @@ export async function deletePhoto(id: string) {
   );
 
   return {
-    ...((await response.json()) as DeletePhotoResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function getAdminTags() {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags`, {
-    method: "GET",
-    credentials: "include",
-  });
+  const { response, data } = await requestClientJson<GetTagPoolResponse>(
+    "/api/admin/tags",
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
 
   return {
-    ...((await response.json()) as GetTagPoolResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function createTag(name: string) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/tags`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "content-type": "application/json",
+  const { response, data } = await requestClientJson<CreateTagResponse>(
+    "/api/admin/tags",
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ name }),
     },
-    body: JSON.stringify({ name }),
-  });
+  );
 
   return {
-    ...((await response.json()) as CreateTagResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function deleteTag(id: string) {
-  const response = await fetch(
-    `${getClientApiBaseUrl()}/api/admin/tags/${id}`,
+  const { response, data } = await requestClientJson<DeleteTagResponse>(
+    `/api/admin/tags/${id}`,
     {
       method: "DELETE",
       credentials: "include",
@@ -290,14 +330,14 @@ export async function deleteTag(id: string) {
   );
 
   return {
-    ...((await response.json()) as DeleteTagResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function updatePhoto(id: string, payload: UpdatePhotoPayload) {
-  const response = await fetch(
-    `${getClientApiBaseUrl()}/api/admin/photos/${id}`,
+  const { response, data } = await requestClientJson<UpdatePhotoResponse>(
+    `/api/admin/photos/${id}`,
     {
       method: "PATCH",
       credentials: "include",
@@ -309,23 +349,26 @@ export async function updatePhoto(id: string, payload: UpdatePhotoPayload) {
   );
 
   return {
-    ...((await response.json()) as UpdatePhotoResponse),
+    ...data,
     status: response.status,
   };
 }
 
 export async function updateSiteConfig(payload: UpdateSitePayload) {
-  const response = await fetch(`${getClientApiBaseUrl()}/api/admin/site`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: {
-      "content-type": "application/json",
+  const { response, data } = await requestClientJson<UpdateSiteResponse>(
+    "/api/admin/site",
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   return {
-    ...((await response.json()) as UpdateSiteResponse),
+    ...data,
     status: response.status,
   };
 }
@@ -334,8 +377,8 @@ export async function uploadPhotographerAvatar(file: File) {
   const formData = new FormData();
   formData.set("file", file);
 
-  const response = await fetch(
-    `${getClientApiBaseUrl()}/api/admin/site/avatar`,
+  const { response, data } = await requestClientJson<UploadPhotographerAvatarResponse>(
+    "/api/admin/site/avatar",
     {
       method: "POST",
       credentials: "include",
@@ -344,7 +387,7 @@ export async function uploadPhotographerAvatar(file: File) {
   );
 
   return {
-    ...((await response.json()) as UploadPhotographerAvatarResponse),
+    ...data,
     status: response.status,
   };
 }
@@ -353,6 +396,7 @@ async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getServerApiBaseUrl()}${path}`, {
     method: "GET",
     cache: "no-store",
+    signal: createAbortSignal(API_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -366,6 +410,7 @@ async function fetchClientJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getClientApiBaseUrl()}${path}`, {
     method: "GET",
     cache: "no-store",
+    signal: createAbortSignal(API_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -413,6 +458,7 @@ export async function getPhotos(tag?: string) {
     method: "GET",
     credentials: "include",
     cache: "no-store",
+    signal: createAbortSignal(API_TIMEOUT_MS),
   });
 
   if (!rawResponse.ok) {

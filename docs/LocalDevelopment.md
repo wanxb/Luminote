@@ -5,7 +5,7 @@
 Luminote currently runs as two local processes:
 
 - Next.js front-end at `http://localhost:3000`
-- Cloudflare Worker API at `http://localhost:8787`
+- Cloudflare Worker API at `http://127.0.0.1:8787`
 
 The front-end reads `NEXT_PUBLIC_API_BASE_URL` / `API_BASE_URL` and talks to the Worker for site data, gallery data, uploads and asset delivery.
 Admin APIs now use an `HttpOnly` session cookie, so front-end requests must include credentials.
@@ -50,7 +50,7 @@ npm run dev
 Default URL:
 
 ```text
-http://localhost:8787
+http://127.0.0.1:8787
 ```
 
 ## 4. Front-end env vars
@@ -60,8 +60,8 @@ Copy values from [`.env.example`](/e:/Projects/Luminote/.env.example) into a loc
 Recommended local values:
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
-API_BASE_URL=http://localhost:8787
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
+API_BASE_URL=http://127.0.0.1:8787
 ```
 
 ## 5. Worker local vars

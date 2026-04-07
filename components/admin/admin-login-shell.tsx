@@ -61,7 +61,7 @@ export function AdminLoginShell() {
 
       window.location.href = "/dashboard";
     } catch {
-      setLoginError("登录请求失败，请确认 Worker 是否已启动。");
+      setLoginError("登录请求失败，请稍后重试。");
     } finally {
       setIsLoggingIn(false);
     }
@@ -118,10 +118,6 @@ export function AdminLoginShell() {
 
           {loginError ? <p className="text-center text-sm text-red-700">{loginError}</p> : null}
         </form>
-
-        <p className="mt-6 text-center text-xs text-ink/50">
-          当前版本账号仅供展示，实际使用密码登录
-        </p>
       </div>
     </main>
   );
