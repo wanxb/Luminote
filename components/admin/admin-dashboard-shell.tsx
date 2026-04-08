@@ -118,7 +118,6 @@ export function AdminDashboardShell() {
   const [batchTags, setBatchTags] = useState<string[]>(initialForm.batchTags);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [uploadError, setUploadError] = useState("");
-  const [uploadStatus, setUploadStatus] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStage, setUploadStage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -189,7 +188,6 @@ export function AdminDashboardShell() {
 
   function resetUploadFeedback() {
     setUploadError("");
-    setUploadStatus("");
     setUploadProgress(0);
     setUploadStage("");
   }
@@ -428,7 +426,6 @@ export function AdminDashboardShell() {
     setIsUploading(true);
     setUploadError("");
     setUploadNotice("");
-    setUploadStatus("");
     setUploadStage("准备图片...");
     setUploadProgress(0);
 
@@ -512,8 +509,7 @@ export function AdminDashboardShell() {
       setUploaded(result.uploaded);
       setUploadQueue([]);
       setBatchTags(initialForm.batchTags);
-      setUploadStatus(`上传成功，共 ${result.uploaded.length} 张。`);
-      setUploadStage("上传完成");
+      setUploadStage(`上传成功，共 ${result.uploaded.length} 张。`);
       setUploadProgress(100);
       setIsUploading(false);
       shouldResetUploading = false;
@@ -1307,18 +1303,41 @@ export function AdminDashboardShell() {
                   </div>
                 ) : null}
 
-                {uploadStatus ? <p className="text-sm text-emerald-700">{uploadStatus}</p> : null}
                 {uploadError ? <p className="text-sm text-red-700">{uploadError}</p> : null}
                 {isUploading || uploadProgress > 0 ? (
-                  <div className="space-y-2">
+                  <div
+                    className={`space-y-2 rounded-2xl border px-4 py-3 ${
+                      uploadError
+                        ? "border-red-200 bg-red-50/80"
+                        : uploadProgress >= 100 && !isUploading
+                          ? "border-emerald-200 bg-emerald-50/80"
+                          : "border-black/8 bg-white/45"
+                    }`}
+                  >
                     <div className="h-2 overflow-hidden rounded-full bg-black/8">
                       <div
-                        className="h-full rounded-full bg-ink transition-[width] duration-300"
+                        className={`h-full rounded-full transition-[width] duration-300 ${
+                          uploadError
+                            ? "bg-red-600"
+                            : uploadProgress >= 100 && !isUploading
+                              ? "bg-emerald-600"
+                              : "bg-ink"
+                        }`}
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
-                    <div className="flex items-center justify-between text-xs text-ink/60">
-                      <span>{uploadStage || "等待上传"}</span>
+                    <div className="flex items-center justify-between gap-4 text-xs">
+                      <span
+                        className={
+                          uploadError
+                            ? "text-red-700"
+                            : uploadProgress >= 100 && !isUploading
+                              ? "font-medium text-emerald-700"
+                              : "text-ink/60"
+                        }
+                      >
+                        {uploadStage || "等待上传"}
+                      </span>
                       <span>{uploadProgress}%</span>
                     </div>
                   </div>
