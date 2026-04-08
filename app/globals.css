@@ -39,3 +39,34 @@ a {
 img {
   -webkit-user-drag: none;
 }
+
+/* --- Summer tree-shadow login background --- */
+
+.summer-shadow-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.summer-shadow-video-single {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 43% 1%;
+  transform: scale(1.16) translateY(-3%);
+  transform-origin: top center;
+  filter: saturate(0.72) sepia(0.08) brightness(1.02) contrast(0.98);
+  pointer-events: none;
+}
+
+.summer-wall-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(245, 240, 228, 0.24) 0%, rgba(245, 240, 228, 0.24) 100%),
+    radial-gradient(circle at 85% 9%, rgba(248, 231, 183, 0.2) 0%, rgba(248, 231, 183, 0.09) 18%, rgba(248, 231, 183, 0) 38%);
+  pointer-events: none;
+}

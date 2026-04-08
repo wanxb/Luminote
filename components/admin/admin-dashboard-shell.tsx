@@ -1039,7 +1039,7 @@ export function AdminDashboardShell() {
   }
 
   if (isCheckingSession) {
-    return <div className="min-h-screen bg-mist" />;
+    return <div className="min-h-screen bg-transparent" />;
   }
 
   const totalPhotos = photos.length;
@@ -1047,17 +1047,17 @@ export function AdminDashboardShell() {
   const visibleTags = [...predefinedTags, ...pendingTags];
 
   return (
-    <div className="min-h-screen bg-mist">
-      <nav className="border-b border-black/5 bg-white/80 backdrop-blur-md">
+    <div className="min-h-screen bg-transparent">
+      <nav className="border-b border-black/5 bg-[rgba(255,255,255,0.34)] backdrop-blur-[3px]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-10">
           <div className="flex items-center gap-8">
             <h1 className="font-display text-2xl text-ink">Luminote 后台</h1>
-            <div className="flex gap-1 rounded-full bg-mist p-1">
+            <div className="flex gap-1 rounded-full bg-[rgba(245,240,228,0.24)] p-1">
               <button
                 type="button"
                 onClick={() => setActiveTab("photos")}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "photos" ? "bg-white text-ink shadow-sm" : "text-ink/60 hover:text-ink"
+                  activeTab === "photos" ? "bg-[rgba(255,255,255,0.5)] text-ink shadow-sm" : "text-ink/60 hover:text-ink"
                 }`}
               >
                 管理照片
@@ -1066,7 +1066,7 @@ export function AdminDashboardShell() {
                 type="button"
                 onClick={() => setActiveTab("settings")}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "settings" ? "bg-white text-ink shadow-sm" : "text-ink/60 hover:text-ink"
+                  activeTab === "settings" ? "bg-[rgba(255,255,255,0.5)] text-ink shadow-sm" : "text-ink/60 hover:text-ink"
                 }`}
               >
                 设置
@@ -1077,7 +1077,7 @@ export function AdminDashboardShell() {
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-full border border-black/10 px-4 py-2 text-sm text-ink transition hover:bg-mist"
+            className="rounded-full border border-black/10 px-4 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.26)]"
           >
             退出
           </button>
@@ -1087,7 +1087,7 @@ export function AdminDashboardShell() {
       <main className="mx-auto max-w-7xl px-6 py-8 md:px-10">
         {activeTab === "photos" ? (
           <div className="space-y-8">
-            <section className="rounded-[28px] border border-black/5 bg-white/80 p-6 shadow-soft">
+            <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
               <div className="flex items-baseline gap-2">
                 <h2 className="font-display text-2xl text-ink">上传照片</h2>
                 <span className="text-sm text-ink/60">{uploadQueue.length}/{maxUploadFiles}</span>
@@ -1108,7 +1108,7 @@ export function AdminDashboardShell() {
                             className={`rounded-full px-4 py-2 text-sm transition ${
                               batchTags.includes(tag.name)
                                 ? "bg-ink text-paper"
-                                : "border border-black/10 bg-white text-ink/45 hover:bg-mist"
+                                : "border border-black/10 bg-[rgba(255,255,255,0.38)] text-ink/45 hover:bg-[rgba(245,240,228,0.24)]"
                             } disabled:cursor-not-allowed disabled:opacity-45`}
                           >
                             {tag.name}
@@ -1117,7 +1117,7 @@ export function AdminDashboardShell() {
                             <button
                               type="button"
                               onClick={() => void handleDeleteTag(tag)}
-                              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-ink shadow-sm ring-1 ring-black/10"
+                              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[rgba(255,255,255,0.56)] text-[10px] text-ink shadow-sm ring-1 ring-black/10"
                               aria-label={`删除 ${tag.name}`}
                             >
                               ×
@@ -1134,14 +1134,14 @@ export function AdminDashboardShell() {
                             onChange={(event) => setNewTagName(event.target.value)}
                             maxLength={TEXT_LIMITS.tagName}
                             placeholder="新标签"
-                            className="w-28 rounded-full border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-ember"
+                            className="w-28 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm outline-none transition focus:border-ember"
                             disabled={isCreatingTag}
                           />
                           <button
                             type="button"
                             onClick={() => void handleCreateTag()}
                             disabled={isCreatingTag || !newTagName.trim() || predefinedTags.length >= maxTagPoolSize}
-                            className="rounded-full border border-black/10 bg-white px-3 py-2 text-sm text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-45"
+                            className="rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)] disabled:cursor-not-allowed disabled:opacity-45"
                           >
                             添加
                           </button>
@@ -1152,7 +1152,7 @@ export function AdminDashboardShell() {
                         type="button"
                         onClick={() => void handleToggleTagManagement()}
                         title={isManagingTags ? "完成标签编辑" : "管理标签"}
-                        className="flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-sm text-ink transition hover:bg-mist"
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)]"
                         aria-label="管理标签"
                       >
                         {isManagingTags ? "✓" : "+"}
@@ -1176,7 +1176,7 @@ export function AdminDashboardShell() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     title="添加照片"
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-paper text-2xl text-ink transition hover:bg-mist"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-[rgba(245,240,228,0.38)] text-2xl text-ink transition hover:bg-[rgba(245,240,228,0.26)]"
                     aria-label="添加照片"
                   >
                     +
@@ -1191,12 +1191,12 @@ export function AdminDashboardShell() {
                       const effectiveTags = uniqueTags([...batchTags, ...item.tags], maxTagsPerPhoto);
 
                       return (
-                        <div key={item.id} className="rounded-2xl border border-black/5 bg-mist/70 px-3 py-2.5">
+                        <div key={item.id} className="rounded-2xl border border-black/5 bg-[rgba(245,240,228,0.24)] px-3 py-2.5">
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
                               onClick={() => setActivePreview({ src: item.previewUrl, name: item.file.name })}
-                              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/10 bg-white transition hover:opacity-90"
+                              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/10 bg-[rgba(255,255,255,0.42)] transition hover:opacity-90"
                               aria-label={`预览 ${item.file.name}`}
                             >
                               <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
@@ -1214,7 +1214,7 @@ export function AdminDashboardShell() {
                                 <button
                                   type="button"
                                   onClick={() => removeQueuedFile(item.id)}
-                                  className="ml-auto shrink-0 rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-ink transition hover:bg-white"
+                                  className="ml-auto shrink-0 rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-ink transition hover:bg-[rgba(255,255,255,0.42)]"
                                 >
                                   移除
                                 </button>
@@ -1234,7 +1234,7 @@ export function AdminDashboardShell() {
                                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
                                       selected
                                         ? "bg-ink text-paper"
-                                        : "border border-black/10 bg-white text-ink/70 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40"
+                                        : "border border-black/10 bg-[rgba(255,255,255,0.42)] text-ink/70 hover:bg-[rgba(245,240,228,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
                                     }`}
                                   >
                                     {tag.name}
@@ -1279,7 +1279,7 @@ export function AdminDashboardShell() {
 
             </section>
 
-            <section className="rounded-[28px] border border-black/5 bg-white/80 p-6 shadow-soft">
+            <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-2xl text-ink">现有照片 ({totalPhotos})</h2>
               </div>
@@ -1297,7 +1297,7 @@ export function AdminDashboardShell() {
                     <div
                       key={photo.id}
                       className={`rounded-xl border border-black/5 px-4 py-3 transition hover:border-black/10 hover:bg-white/70 ${
-                        photo.isHidden ? "bg-black/[0.04]" : "bg-mist"
+                        photo.isHidden ? "bg-black/[0.04]" : "bg-[rgba(245,240,228,0.2)]"
                       }`}
                     >
                       {(() => {
@@ -1336,7 +1336,7 @@ export function AdminDashboardShell() {
                                 {photo.description || `照片 ${photo.id.replace("photo_", "")}`}
                               </p>
                               {photo.isHidden ? (
-                                <span className="shrink-0 rounded-full border border-black/10 bg-white px-2 py-0.5 text-[11px] text-ink/60">
+                                <span className="shrink-0 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-2 py-0.5 text-[11px] text-ink/60">
                                   已隐藏
                                 </span>
                               ) : null}
@@ -1346,7 +1346,7 @@ export function AdminDashboardShell() {
                                 {draftTags.map((tag) => (
                                   <span
                                     key={tag}
-                                    className="inline-flex rounded-lg border border-black/10 bg-white px-2 py-0.5 text-xs text-ink/70"
+                                    className="inline-flex rounded-lg border border-black/10 bg-[rgba(255,255,255,0.42)] px-2 py-0.5 text-xs text-ink/70"
                                   >
                                     {tag}
                                   </span>
@@ -1431,7 +1431,7 @@ export function AdminDashboardShell() {
                                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
                                       selected
                                         ? "bg-ink text-paper"
-                                        : "border border-black/10 bg-white text-ink/70 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40"
+                                        : "border border-black/10 bg-[rgba(255,255,255,0.42)] text-ink/70 hover:bg-[rgba(245,240,228,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
                                     }`}
                                   >
                                     {tag.name}
@@ -1453,7 +1453,7 @@ export function AdminDashboardShell() {
           </div>
         ) : (
           <div className="space-y-8">
-            <section className="rounded-[28px] border border-black/5 bg-white/80 p-6 shadow-soft">
+            <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
               <h2 className="font-display text-2xl text-ink">站点设置</h2>
 
               {isLoadingConfig ? (
@@ -1461,7 +1461,7 @@ export function AdminDashboardShell() {
               ) : (
                 <form className="mt-6 space-y-4" onSubmit={handleSaveConfig}>
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-                    <section className="rounded-[24px] border border-black/5 bg-mist/45 p-4 md:p-5">
+                    <section className="rounded-[24px] border border-black/5 bg-[rgba(245,240,228,0.22)] p-4 md:p-5">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
                           <h3 className="text-sm font-semibold text-ink">基础信息</h3>
@@ -1470,25 +1470,25 @@ export function AdminDashboardShell() {
                       </div>
 
                       <div className="grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-                        <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
+                        <label className="block space-y-2 rounded-2xl border border-black/6 bg-[rgba(255,255,255,0.34)] px-4 py-4">
                           <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">站点标题</span>
                           <input
                             type="text"
                             value={siteTitle}
                             onChange={(event) => setSiteTitle(event.target.value)}
                             maxLength={TEXT_LIMITS.siteTitle}
-                            className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
+                            className="w-full rounded-2xl border border-black/10 bg-[rgba(245,240,228,0.28)] px-4 py-3 text-sm outline-none transition focus:border-ember"
                             placeholder="例如：Luminote"
                           />
                         </label>
 
-                        <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
+                        <label className="block space-y-2 rounded-2xl border border-black/6 bg-[rgba(255,255,255,0.34)] px-4 py-4">
                           <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">站点简介</span>
                           <textarea
                             value={siteDescription}
                             onChange={(event) => setSiteDescription(event.target.value)}
                             maxLength={TEXT_LIMITS.siteDescription}
-                            className="min-h-[132px] w-full resize-none rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm leading-6 outline-none transition focus:border-ember"
+                            className="min-h-[132px] w-full resize-none rounded-2xl border border-black/10 bg-[rgba(245,240,228,0.28)] px-4 py-3 text-sm leading-6 outline-none transition focus:border-ember"
                             placeholder="用两到三行介绍站点的气质、主题或拍摄方向。"
                           />
                         </label>

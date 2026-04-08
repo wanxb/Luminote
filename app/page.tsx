@@ -1,4 +1,5 @@
 import { GalleryExperience } from "@/components/gallery/gallery-experience";
+import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotos, getSite } from "@/lib/api/client";
 import { defaultGalleryPhotos } from "@/lib/gallery-defaults";
 
@@ -28,8 +29,11 @@ export default async function HomePage() {
   const galleryPhotos = photos.length > 0 ? photos : defaultGalleryPhotos;
 
   return (
-    <main className="min-h-screen bg-[#050505] p-[2px] text-white sm:p-[3px]">
-      <GalleryExperience site={site} photos={galleryPhotos} allTags={PREDEFINED_TAGS} />
+    <main className="relative isolate min-h-screen overflow-hidden bg-[#f5f0e4] text-white">
+      <SummerShadowBackground />
+      <div className="relative z-10 p-[2px] sm:p-[3px]">
+        <GalleryExperience site={site} photos={galleryPhotos} allTags={PREDEFINED_TAGS} />
+      </div>
     </main>
   );
 }
