@@ -43,6 +43,8 @@ export type PhotosResponse = {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  total: number;
+  unfilteredTotal?: number;
 };
 
 export type SiteResponse = {

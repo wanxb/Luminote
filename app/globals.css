@@ -15,6 +15,7 @@ html {
 }
 
 body {
+  margin: 0;
   min-height: 100vh;
   color: var(--page-ink);
   background: #050505;

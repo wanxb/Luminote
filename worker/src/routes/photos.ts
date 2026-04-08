@@ -2,6 +2,16 @@ import type { Env } from "../index";
 import { getPhotoById, listPhotos } from "../services/photo-service";
 import { json } from "../utils/json";
 
+function parsePositiveNumber(value: string | null, fallback: number) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
 export async function handlePhotos(
   request: Request,
   env: Env,
@@ -27,18 +37,22 @@ export async function handlePhotos(
     return json(detail);
   }
 
-  const page = Number(url.searchParams.get("page") || "1");
-  const pageSize = Number(url.searchParams.get("pageSize") || "30");
+  const page = parsePositiveNumber(url.searchParams.get("page"), 1);
+  const pageSize = parsePositiveNumber(url.searchParams.get("pageSize"), 30);
   const tag = url.searchParams.get("tag");
 
   try {
-    const items = await listPhotos(env, origin, tag);
-
-    return json({
-      items,
+    const result = await listPhotos(env, origin, tag, {
       page,
       pageSize,
-      hasMore: items.length >= pageSize,
+    });
+
+    return json({
+      items: result.items,
+      page,
+      pageSize,
+      hasMore: result.hasMore,
+      total: result.total,
     });
   } catch (error) {
     console.error("[handlePhotos] listPhotos failed", error);

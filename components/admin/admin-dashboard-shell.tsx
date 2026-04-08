@@ -36,6 +36,7 @@ const DEFAULT_MAX_QUEUE_ITEMS = 20;
 const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
 const DEFAULT_MAX_TAG_POOL_SIZE = 20;
 const DEFAULT_WATERMARK_POSITION: WatermarkPosition = "bottom-right";
+const PHOTO_PAGE_SIZE = 10;
 
 const WATERMARK_POSITION_OPTIONS: Array<{ value: WatermarkPosition; label: string }> = [
   { value: "top-left", label: "左上" },
@@ -104,7 +105,13 @@ export function AdminDashboardShell() {
 
   const [photos, setPhotos] = useState<PhotoSummary[]>([]);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
+  const [photosPage, setPhotosPage] = useState(1);
+  const [photosHasMore, setPhotosHasMore] = useState(false);
+  const [photosTotal, setPhotosTotal] = useState(0);
+  const [photosUnfilteredTotal, setPhotosUnfilteredTotal] = useState(0);
   const [photosError, setPhotosError] = useState("");
+  const [photoTagFilterInput, setPhotoTagFilterInput] = useState("");
+  const [appliedPhotoTagFilter, setAppliedPhotoTagFilter] = useState("");
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [deleteConfirmPhotoId, setDeleteConfirmPhotoId] = useState<string | null>(null);
 
@@ -286,19 +293,61 @@ export function AdminDashboardShell() {
     setConfigSuccess("");
   }
 
-  async function loadPhotos() {
+  async function loadPhotos(page = 1, tag = appliedPhotoTagFilter) {
     setIsLoadingPhotos(true);
     setPhotosError("");
 
     try {
-      const photoList = await getPhotos();
-      setPhotos(photoList);
+      const response = await getPhotos({
+        page,
+        pageSize: PHOTO_PAGE_SIZE,
+        tag: tag || undefined
+      });
+
+      setPhotos(response.items);
+      setPhotosPage(response.page);
+      setPhotosHasMore(response.hasMore);
+      setPhotosTotal(response.total);
+      setPhotosUnfilteredTotal(response.unfilteredTotal ?? response.total);
     } catch {
       setPhotos([]);
+      setPhotosPage(1);
+      setPhotosHasMore(false);
+      setPhotosTotal(0);
+      setPhotosUnfilteredTotal(0);
       setPhotosError("加载现有照片失败，请检查 Worker 或数据库状态后重试。");
     } finally {
       setIsLoadingPhotos(false);
     }
+  }
+
+  async function handleApplyPhotoTagFilter(tag?: string) {
+    const nextTag = (tag ?? photoTagFilterInput).trim();
+    setAppliedPhotoTagFilter(nextTag);
+    setPhotoTagFilterInput(nextTag);
+    await loadPhotos(1, nextTag);
+  }
+
+  async function handleClearPhotoTagFilter() {
+    setAppliedPhotoTagFilter("");
+    setPhotoTagFilterInput("");
+    await loadPhotos(1, "");
+  }
+
+  async function handlePreviousPhotosPage() {
+    if (isLoadingPhotos || photosPage <= 1) {
+      return;
+    }
+
+    await loadPhotos(photosPage - 1, appliedPhotoTagFilter);
+  }
+
+  async function handleNextPhotosPage() {
+    if (isLoadingPhotos || !photosHasMore) {
+      return;
+    }
+
+    await loadPhotos(photosPage + 1, appliedPhotoTagFilter);
   }
 
   async function loadTags() {
@@ -368,6 +417,7 @@ export function AdminDashboardShell() {
     const processingStepsPerFile = watermarkEnabled ? 4 : 3;
     const totalProcessingSteps = Math.max(1, files.length * processingStepsPerFile);
     let completedProcessingSteps = 0;
+    let shouldResetUploading = true;
 
     const reportProcessingProgress = (label: string) => {
       completedProcessingSteps += 1;
@@ -453,6 +503,7 @@ export function AdminDashboardShell() {
           return;
         }
 
+        setUploadStage("上传失败");
         setUploadError(result.error ?? "上传失败，请稍后重试。");
         return;
       }
@@ -464,12 +515,17 @@ export function AdminDashboardShell() {
       setUploadStatus(`上传成功，共 ${result.uploaded.length} 张。`);
       setUploadStage("上传完成");
       setUploadProgress(100);
+      setIsUploading(false);
+      shouldResetUploading = false;
 
-      await loadPhotos();
+      await loadPhotos(1, appliedPhotoTagFilter);
     } catch {
+      setUploadStage("上传失败");
       setUploadError("上传请求失败，请确认 Worker 是否已启动。");
     } finally {
-      setIsUploading(false);
+      if (shouldResetUploading) {
+        setIsUploading(false);
+      }
     }
   }
 
@@ -491,7 +547,8 @@ export function AdminDashboardShell() {
       }
 
       setUploaded((current) => current.filter((item) => item.id !== photoId));
-      await loadPhotos();
+      const nextPage = photos.length === 1 && photosPage > 1 ? photosPage - 1 : photosPage;
+      await loadPhotos(nextPage, appliedPhotoTagFilter);
     } catch {
       alert("删除请求失败，请确认 Worker 是否已启动。");
     } finally {
@@ -1042,7 +1099,6 @@ export function AdminDashboardShell() {
     return <div className="min-h-screen bg-transparent" />;
   }
 
-  const totalPhotos = photos.length;
   const canSelectTags = uploadQueue.length > 0;
   const visibleTags = [...predefinedTags, ...pendingTags];
 
@@ -1280,8 +1336,75 @@ export function AdminDashboardShell() {
             </section>
 
             <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-2xl text-ink">现有照片 ({totalPhotos})</h2>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="font-display text-2xl text-ink">
+                    现有照片 {appliedPhotoTagFilter ? `(${photosTotal} / ${photosUnfilteredTotal})` : `(${photosUnfilteredTotal})`}
+                  </h2>
+                  <p className="mt-1 text-sm text-ink/60">
+                    每页 10 条，当前第 {photosPage} 页{appliedPhotoTagFilter ? `，标签筛选：${appliedPhotoTagFilter}，匹配 ${photosTotal} 张` : `，总计 ${photosUnfilteredTotal} 张`}
+                  </p>
+                </div>
+
+                <div className="space-y-3 lg:max-w-[32rem]">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      type="text"
+                      value={photoTagFilterInput}
+                      onChange={(event) => setPhotoTagFilterInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void handleApplyPhotoTagFilter();
+                        }
+                      }}
+                      placeholder="按标签搜索图片"
+                      className="min-w-0 flex-1 rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink outline-none transition focus:border-black/20"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleApplyPhotoTagFilter()}
+                        disabled={isLoadingPhotos}
+                        className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        搜索
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleClearPhotoTagFilter()}
+                        disabled={isLoadingPhotos || (!appliedPhotoTagFilter && !photoTagFilterInput)}
+                        className="rounded-full border border-black/10 bg-[rgba(245,240,228,0.45)] px-4 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        清除
+                      </button>
+                    </div>
+                  </div>
+
+                  {visibleTags.length > 0 ? (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {visibleTags.map((tag) => {
+                        const isActive = appliedPhotoTagFilter === tag.name;
+
+                        return (
+                          <button
+                            key={`photo-filter-${tag.id}`}
+                            type="button"
+                            onClick={() => void handleApplyPhotoTagFilter(isActive ? "" : tag.name)}
+                            disabled={isLoadingPhotos}
+                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                              isActive
+                                ? "bg-ink text-paper"
+                                : "border border-black/10 bg-white/60 text-ink/70 hover:bg-white"
+                            }`}
+                          >
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               {photoNotice ? <p className="mt-4 text-sm text-amber-700">{photoNotice}</p> : null}
@@ -1447,6 +1570,25 @@ export function AdminDashboardShell() {
                       })()}
                     </div>
                   ))}
+
+                  <div className="flex items-center justify-between gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => void handlePreviousPhotosPage()}
+                      disabled={isLoadingPhotos || photosPage <= 1}
+                      className="rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      上一页
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleNextPhotosPage()}
+                      disabled={isLoadingPhotos || !photosHasMore}
+                      className="rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      下一页
+                    </button>
+                  </div>
                 </div>
               )}
             </section>

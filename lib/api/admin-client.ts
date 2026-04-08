@@ -121,6 +121,12 @@ export type GetTagPoolResponse = {
   status?: number;
 };
 
+type GetPhotosOptions = {
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export type CreateTagPayload = {
   name: string;
 };
@@ -190,7 +196,9 @@ function uploadFormDataWithProgress<T>(
           return;
         }
 
-        options?.onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        options?.onProgress?.(
+          Math.min(100, Math.round((event.loaded / event.total) * 100)),
+        );
       };
 
       xhr.onerror = () => {
@@ -198,7 +206,8 @@ function uploadFormDataWithProgress<T>(
       };
 
       xhr.onload = () => {
-        const data = (xhr.response ?? JSON.parse(xhr.responseText || "{}")) as T;
+        const data = (xhr.response ??
+          JSON.parse(xhr.responseText || "{}")) as T;
         options?.onProgress?.(100);
         resolve({
           response: { status: xhr.status },
@@ -306,11 +315,12 @@ export async function uploadPhotos(
     formData.append("exif[]", JSON.stringify(exifRecord));
   }
 
-  const { response, data } = await uploadFormDataWithProgress<UploadPhotosResponse>(
-    "/api/admin/photos",
-    formData,
-    options,
-  );
+  const { response, data } =
+    await uploadFormDataWithProgress<UploadPhotosResponse>(
+      "/api/admin/photos",
+      formData,
+      options,
+    );
 
   return {
     ...data,
@@ -499,10 +509,13 @@ export async function getSite(): Promise<SiteResponse> {
   }
 }
 
-export async function getPhotos(tag?: string) {
+export async function getPhotos(
+  options: GetPhotosOptions = {},
+): Promise<PhotosResponse> {
+  const { tag, page = 1, pageSize = 30 } = options;
   const url = tag
-    ? `${getClientApiBaseUrl()}/api/admin/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}`
-    : `${getClientApiBaseUrl()}/api/admin/photos?page=1&pageSize=30`;
+    ? `${getClientApiBaseUrl()}/api/admin/photos?page=${page}&pageSize=${pageSize}&tag=${encodeURIComponent(tag)}`
+    : `${getClientApiBaseUrl()}/api/admin/photos?page=${page}&pageSize=${pageSize}`;
   const rawResponse = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -514,8 +527,7 @@ export async function getPhotos(tag?: string) {
     throw new Error(`Request failed for ${url}: ${rawResponse.status}`);
   }
 
-  const response = (await rawResponse.json()) as PhotosResponse;
-  return response.items;
+  return (await rawResponse.json()) as PhotosResponse;
 }
 
 export async function getPhotoDetail(id: string) {

@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
 import { getPhotoDetail } from "@/lib/api/client";
+import { getPhotos } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
 import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type GalleryExperienceProps = {
   site: SiteResponse;
-  photos: PhotoSummary[];
+  initialPhotos: PhotoSummary[];
+  initialPage: number;
+  initialHasMore: boolean;
   allTags: string[];
 };
+
+const PAGE_SIZE = 30;
 
 function getTopTags(photos: PhotoSummary[]) {
   const counts = new Map<string, number>();
@@ -27,7 +32,14 @@ function getTopTags(photos: PhotoSummary[]) {
     .slice(0, 3);
 }
 
-export function GalleryExperience({ site, photos, allTags }: GalleryExperienceProps) {
+export function GalleryExperience({
+  site,
+  initialPhotos,
+  initialPage,
+  initialHasMore,
+  allTags,
+}: GalleryExperienceProps) {
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [detail, setDetail] = useState<PhotoDetail | null>(null);
@@ -35,13 +47,26 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(photos);
+  const [loadedPhotos, setLoadedPhotos] = useState<PhotoSummary[]>(initialPhotos);
+  const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(initialPhotos);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
-  const activePhotos = selectedTags.length === 0 ? photos : filteredPhotos;
-  const topTags = getTopTags(photos);
+  const activePhotos = selectedTags.length === 0 ? loadedPhotos : filteredPhotos;
+  const topTags = getTopTags(loadedPhotos);
   const displayDescription =
     site.photographerBio || site.siteDescription || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
   const tagOptions = Array.from(new Set([...topTags.map(([tag]) => tag), ...allTags])).slice(0, 12);
+
+  useEffect(() => {
+    setLoadedPhotos(initialPhotos);
+    setFilteredPhotos(initialPhotos);
+    setCurrentPage(initialPage);
+    setHasMore(initialHasMore);
+    setLoadMoreError(null);
+  }, [initialHasMore, initialPage, initialPhotos]);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -94,21 +119,21 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
   }, [selectedId]);
 
   useEffect(() => {
-    setFilteredPhotos(photos);
-  }, [photos]);
+    setFilteredPhotos(loadedPhotos);
+  }, [loadedPhotos]);
 
   useEffect(() => {
     if (selectedTags.length === 0) {
-      setFilteredPhotos(photos);
+      setFilteredPhotos(loadedPhotos);
       setIsFiltering(false);
       return;
     }
 
     setIsFiltering(true);
 
-    setFilteredPhotos(photos.filter((photo) => photo.tags?.some((tag) => selectedTags.includes(tag))));
+    setFilteredPhotos(loadedPhotos.filter((photo) => photo.tags?.some((tag) => selectedTags.includes(tag))));
     setIsFiltering(false);
-  }, [photos, selectedTags]);
+  }, [loadedPhotos, selectedTags]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -155,14 +180,73 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current;
+
+    if (!trigger || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+
+        if (!entry?.isIntersecting) {
+          return;
+        }
+
+        void handleLoadMore();
+      },
+      {
+        root: null,
+        rootMargin: "0px 0px 320px 0px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(trigger);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [currentPage, hasMore, isLoadingMore]);
+
   const selectedSummary =
     selectedIndex !== null
       ? activePhotos[selectedIndex]
       : selectedId
-        ? activePhotos.find((photo) => photo.id === selectedId) ?? photos.find((photo) => photo.id === selectedId)
+        ? activePhotos.find((photo) => photo.id === selectedId) ?? loadedPhotos.find((photo) => photo.id === selectedId)
         : null;
 
   const activePhoto = detail && detail.id === selectedId ? detail : selectedSummary;
+
+  async function handleLoadMore() {
+    if (isLoadingMore || !hasMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const response = await getPhotos({
+        page: currentPage + 1,
+        pageSize: PAGE_SIZE,
+      });
+
+      setLoadedPhotos((current) => {
+        const existingIds = new Set(current.map((photo) => photo.id));
+        const nextItems = response.items.filter((photo) => !existingIds.has(photo.id));
+        return [...current, ...nextItems];
+      });
+      setCurrentPage(response.page);
+      setHasMore(response.hasMore);
+    } catch {
+      setLoadMoreError("加载更多照片失败，请稍后再试。");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   function selectPhoto(nextIndex: number) {
     if (nextIndex < 0 || nextIndex >= activePhotos.length) {
@@ -218,6 +302,15 @@ export function GalleryExperience({ site, photos, allTags }: GalleryExperiencePr
           onSelectTags={setSelectedTags}
           description={displayDescription}
         />
+
+        {loadMoreError ? <p className="px-1 py-4 text-center text-sm text-[#ffd8c7]">{loadMoreError}</p> : null}
+
+        {hasMore || isLoadingMore ? (
+          <div className="px-4 py-8">
+            <div ref={loadMoreTriggerRef} className="h-1 w-full" aria-hidden="true" />
+            {isLoadingMore ? <p className="text-center text-sm tracking-[0.18em] text-white/62">正在加载更多作品...</p> : null}
+          </div>
+        ) : null}
       </div>
       <LightboxShell
         photo={activePhoto ?? null}

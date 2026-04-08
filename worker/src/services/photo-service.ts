@@ -64,6 +64,31 @@ type CreatedPhoto = {
   persisted: boolean;
 };
 
+type ListPhotosOptions = {
+  includeHidden?: boolean;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ListPhotosResult = {
+  items: Array<{
+    id: string;
+    thumbUrl: string;
+    displayUrl: string;
+    watermarkedDisplayUrl?: string;
+    watermarkEnabled: boolean;
+    isHidden: boolean;
+    takenAt?: string;
+    description?: string;
+    tags: string[];
+  }>;
+  hasMore: boolean;
+  total: number;
+};
+
+const DEFAULT_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 60;
+
 function buildMockAssetUrl(
   origin: string,
   variant: "thumb" | "display" | "watermarked",
@@ -104,18 +129,9 @@ function extractPhotoIdFromObjectKey(key: string) {
   return match?.[1] ?? null;
 }
 
-async function listPhotosFromBucket(env: Env, origin: string) {
+async function collectBucketPhotoItems(env: Env, origin: string) {
   if (!env.PHOTOS_BUCKET) {
-    return [] as Array<{
-      id: string;
-      thumbUrl: string;
-      displayUrl: string;
-      watermarkedDisplayUrl?: string;
-      watermarkEnabled: boolean;
-      isHidden: boolean;
-      description?: string;
-      tags: string[];
-    }>;
+    return [] as ListPhotosResult["items"];
   }
 
   let watermarkedObjects;
@@ -196,7 +212,6 @@ async function listPhotosFromBucket(env: Env, origin: string) {
 
   return Array.from(photoMap.values())
     .sort((left, right) => right.uploadedAt - left.uploadedAt)
-    .slice(0, 30)
     .map((item) => ({
       id: item.id,
       thumbUrl: item.hasThumb
@@ -211,6 +226,34 @@ async function listPhotosFromBucket(env: Env, origin: string) {
       description: undefined,
       tags: [],
     }));
+}
+
+async function listPhotosFromBucket(env: Env, origin: string) {
+  const allItems = await collectBucketPhotoItems(env, origin);
+
+  return paginatePhotoItems(allItems, DEFAULT_PAGE_SIZE, 0);
+}
+
+function normalizePage(page = 1) {
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+}
+
+function normalizePageSize(pageSize = DEFAULT_PAGE_SIZE) {
+  if (!Number.isFinite(pageSize) || pageSize <= 0) {
+    return DEFAULT_PAGE_SIZE;
+  }
+
+  return Math.min(Math.floor(pageSize), MAX_PAGE_SIZE);
+}
+
+function paginatePhotoItems<T>(items: T[], pageSize: number, offset: number) {
+  const paginatedItems = items.slice(offset, offset + pageSize + 1);
+
+  return {
+    items: paginatedItems.slice(0, pageSize),
+    hasMore: paginatedItems.length > pageSize,
+    total: items.length,
+  };
 }
 
 async function ensurePhotoVisibilityColumn(env: Env) {
@@ -239,16 +282,30 @@ export async function listPhotos(
   env: Env,
   origin: string,
   tag: string | null = null,
-  options?: { includeHidden?: boolean },
-) {
+  options?: ListPhotosOptions,
+): Promise<ListPhotosResult> {
+  const page = normalizePage(options?.page);
+  const pageSize = normalizePageSize(options?.pageSize);
+  const offset = (page - 1) * pageSize;
+
   if (!env.DB) {
-    return tag ? [] : listPhotosFromBucket(env, origin);
+    if (tag) {
+      return {
+        items: [],
+        hasMore: false,
+        total: 0,
+      };
+    }
+
+    const bucketItems = await collectBucketPhotoItems(env, origin);
+    return paginatePhotoItems(bucketItems, pageSize, offset);
   }
 
   await ensurePhotoVisibilityColumn(env);
 
   const conditions: string[] = [];
   const values: unknown[] = [];
+  const countValues: unknown[] = [];
 
   let query = `SELECT id, thumb_url, display_url, watermarked_display_url, watermark_enabled, is_hidden, taken_at, description, tags_json
      FROM photos`;
@@ -260,52 +317,69 @@ export async function listPhotos(
   if (tag) {
     conditions.push("tags_json LIKE ?");
     values.push(`%${tag}%`);
+    countValues.push(`%${tag}%`);
   }
 
   if (conditions.length > 0) {
     query += ` WHERE ${conditions.join(" AND ")}`;
   }
 
-  query += ` ORDER BY created_at DESC LIMIT 30`;
+  let countQuery = "SELECT COUNT(*) as count FROM photos";
+
+  if (conditions.length > 0) {
+    countQuery += ` WHERE ${conditions.join(" AND ")}`;
+  }
+
+  query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
 
   const fallbackToBucket = async () => {
     if (tag) {
-      return [] as Array<{
-        id: string;
-        thumbUrl: string;
-        displayUrl: string;
-        watermarkedDisplayUrl?: string;
-        watermarkEnabled: boolean;
-        isHidden: boolean;
-        takenAt?: string;
-        description?: string;
-        tags: string[];
-      }>;
+      return {
+        items: [] as ListPhotosResult["items"],
+        hasMore: false,
+        total: 0,
+      };
     }
 
     try {
-      return await listPhotosFromBucket(env, origin);
+      const bucketItems = await collectBucketPhotoItems(env, origin);
+      return paginatePhotoItems(bucketItems, pageSize, offset);
     } catch (error) {
       console.error("[listPhotos] bucket fallback failed", error);
-      return [];
+      return {
+        items: [],
+        hasMore: false,
+        total: 0,
+      };
     }
   };
 
   try {
     let statement = env.DB.prepare(query);
+    let countStatement = env.DB.prepare(countQuery);
+
+    values.push(pageSize + 1, offset);
 
     if (values.length > 0) {
       statement = statement.bind(...values);
     }
 
-    const result = await statement.all<PersistedPhotoRow>();
-    const rows = result.results ?? [];
+    if (countValues.length > 0) {
+      countStatement = countStatement.bind(...countValues);
+    }
 
-    if (rows.length === 0 && !tag) {
+    const [result, countResult] = await Promise.all([
+      statement.all<PersistedPhotoRow>(),
+      countStatement.first<{ count: number }>(),
+    ]);
+    const rows = result.results ?? [];
+    const total = countResult?.count ?? 0;
+
+    if (rows.length === 0 && !tag && page === 1) {
       return fallbackToBucket();
     }
 
-    return rows.map((row) => ({
+    const items = rows.slice(0, pageSize).map((row) => ({
       id: row.id,
       thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
       displayUrl:
@@ -317,6 +391,12 @@ export async function listPhotos(
       description: row.description ?? undefined,
       tags: parseTagsJson(row.tags_json),
     }));
+
+    return {
+      items,
+      hasMore: rows.length > pageSize,
+      total,
+    };
   } catch (error) {
     console.error("[listPhotos] D1 query failed, falling back to R2", error);
     return fallbackToBucket();
@@ -330,7 +410,7 @@ export async function getPhotoById(
   options?: { includeHidden?: boolean },
 ) {
   if (!env.DB) {
-    const bucketPhotos = await listPhotosFromBucket(env, origin);
+    const bucketPhotos = await collectBucketPhotoItems(env, origin);
     const bucketPhoto = bucketPhotos.find((photo) => photo.id === id);
     return bucketPhoto ? { ...bucketPhoto, tags: [] } : null;
   }
@@ -365,13 +445,13 @@ export async function getPhotoById(
       .bind(id)
       .first<PhotoDetailRow>();
   } catch {
-    const bucketPhotos = await listPhotosFromBucket(env, origin);
+    const bucketPhotos = await collectBucketPhotoItems(env, origin);
     const bucketPhoto = bucketPhotos.find((photo) => photo.id === id);
     return bucketPhoto ? { ...bucketPhoto, tags: [] } : null;
   }
 
   if (!row) {
-    const bucketPhotos = await listPhotosFromBucket(env, origin);
+    const bucketPhotos = await collectBucketPhotoItems(env, origin);
     const bucketPhoto = bucketPhotos.find((photo) => photo.id === id);
     return bucketPhoto ? { ...bucketPhoto, tags: [] } : null;
   }

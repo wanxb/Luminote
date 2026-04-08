@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { PhotoDetail, PhotoSummary, WatermarkPosition } from "@/lib/api/types";
 
@@ -69,12 +70,17 @@ export function LightboxShell({
   onToggleImmersive,
   hasMultiple
 }: LightboxShellProps) {
-  if (!isOpen || !photo) {
-    return null;
-  }
+  const imageViewportRef = useRef<HTMLDivElement | null>(null);
+  const displayImageRef = useRef<HTMLImageElement | null>(null);
+  const [watermarkFrame, setWatermarkFrame] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const detail = isPhotoDetail(photo) ? photo : null;
-  const displaySrc = photo.displayUrl;
+  const displaySrc = photo?.displayUrl ?? "";
   const metaItems = detail
     ? metaLabels
         .map(({ label, value }) => {
@@ -90,9 +96,49 @@ export function LightboxShell({
         .filter((item): item is { label: string; value: string } => item !== null)
     : [];
 
+  function updateWatermarkFrame() {
+    const viewport = imageViewportRef.current;
+    const image = displayImageRef.current;
+
+    if (!viewport || !image) {
+      setWatermarkFrame(null);
+      return;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+
+    setWatermarkFrame({
+      top: imageRect.top - viewportRect.top,
+      left: imageRect.left - viewportRect.left,
+      width: imageRect.width,
+      height: imageRect.height,
+    });
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleResize = () => {
+      updateWatermarkFrame();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [displaySrc, isOpen, isImmersive]);
+
+  if (!isOpen || !photo) {
+    return null;
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(24,19,16,0.86)] backdrop-blur-2xl"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(24,19,16,0.86)] backdrop-blur-2xl"
       role="dialog"
       aria-modal="true"
       aria-label="照片详情"
@@ -102,7 +148,7 @@ export function LightboxShell({
         className={`grid h-screen w-screen overflow-hidden bg-[#261d18] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${
           isImmersive
             ? "grid-rows-[minmax(0,1fr)_72px]"
-            : "lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"
+            : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"
         }`}
         onClick={(event) => event.stopPropagation()}
       >
@@ -154,7 +200,7 @@ export function LightboxShell({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-6 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34"
+              className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34 sm:right-4 sm:top-4 lg:right-6"
             >
               ×
             </button>
@@ -163,33 +209,44 @@ export function LightboxShell({
             <div
               className={`relative z-[1] flex h-full min-h-0 justify-center ${
                 isImmersive
-                  ? "items-center px-4 py-0 md:px-8 lg:px-10"
-                  : "items-stretch px-4 py-1 md:px-8 md:py-2 lg:px-10 lg:py-3"
+                  ? "items-center px-3 py-0 sm:px-4 md:px-8 lg:px-10"
+                  : "items-stretch px-3 py-2 sm:px-4 md:px-8 md:py-2 lg:px-10 lg:py-3"
               }`}
             >
-              <div className={`relative ${isImmersive ? "h-full w-full" : "h-full w-full"}`}>
-                <Image
-                  src={displaySrc}
-                  alt={photo.description ?? photo.id}
-                  fill
-                  className="object-contain object-center"
-                  sizes={isImmersive ? "100vw" : "(max-width: 1024px) 100vw, 78vw"}
-                  priority
-                />
-                {watermarkEnabled && watermarkText ? (
-                  <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
+              <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
+                <div className="flex h-full w-full items-center justify-center">
+                  <img
+                    ref={displayImageRef}
+                    src={displaySrc}
+                    alt={photo.description ?? photo.id}
+                    onLoad={updateWatermarkFrame}
+                    className="block h-auto max-h-full w-auto max-w-full object-contain"
+                  />
+                </div>
+                {watermarkEnabled && watermarkText && watermarkFrame ? (
+                  <div
+                    className="pointer-events-none absolute z-[2]"
+                    style={{
+                      top: `${watermarkFrame.top}px`,
+                      left: `${watermarkFrame.left}px`,
+                      width: `${watermarkFrame.width}px`,
+                      height: `${watermarkFrame.height}px`,
+                    }}
+                  >
+                    <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
+                  </div>
                 ) : null}
               </div>
             </div>
           </section>
 
           {isImmersive ? null : (
-            <aside className="flex min-h-0 flex-col bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-5 backdrop-blur-2xl lg:col-start-2 lg:row-span-2 lg:overflow-hidden">
+            <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-4 backdrop-blur-2xl sm:p-5 lg:col-start-2 lg:row-span-2 lg:overflow-hidden">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
             </div>
 
-            <div className="mt-5 flex-1 space-y-5 overflow-hidden text-[12px] leading-5 text-paper/76">
+            <div className="mt-4 flex-1 space-y-5 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76 lg:mt-5 lg:overflow-hidden">
               {isLoading ? (
                 <p className="rounded-2xl border border-white/6 bg-white/[0.045] px-4 py-3 text-paper/70 backdrop-blur-md">
                   正在拉取这张照片的完整信息…
@@ -298,7 +355,7 @@ function WatermarkOverlay({ text, position }: { text: string; position: Watermar
 
   return (
     <div className={`pointer-events-none absolute inset-0 z-[2] flex ${positionClassMap[position]}`}>
-      <div className="max-w-[58vw] rounded-full border border-white/10 bg-black/16 px-4 py-2 text-[clamp(12px,1.3vw,18px)] font-semibold tracking-[0.28em] text-white/58 shadow-[0_12px_30px_rgba(0,0,0,0.2)] backdrop-blur-[2px]">
+      <div className="max-w-[58vw] px-4 py-2 text-[clamp(12px,1.3vw,18px)] font-semibold tracking-[0.28em] text-[rgba(0,0,0,0.72)]">
         {text}
       </div>
     </div>

@@ -25,14 +25,21 @@ const PREDEFINED_TAGS = [
 ];
 
 export default async function HomePage() {
-  const [site, photos] = await Promise.all([getSite(), getPhotos()]);
-  const galleryPhotos = photos.length > 0 ? photos : defaultGalleryPhotos;
+  const [site, photoResponse] = await Promise.all([getSite(), getPhotos({ page: 1, pageSize: 30 })]);
+  const hasRemotePhotos = photoResponse.items.length > 0;
+  const galleryPhotos = hasRemotePhotos ? photoResponse.items : defaultGalleryPhotos;
 
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-[#f5f0e4] text-white">
       <SummerShadowBackground />
-      <div className="relative z-10 p-[2px] sm:p-[3px]">
-        <GalleryExperience site={site} photos={galleryPhotos} allTags={PREDEFINED_TAGS} />
+      <div className="relative z-10 px-0 py-[2px] sm:py-[3px]">
+        <GalleryExperience
+          site={site}
+          initialPhotos={galleryPhotos}
+          initialPage={hasRemotePhotos ? photoResponse.page : 1}
+          initialHasMore={hasRemotePhotos ? photoResponse.hasMore : false}
+          allTags={PREDEFINED_TAGS}
+        />
       </div>
     </main>
   );

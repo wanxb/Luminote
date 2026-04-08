@@ -6,6 +6,12 @@ import type {
   SiteResponse,
 } from "@/lib/api/types";
 
+type GetPhotosOptions = {
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 const API_TIMEOUT_MS = 8000;
 
 function createAbortSignal(timeoutMs: number) {
@@ -55,15 +61,26 @@ export async function getSite() {
   }
 }
 
-export async function getPhotos(tag?: string) {
+export async function getPhotos(
+  options: GetPhotosOptions = {},
+): Promise<PhotosResponse> {
+  const { tag, page = 1, pageSize = 30 } = options;
+
   try {
     const url = tag
-      ? `/api/photos?page=1&pageSize=30&tag=${encodeURIComponent(tag)}`
-      : "/api/photos?page=1&pageSize=30";
-    const response = await fetchJson<PhotosResponse>(url);
-    return response.items;
+      ? `/api/photos?page=${page}&pageSize=${pageSize}&tag=${encodeURIComponent(tag)}`
+      : `/api/photos?page=${page}&pageSize=${pageSize}`;
+
+    return await fetchJson<PhotosResponse>(url);
   } catch {
-    return [];
+    return {
+      items: [],
+      page,
+      pageSize,
+      hasMore: false,
+      total: 0,
+      unfilteredTotal: 0,
+    };
   }
 }
 

@@ -26,6 +26,16 @@ import { handleSite } from "./site";
 const sessionCookieName = "luminote_admin_session";
 const sessionIdleTimeoutSeconds = 60 * 60 * 2;
 
+function parsePositiveNumber(value: string | null, fallback: number) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
 function unauthorized(message = "Unauthorized") {
   return json(
     {
@@ -417,16 +427,30 @@ export async function handleAdmin(
     }
 
     const tag = url.searchParams.get("tag");
+    const page = parsePositiveNumber(url.searchParams.get("page"), 1);
+    const pageSize = parsePositiveNumber(url.searchParams.get("pageSize"), 30);
+
     try {
-      const items = await listPhotos(env, new URL(request.url).origin, tag, {
+      const result = await listPhotos(env, new URL(request.url).origin, tag, {
         includeHidden: true,
+        page,
+        pageSize,
       });
+      const unfilteredResult = tag
+        ? await listPhotos(env, new URL(request.url).origin, null, {
+            includeHidden: true,
+            page: 1,
+            pageSize: 1,
+          })
+        : null;
 
       return json({
-        items,
-        page: 1,
-        pageSize: 30,
-        hasMore: items.length >= 30,
+        items: result.items,
+        page,
+        pageSize,
+        hasMore: result.hasMore,
+        total: result.total,
+        unfilteredTotal: unfilteredResult?.total ?? result.total,
       });
     } catch {
       return json(
