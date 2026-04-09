@@ -26,6 +26,39 @@ import { handleSite } from "./site";
 const sessionCookieName = "luminote_admin_session";
 const sessionIdleTimeoutSeconds = 60 * 60 * 2;
 
+function resolveSameSite(value: string | undefined) {
+  const normalized = (value ?? "Lax").trim().toLowerCase();
+
+  if (normalized === "strict") {
+    return "Strict";
+  }
+
+  if (normalized === "none") {
+    return "None";
+  }
+
+  return "Lax";
+}
+
+function shouldUseSecureCookie(
+  request: Request,
+  env: Env,
+  sameSite: "Lax" | "Strict" | "None",
+) {
+  const secureMode = (env.ADMIN_COOKIE_SECURE ?? "auto").trim().toLowerCase();
+
+  if (secureMode === "true") {
+    return true;
+  }
+
+  if (secureMode === "false") {
+    return sameSite === "None";
+  }
+
+  const url = new URL(request.url);
+  return sameSite === "None" || url.protocol === "https:";
+}
+
 function parsePositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
 
@@ -66,31 +99,31 @@ function getSessionToken(request: Request) {
 }
 
 function createSessionCookie(request: Request, env: Env) {
-  const url = new URL(request.url);
-  const isHttps = url.protocol === "https:";
+  const sameSite = resolveSameSite(env.ADMIN_COOKIE_SAME_SITE);
+  const isSecure = shouldUseSecureCookie(request, env, sameSite);
 
   return [
     `${sessionCookieName}=${encodeURIComponent(env.ADMIN_SESSION_TOKEN)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Lax",
-    isHttps ? "Secure" : "",
+    `SameSite=${sameSite}`,
+    isSecure ? "Secure" : "",
     `Max-Age=${sessionIdleTimeoutSeconds}`,
   ]
     .filter(Boolean)
     .join("; ");
 }
 
-function clearSessionCookie(request: Request) {
-  const url = new URL(request.url);
-  const isHttps = url.protocol === "https:";
+function clearSessionCookie(request: Request, env: Env) {
+  const sameSite = resolveSameSite(env.ADMIN_COOKIE_SAME_SITE);
+  const isSecure = shouldUseSecureCookie(request, env, sameSite);
 
   return [
     `${sessionCookieName}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Lax",
-    isHttps ? "Secure" : "",
+    `SameSite=${sameSite}`,
+    isSecure ? "Secure" : "",
     "Max-Age=0",
   ]
     .filter(Boolean)
@@ -279,7 +312,7 @@ export async function handleAdmin(
     const response = json({
       ok: true,
     });
-    response.headers.append("set-cookie", clearSessionCookie(request));
+    response.headers.append("set-cookie", clearSessionCookie(request, env));
     return response;
   }
 

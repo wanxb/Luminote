@@ -12,6 +12,9 @@ export interface Env {
   WATERMARK_TEXT: string;
   ADMIN_PASSWORD: string;
   ADMIN_SESSION_TOKEN: string;
+  CORS_ALLOWED_ORIGINS?: string;
+  ADMIN_COOKIE_SAME_SITE?: string;
+  ADMIN_COOKIE_SECURE?: string;
   DB?: D1Database;
   PHOTOS_BUCKET?: R2Bucket;
 }
@@ -21,7 +24,7 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-      return createCorsPreflight(request);
+      return createCorsPreflight(request, env.CORS_ALLOWED_ORIGINS);
     }
 
     if (url.pathname === "/api/health") {
@@ -31,20 +34,33 @@ export default {
           ok: true,
           service: "luminote-api",
           date: "2026-04-02"
-        })
+        }),
+        env.CORS_ALLOWED_ORIGINS,
       );
     }
 
     if (url.pathname.startsWith("/api/site")) {
-      return applyCors(request, await handleSite(request, env));
+      return applyCors(
+        request,
+        await handleSite(request, env),
+        env.CORS_ALLOWED_ORIGINS,
+      );
     }
 
     if (url.pathname.startsWith("/api/photos")) {
-      return applyCors(request, await handlePhotos(request, env));
+      return applyCors(
+        request,
+        await handlePhotos(request, env),
+        env.CORS_ALLOWED_ORIGINS,
+      );
     }
 
     if (url.pathname.startsWith("/api/admin")) {
-      return applyCors(request, await handleAdmin(request, env));
+      return applyCors(
+        request,
+        await handleAdmin(request, env),
+        env.CORS_ALLOWED_ORIGINS,
+      );
     }
 
     if (url.pathname.startsWith("/assets/")) {
@@ -62,8 +78,10 @@ export default {
           ok: false,
           error: "Not Found"
         },
-        { status: 404 }
+        { status: 404 },
       )
+      ,
+      env.CORS_ALLOWED_ORIGINS,
     );
   }
 };

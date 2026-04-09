@@ -10,6 +10,9 @@ export function loadRuntimeConfig() {
   const dataFile =
     process.env.DATA_FILE ||
     path.resolve(process.cwd(), "apps/api-node/data/public-content.json");
+  const sqliteDbFile =
+    process.env.SQLITE_DB_FILE ||
+    path.resolve(process.cwd(), "apps/api-node/data/luminote.sqlite");
   const storageMode = process.env.STORAGE_MODE || "mock";
   const uploadsDir =
     process.env.UPLOADS_DIR ||
@@ -19,6 +22,9 @@ export function loadRuntimeConfig() {
     process.env.ADMIN_SESSION_TOKEN || "local-node-admin-session-token";
   const sessionCookieName =
     process.env.ADMIN_SESSION_COOKIE_NAME || "luminote_admin_session";
+  const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS || "";
+  const adminCookieSameSite = process.env.ADMIN_COOKIE_SAME_SITE || "Lax";
+  const adminCookieSecure = process.env.ADMIN_COOKIE_SECURE || "auto";
 
   return {
     host,
@@ -27,10 +33,14 @@ export function loadRuntimeConfig() {
     contentSource,
     persistenceDriver,
     dataFile,
+    sqliteDbFile,
     storageMode,
     uploadsDir,
     adminPassword,
     adminSessionToken,
     sessionCookieName,
+    corsAllowedOrigins,
+    adminCookieSameSite,
+    adminCookieSecure,
   };
 }

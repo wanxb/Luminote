@@ -8,6 +8,7 @@ import { handleAdminRoute } from "./routes/admin.mjs";
 import { handlePublicRoute } from "./routes/public.mjs";
 import { createAssetStorage } from "./storage/index.mjs";
 import { buildMockStorageSvg } from "./mock-storage.mjs";
+import { applyCorsHeaders, createCorsPreflightResponse } from "./utils/cors.mjs";
 
 const config = loadRuntimeConfig();
 const { host, port } = config;
@@ -28,6 +29,12 @@ const server = createServer(async (req, res) => {
   const repository = createPublicContentRepository(requestConfig);
   const adminRepository = createAdminContentRepository(requestConfig);
   const assetStorage = createAssetStorage(requestConfig);
+  applyCorsHeaders(req, res, requestConfig);
+
+  if (req.method === "OPTIONS") {
+    createCorsPreflightResponse(res);
+    return;
+  }
 
   if (url.pathname === "/api/health") {
     sendJson(res, 200, {

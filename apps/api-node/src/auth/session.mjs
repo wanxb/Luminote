@@ -28,15 +28,14 @@ export function isAuthenticated(request, config) {
 }
 
 export function appendSessionCookie(response, request, config) {
-  const isHttps =
-    request.headers["x-forwarded-proto"] === "https" ||
-    request.socket.encrypted;
+  const sameSite = resolveSameSite(config.adminCookieSameSite);
+  const isHttps = shouldUseSecureCookie(request, config, sameSite);
 
   const cookie = [
     `${config.sessionCookieName}=${encodeURIComponent(config.adminSessionToken)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Lax",
+    `SameSite=${sameSite}`,
     isHttps ? "Secure" : "",
     `Max-Age=${60 * 60 * 2}`,
   ]
@@ -47,15 +46,14 @@ export function appendSessionCookie(response, request, config) {
 }
 
 export function clearSessionCookie(response, request, config) {
-  const isHttps =
-    request.headers["x-forwarded-proto"] === "https" ||
-    request.socket.encrypted;
+  const sameSite = resolveSameSite(config.adminCookieSameSite);
+  const isHttps = shouldUseSecureCookie(request, config, sameSite);
 
   const cookie = [
     `${config.sessionCookieName}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Lax",
+    `SameSite=${sameSite}`,
     isHttps ? "Secure" : "",
     "Max-Age=0",
   ]
@@ -63,4 +61,38 @@ export function clearSessionCookie(response, request, config) {
     .join("; ");
 
   response.setHeader("Set-Cookie", cookie);
+}
+
+function resolveSameSite(value) {
+  const normalized = String(value || "Lax").trim().toLowerCase();
+
+  if (normalized === "strict") {
+    return "Strict";
+  }
+
+  if (normalized === "none") {
+    return "None";
+  }
+
+  return "Lax";
+}
+
+function shouldUseSecureCookie(request, config, sameSite) {
+  const secureMode = String(config.adminCookieSecure || "auto")
+    .trim()
+    .toLowerCase();
+
+  if (secureMode === "true") {
+    return true;
+  }
+
+  if (secureMode === "false") {
+    return sameSite === "None";
+  }
+
+  return (
+    sameSite === "None" ||
+    request.headers["x-forwarded-proto"] === "https" ||
+    request.socket.encrypted
+  );
 }
