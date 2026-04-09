@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8788
+      API_BASE_URL: http://api:8788
+    volumes:
+      - .:/app
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api-node/Dockerfile
+    ports:
+      - "8788:8788"
+    environment:
+      CONTENT_SOURCE: file
+      STORAGE_MODE: local
+      DATA_FILE: /app/apps/api-node/data/public-content.json
+      UPLOADS_DIR: /app/apps/api-node/data/uploads
+      ADMIN_PASSWORD: changeme
+      ADMIN_SESSION_TOKEN: docker-local-admin-session-token
+    volumes:
+      - ./apps/api-node/data:/app/apps/api-node/data

@@ -1,0 +1,9 @@
+{
+  "name": "luminote-api-node",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs"
+  }
+}

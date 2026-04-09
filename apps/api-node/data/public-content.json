@@ -1,0 +1,124 @@
+{
+  "site": {
+    "siteTitle": "Luminote",
+    "siteDescription": "A lightweight home for photography that lets the work breathe.",
+    "homeLayout": "editorial",
+    "watermarkEnabledByDefault": true,
+    "watermarkText": "© Luminote",
+    "watermarkPosition": "bottom-right",
+    "uploadOriginalEnabled": false,
+    "maxTagPoolSize": 20,
+    "maxUploadFiles": 20,
+    "maxTagsPerPhoto": 5,
+    "photographerAvatarUrl": "",
+    "photographerName": "Luminote",
+    "photographerBio": "Photographic notes arranged for a portable self-hosted runtime preview.",
+    "photographerEmail": "",
+    "photographerXiaohongshu": "",
+    "photographerXiaohongshuUrl": "",
+    "photographerDouyin": "",
+    "photographerDouyinUrl": "",
+    "photographerInstagram": "",
+    "photographerInstagramUrl": "",
+    "photographerCustomAccount": "",
+    "photographerCustomAccountUrl": ""
+  },
+  "tagPool": [
+    {
+      "id": "tag_architecture",
+      "name": "architecture",
+      "createdAt": "2026-04-09T00:00:00.000Z"
+    },
+    {
+      "id": "tag_city",
+      "name": "city",
+      "createdAt": "2026-04-09T00:00:01.000Z"
+    },
+    {
+      "id": "tag_street",
+      "name": "street",
+      "createdAt": "2026-04-09T00:00:02.000Z"
+    },
+    {
+      "id": "tag_night",
+      "name": "night",
+      "createdAt": "2026-04-09T00:00:03.000Z"
+    }
+  ],
+  "photos": [
+    {
+      "id": "photo_node_001",
+      "thumbUrl": "/assets/thumb/photo_node_001",
+      "displayUrl": "/assets/display/photo_node_001",
+      "watermarkedDisplayUrl": "/assets/display-watermarked/photo_node_001",
+      "watermarkEnabled": true,
+      "isHidden": false,
+      "takenAt": "2026-04-09T08:00:00.000Z",
+      "description": "Morning facade study",
+      "tags": ["architecture", "city"],
+      "sourceHash": "sample-hash-001"
+    },
+    {
+      "id": "photo_node_002",
+      "thumbUrl": "/assets/thumb/photo_node_002",
+      "displayUrl": "/assets/display/photo_node_002",
+      "watermarkedDisplayUrl": "/assets/display-watermarked/photo_node_002",
+      "watermarkEnabled": true,
+      "isHidden": false,
+      "takenAt": "2026-04-08T17:30:00.000Z",
+      "description": "Late street light",
+      "tags": ["street", "night"],
+      "sourceHash": "sample-hash-002"
+    }
+  ],
+  "photoDetails": {
+    "photo_node_001": {
+      "id": "photo_node_001",
+      "thumbUrl": "/assets/thumb/photo_node_001",
+      "displayUrl": "/assets/display/photo_node_001",
+      "watermarkedDisplayUrl": "/assets/display-watermarked/photo_node_001",
+      "watermarkEnabled": true,
+      "isHidden": false,
+      "takenAt": "2026-04-09T08:00:00.000Z",
+      "description": "Morning facade study",
+      "device": "Portable Runtime Camera",
+      "lens": "50mm f/1.8",
+      "location": "Node Preview Location 1",
+      "exif": {
+        "aperture": "f/1.8",
+        "shutter": "1/250s",
+        "iso": 200,
+        "focalLength": "50mm",
+        "params": {
+          "Runtime": "node",
+          "Preview": "true"
+        }
+      },
+      "tags": ["architecture", "city"]
+    },
+    "photo_node_002": {
+      "id": "photo_node_002",
+      "thumbUrl": "/assets/thumb/photo_node_002",
+      "displayUrl": "/assets/display/photo_node_002",
+      "watermarkedDisplayUrl": "/assets/display-watermarked/photo_node_002",
+      "watermarkEnabled": true,
+      "isHidden": false,
+      "takenAt": "2026-04-08T17:30:00.000Z",
+      "description": "Late street light",
+      "device": "Portable Runtime Camera",
+      "lens": "50mm f/1.8",
+      "location": "Node Preview Location 2",
+      "exif": {
+        "aperture": "f/1.8",
+        "shutter": "1/250s",
+        "iso": 300,
+        "focalLength": "50mm",
+        "params": {
+          "Runtime": "node",
+          "Preview": "true"
+        }
+      },
+      "tags": ["street", "night"]
+    }
+  }
+}

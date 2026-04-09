@@ -6,6 +6,11 @@ import {
 import { getTagPool } from "../services/tag-service";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
+import {
+  getPublicSite,
+  getPublicSiteTags,
+} from "../../../packages/core/src";
+import type { SiteResponse } from "../../../packages/shared/src/api-types";
 
 function resolvePublicAssetUrl(request: Request, assetUrl: string) {
   const trimmed = assetUrl.trim();
@@ -46,48 +51,54 @@ export async function handleSite(
   env: Env,
 ): Promise<Response> {
   const url = new URL(request.url);
+  const reader = {
+    async getSite() {
+      const config = await getSiteConfig(env);
+
+      return {
+        siteTitle: config.siteTitle,
+        siteDescription: config.siteDescription,
+        homeLayout: config.homeLayout as SiteResponse["homeLayout"],
+        watermarkEnabledByDefault: config.watermarkEnabledByDefault,
+        watermarkText: config.watermarkText,
+        watermarkPosition:
+          config.watermarkPosition as SiteResponse["watermarkPosition"],
+        uploadOriginalEnabled: config.uploadOriginalEnabled,
+        maxTagPoolSize: config.maxTagPoolSize,
+        maxUploadFiles: config.maxUploadFiles,
+        maxTagsPerPhoto: config.maxTagsPerPhoto,
+        photographerAvatarUrl: resolvePublicAssetUrl(
+          request,
+          config.photographerAvatarUrl,
+        ),
+        photographerName: config.photographerName,
+        photographerBio: config.photographerBio,
+        photographerEmail: config.photographerEmail,
+        photographerXiaohongshu: config.photographerXiaohongshu,
+        photographerXiaohongshuUrl: config.photographerXiaohongshuUrl,
+        photographerDouyin: config.photographerDouyin,
+        photographerDouyinUrl: config.photographerDouyinUrl,
+        photographerInstagram: config.photographerInstagram,
+        photographerInstagramUrl: config.photographerInstagramUrl,
+        photographerCustomAccount: config.photographerCustomAccount,
+        photographerCustomAccountUrl: config.photographerCustomAccountUrl,
+      };
+    },
+    async getTagNames() {
+      const tags = await getTagPool(env);
+      return tags.map((tag) => tag.name);
+    },
+  };
 
   if (url.pathname === "/api/site/tags" && request.method === "GET") {
-    const tags = await getTagPool(env);
-
-    return json({
-      tags: tags.map((tag) => tag.name),
-    });
+    return json(await getPublicSiteTags(reader));
   }
 
   if (request.method === "PATCH") {
     return handleSiteUpdate(request, env);
   }
 
-  const config = await getSiteConfig(env);
-
-  return json({
-    siteTitle: config.siteTitle,
-    siteDescription: config.siteDescription,
-    homeLayout: config.homeLayout,
-    watermarkEnabledByDefault: config.watermarkEnabledByDefault,
-    watermarkText: config.watermarkText,
-    watermarkPosition: config.watermarkPosition,
-    uploadOriginalEnabled: config.uploadOriginalEnabled,
-    maxTagPoolSize: config.maxTagPoolSize,
-    maxUploadFiles: config.maxUploadFiles,
-    maxTagsPerPhoto: config.maxTagsPerPhoto,
-    photographerAvatarUrl: resolvePublicAssetUrl(
-      request,
-      config.photographerAvatarUrl,
-    ),
-    photographerName: config.photographerName,
-    photographerBio: config.photographerBio,
-    photographerEmail: config.photographerEmail,
-    photographerXiaohongshu: config.photographerXiaohongshu,
-    photographerXiaohongshuUrl: config.photographerXiaohongshuUrl,
-    photographerDouyin: config.photographerDouyin,
-    photographerDouyinUrl: config.photographerDouyinUrl,
-    photographerInstagram: config.photographerInstagram,
-    photographerInstagramUrl: config.photographerInstagramUrl,
-    photographerCustomAccount: config.photographerCustomAccount,
-    photographerCustomAccountUrl: config.photographerCustomAccountUrl,
-  });
+  return json(await getPublicSite(reader));
 }
 
 async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {

@@ -1,6 +1,10 @@
 import type { Env } from "../index";
 import { getPhotoById, listPhotos } from "../services/photo-service";
 import { json } from "../utils/json";
+import {
+  getPublicPhotoDetail,
+  getPublicPhotoList,
+} from "../../../packages/core/src";
 
 function parsePositiveNumber(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -22,7 +26,17 @@ export async function handlePhotos(
   const url = new URL(request.url);
 
   if (parts.length === 3) {
-    const detail = await getPhotoById(env, origin, parts[2]);
+    const detail = await getPublicPhotoDetail(
+      {
+        getPhotoDetail(id) {
+          return getPhotoById(env, origin, id);
+        },
+        listPhotos() {
+          throw new Error("listPhotos is not used in detail requests");
+        },
+      },
+      parts[2],
+    );
 
     if (!detail) {
       return json(
@@ -42,18 +56,26 @@ export async function handlePhotos(
   const tag = url.searchParams.get("tag");
 
   try {
-    const result = await listPhotos(env, origin, tag, {
-      page,
-      pageSize,
-    });
+    const result = await getPublicPhotoList(
+      {
+        async listPhotos(input) {
+          return listPhotos(env, origin, input.tag ?? null, {
+            page: input.page,
+            pageSize: input.pageSize,
+          });
+        },
+        getPhotoDetail(id) {
+          return getPhotoById(env, origin, id);
+        },
+      },
+      {
+        tag,
+        page,
+        pageSize,
+      },
+    );
 
-    return json({
-      items: result.items,
-      page,
-      pageSize,
-      hasMore: result.hasMore,
-      total: result.total,
-    });
+    return json(result);
   } catch (error) {
     console.error("[handlePhotos] listPhotos failed", error);
     return json(
