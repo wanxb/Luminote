@@ -4,6 +4,7 @@ import type {
   PhotoDetail,
   PhotosResponse,
   SiteResponse,
+  SiteTagsResponse,
 } from "@/lib/api/types";
 
 type GetPhotosOptions = {
@@ -58,6 +59,17 @@ export async function getSite() {
     return await fetchJson<SiteResponse>("/api/site");
   } catch {
     return fallbackSite;
+  }
+}
+
+export async function getSiteTags() {
+  try {
+    const response = await fetchJson<SiteTagsResponse>("/api/site/tags");
+    return Array.from(
+      new Set(response.tags.map((tag) => tag.trim()).filter(Boolean)),
+    );
+  } catch {
+    return [];
   }
 }
 

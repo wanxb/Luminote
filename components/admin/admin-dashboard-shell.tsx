@@ -16,11 +16,12 @@ import {
 } from "@/lib/api/admin-client";
 import { getPhotos, getSite, uploadPhotos } from "@/lib/api/admin-client";
 import { extractExif } from "@/lib/upload/exif";
+import { computeFileHash } from "@/lib/upload/file-hash";
 import { createDisplayVariant } from "@/lib/upload/image-variants";
 import { createThumbnail } from "@/lib/upload/thumbnail";
 import { TEXT_LIMITS } from "@/lib/text-limits";
 import { useAdminSessionTimeout } from "@/lib/use-admin-session-timeout";
-import type { PhotoSummary, SiteResponse, WatermarkPosition } from "@/lib/api/types";
+import type { HomeLayout, PhotoSummary, SiteResponse, WatermarkPosition } from "@/lib/api/types";
 
 type Tab = "photos" | "settings";
 
@@ -32,9 +33,15 @@ type UploadQueueItem = {
   tags: string[];
 };
 
+type SelectOption<T extends string> = {
+  value: T;
+  label: string;
+};
+
 const DEFAULT_MAX_QUEUE_ITEMS = 20;
 const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
 const DEFAULT_MAX_TAG_POOL_SIZE = 20;
+const DEFAULT_HOME_LAYOUT: HomeLayout = "editorial";
 const DEFAULT_WATERMARK_POSITION: WatermarkPosition = "bottom-right";
 const PHOTO_PAGE_SIZE = 10;
 
@@ -50,9 +57,171 @@ const WATERMARK_POSITION_OPTIONS: Array<{ value: WatermarkPosition; label: strin
   { value: "bottom-right", label: "右下" },
 ];
 
+const HOME_LAYOUT_OPTIONS: Array<{ value: HomeLayout; label: string; description: string }> = [
+  { value: "masonry", label: "作品流览版", description: "首页直接进入瀑布式图片浏览，适合连续看图。" },
+  { value: "editorial", label: "侧栏档案版", description: "左侧展示摄影师信息与标签，右侧进行多图档案式浏览。" },
+  { value: "spotlight", label: "单屏聚焦版", description: "左侧展示摄影师信息与标签，右侧轮播单张大图。" },
+];
+
 const initialForm = {
   batchTags: [] as string[]
 };
+
+function SelectCaret({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      className={`h-4 w-4 text-[#9c7655] transition duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SoftSelect<T extends string>({
+  value,
+  onChange,
+  options,
+  className = "",
+  buttonClassName = "",
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<SelectOption<T>>;
+  className?: string;
+  buttonClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div ref={rootRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={`flex w-full items-center justify-between gap-3 rounded-[20px] border border-[rgba(92,68,48,0.14)] bg-[linear-gradient(180deg,rgba(247,241,232,0.98),rgba(242,234,222,0.96))] px-4 py-3 text-left text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_8px_24px_rgba(123,99,71,0.06)] outline-none transition duration-200 hover:border-[rgba(180,136,95,0.34)] focus-visible:border-[#c78f63] focus-visible:ring-2 focus-visible:ring-[#e8c8a8]/60 ${buttonClassName}`}
+      >
+        <span className="truncate">{selected?.label}</span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(214,185,152,0.18)]">
+          <SelectCaret open={open} />
+        </span>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-[24px] border border-[rgba(92,68,48,0.12)] bg-[rgba(249,244,236,0.98)] p-1.5 shadow-[0_22px_54px_rgba(91,70,45,0.16)] backdrop-blur-sm">
+          <div role="listbox" aria-activedescendant={`select-option-${String(selected?.value ?? "")}`} className="space-y-1">
+            {options.map((option) => {
+              const isSelected = option.value === value;
+
+              return (
+                <button
+                  key={option.value}
+                  id={`select-option-${String(option.value)}`}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-[18px] px-4 py-2.5 text-sm transition duration-150 ${
+                    isSelected
+                      ? "bg-[linear-gradient(180deg,rgba(214,178,142,0.26),rgba(201,145,99,0.18))] text-[#5c4330]"
+                      : "text-ink/80 hover:bg-[rgba(214,178,142,0.16)] hover:text-ink"
+                  }`}
+                >
+                  <span>{option.label}</span>
+                  <span className={`h-2.5 w-2.5 rounded-full transition ${isSelected ? "bg-[#c78f63]" : "bg-transparent"}`} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NumberStepperField({
+  value,
+  onChange,
+  min = 1,
+  className = "",
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  className?: string;
+}) {
+  function normalize(nextValue: number) {
+    if (!Number.isFinite(nextValue)) {
+      return min;
+    }
+
+    return Math.max(min, Math.trunc(nextValue));
+  }
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 rounded-[18px] border border-[rgba(92,68,48,0.12)] bg-[linear-gradient(180deg,rgba(247,241,232,0.98),rgba(242,234,222,0.94))] px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_8px_18px_rgba(123,99,71,0.05)] ${className}`}>
+      <button
+        type="button"
+        onClick={() => onChange(normalize(value - 1))}
+        aria-label="减少数值"
+        className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-[rgba(92,68,48,0.1)] bg-white/72 text-base leading-none text-[#8b6b4f] transition hover:border-[rgba(180,136,95,0.28)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c8a8]/60"
+      >
+        -
+      </button>
+      <input
+        type="number"
+        min={min}
+        value={value}
+        onChange={(event) => onChange(normalize(Number(event.target.value)))}
+        className="w-12 appearance-none border-0 bg-transparent px-1 py-1 text-center text-sm text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(normalize(value + 1))}
+        aria-label="增加数值"
+        className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-[rgba(92,68,48,0.1)] bg-white/72 text-base leading-none text-[#8b6b4f] transition hover:border-[rgba(180,136,95,0.28)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c8a8]/60"
+      >
+        +
+      </button>
+    </div>
+  );
+}
 
 function uniqueTags(tags: string[], maxTagsPerPhoto = DEFAULT_MAX_TAGS_PER_PHOTO) {
   return Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean))).slice(0, maxTagsPerPhoto);
@@ -114,6 +283,8 @@ export function AdminDashboardShell() {
   const [appliedPhotoTagFilter, setAppliedPhotoTagFilter] = useState("");
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [deleteConfirmPhotoId, setDeleteConfirmPhotoId] = useState<string | null>(null);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [isConfirmingBatchDelete, setIsConfirmingBatchDelete] = useState(false);
 
   const [batchTags, setBatchTags] = useState<string[]>(initialForm.batchTags);
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
@@ -135,6 +306,7 @@ export function AdminDashboardShell() {
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [siteTitle, setSiteTitle] = useState("");
   const [siteDescription, setSiteDescription] = useState("");
+  const [homeLayout, setHomeLayout] = useState<HomeLayout>(DEFAULT_HOME_LAYOUT);
   const [watermarkEnabledByDefault, setWatermarkEnabledByDefault] = useState(true);
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkPosition, setWatermarkPosition] = useState<WatermarkPosition>(DEFAULT_WATERMARK_POSITION);
@@ -167,6 +339,10 @@ export function AdminDashboardShell() {
   const [newTagName, setNewTagName] = useState("");
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [pendingTags, setPendingTags] = useState<TagPool[]>([]);
+  const photosPageCount = Math.max(
+    1,
+    Math.ceil((appliedPhotoTagFilter ? photosTotal : photosUnfilteredTotal) / PHOTO_PAGE_SIZE)
+  );
   const [pendingDeletedTags, setPendingDeletedTags] = useState<TagPool[]>([]);
   const [tagError, setTagError] = useState("");
   const [uploadNotice, setUploadNotice] = useState("");
@@ -251,6 +427,28 @@ export function AdminDashboardShell() {
       window.clearTimeout(timeoutId);
     };
   }, [deleteConfirmPhotoId]);
+
+  useEffect(() => {
+    if (!isConfirmingBatchDelete) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsConfirmingBatchDelete(false);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isConfirmingBatchDelete]);
+
+  useEffect(() => {
+    setSelectedPhotoIds((current) => current.filter((id) => photos.some((photo) => photo.id === id)));
+  }, [photos]);
+
+  useEffect(() => {
+    setIsConfirmingBatchDelete(false);
+  }, [selectedPhotoIds]);
 
   useEffect(() => {
     if (uploadQueue.length === 0 && batchTags.length > 0) {
@@ -370,6 +568,7 @@ export function AdminDashboardShell() {
       setConfig(site);
       setSiteTitle(site.siteTitle);
       setSiteDescription(site.siteDescription ?? "");
+      setHomeLayout(site.homeLayout ?? DEFAULT_HOME_LAYOUT);
       setWatermarkEnabledByDefault(site.watermarkEnabledByDefault);
       setWatermarkText(site.watermarkText);
       setWatermarkPosition(site.watermarkPosition);
@@ -412,7 +611,7 @@ export function AdminDashboardShell() {
     const files = uploadQueue.map((item) => item.file);
     const watermarkEnabled = config?.watermarkEnabledByDefault ?? true;
     const nextWatermarkPosition = config?.watermarkPosition ?? DEFAULT_WATERMARK_POSITION;
-    const processingStepsPerFile = watermarkEnabled ? 4 : 3;
+    const processingStepsPerFile = watermarkEnabled ? 5 : 4;
     const totalProcessingSteps = Math.max(1, files.length * processingStepsPerFile);
     let completedProcessingSteps = 0;
     let shouldResetUploading = true;
@@ -433,6 +632,12 @@ export function AdminDashboardShell() {
       const thumbnailPromises = files.map((file) =>
         createThumbnail(file).then((result) => {
           reportProcessingProgress(`正在生成缩略图 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
+          return result;
+        })
+      );
+      const sourceHashPromises = files.map((file) =>
+        computeFileHash(file).then((result) => {
+          reportProcessingProgress(`正在计算去重指纹 ${completedProcessingSteps + 1}/${totalProcessingSteps}`);
           return result;
         })
       );
@@ -461,8 +666,9 @@ export function AdminDashboardShell() {
         })
       );
 
-      const [thumbnails, displayFiles, watermarkedDisplayFiles, exifRecords] = await Promise.all([
+      const [thumbnails, sourceHashes, displayFiles, watermarkedDisplayFiles, exifRecords] = await Promise.all([
         Promise.all(thumbnailPromises),
+        Promise.all(sourceHashPromises),
         Promise.all(displayPromises),
         Promise.all(watermarkedDisplayPromises),
         Promise.all(exifPromises)
@@ -473,6 +679,7 @@ export function AdminDashboardShell() {
 
       const result = await uploadPhotos({
         files,
+        sourceHashes,
         thumbnails,
         displayFiles,
         watermarkedDisplayFiles,
@@ -509,7 +716,16 @@ export function AdminDashboardShell() {
       setUploaded(result.uploaded);
       setUploadQueue([]);
       setBatchTags(initialForm.batchTags);
-      setUploadStage(`上传成功，共 ${result.uploaded.length} 张。`);
+      setUploadStage(
+        result.failed.length > 0
+          ? `上传完成，新增 ${result.uploaded.length} 张，跳过重复 ${result.failed.length} 张。`
+          : `上传成功，共 ${result.uploaded.length} 张。`
+      );
+      setUploadNotice(
+        result.failed.length > 0
+          ? result.failed.map((item) => `${item.fileName}：${item.error}`).join("；")
+          : ""
+      );
       setUploadProgress(100);
       setIsUploading(false);
       shouldResetUploading = false;
@@ -528,6 +744,7 @@ export function AdminDashboardShell() {
   async function handleDelete(photoId: string) {
     setDeletingIds((current) => [...current, photoId]);
     setDeleteConfirmPhotoId(null);
+    setPhotoNotice("");
 
     try {
       const result = await deletePhoto(photoId);
@@ -538,15 +755,16 @@ export function AdminDashboardShell() {
           return;
         }
 
-        alert(result.error ?? "删除失败，请稍后重试。");
+        setPhotoNotice(result.error ?? "删除失败，请稍后重试。");
         return;
       }
 
       setUploaded((current) => current.filter((item) => item.id !== photoId));
+      setSelectedPhotoIds((current) => current.filter((id) => id !== photoId));
       const nextPage = photos.length === 1 && photosPage > 1 ? photosPage - 1 : photosPage;
       await loadPhotos(nextPage, appliedPhotoTagFilter);
     } catch {
-      alert("删除请求失败，请确认 Worker 是否已启动。");
+      setPhotoNotice("删除请求失败，请确认 Worker 是否已启动。");
     } finally {
       setDeletingIds((current) => current.filter((id) => id !== photoId));
     }
@@ -563,6 +781,145 @@ export function AdminDashboardShell() {
     }
 
     void handleDelete(photoId);
+  }
+
+  function togglePhotoSelection(photoId: string) {
+    setSelectedPhotoIds((current) =>
+      current.includes(photoId)
+        ? current.filter((id) => id !== photoId)
+        : [...current, photoId]
+    );
+  }
+
+  function handleToggleSelectAllPhotos() {
+    const currentPagePhotoIds = photos.map((photo) => photo.id);
+    const areAllSelected = currentPagePhotoIds.length > 0 && currentPagePhotoIds.every((id) => selectedPhotoIds.includes(id));
+
+    setSelectedPhotoIds(areAllSelected ? [] : currentPagePhotoIds);
+  }
+
+  async function handleBatchPhotoHidden(nextHidden: boolean) {
+    const targetIds = photos
+      .filter((photo) => selectedPhotoIds.includes(photo.id) && Boolean(photo.isHidden) !== nextHidden)
+      .map((photo) => photo.id);
+
+    if (targetIds.length === 0) {
+      return;
+    }
+
+    setUpdatingPhotoIds((current) => Array.from(new Set([...current, ...targetIds])));
+    setPhotoNotice("");
+
+    try {
+      const results = await Promise.all(
+        targetIds.map(async (photoId) => {
+          try {
+            const result = await updatePhoto(photoId, { isHidden: nextHidden });
+            return { photoId, result };
+          } catch {
+            return { photoId, result: null };
+          }
+        })
+      );
+
+      if (results.some(({ result }) => result?.status === 401)) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const succeededIds = results.filter(({ result }) => result?.ok).map(({ photoId }) => photoId);
+      const failedCount = results.length - succeededIds.length;
+
+      if (succeededIds.length > 0) {
+        setPhotos((current) =>
+          current.map((photo) =>
+            succeededIds.includes(photo.id) ? { ...photo, isHidden: nextHidden } : photo
+          )
+        );
+      }
+
+      if (failedCount > 0) {
+        setPhotoNotice(
+          `${nextHidden ? "已隐藏" : "已取消隐藏"} ${succeededIds.length} 张，${failedCount} 张失败。`
+        );
+        return;
+      }
+    } finally {
+      setUpdatingPhotoIds((current) => current.filter((id) => !targetIds.includes(id)));
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (selectedPhotoIds.length === 0) {
+      return;
+    }
+
+    const targetIds = photos.filter((photo) => selectedPhotoIds.includes(photo.id)).map((photo) => photo.id);
+
+    if (targetIds.length === 0) {
+      return;
+    }
+
+    setDeletingIds((current) => Array.from(new Set([...current, ...targetIds])));
+    setDeleteConfirmPhotoId(null);
+    setIsConfirmingBatchDelete(false);
+    setPhotoNotice("");
+
+    try {
+      const results = await Promise.all(
+        targetIds.map(async (photoId) => {
+          try {
+            const result = await deletePhoto(photoId);
+            return { photoId, result, requestFailed: false };
+          } catch {
+            return { photoId, result: null, requestFailed: true };
+          }
+        })
+      );
+
+      if (results.some(({ result }) => result?.status === 401)) {
+        window.location.href = "/admin";
+        return;
+      }
+
+      const succeededIds = results.filter(({ result }) => result?.ok).map(({ photoId }) => photoId);
+      const failedCount = results.length - succeededIds.length;
+      const firstFailedResult = results.find(({ result, requestFailed }) => requestFailed || !result?.ok);
+      const failedReason = firstFailedResult?.requestFailed
+        ? "删除请求失败，请确认 Worker 是否已启动。"
+        : firstFailedResult?.result?.error;
+
+      if (succeededIds.length > 0) {
+        setUploaded((current) => current.filter((item) => !succeededIds.includes(item.id)));
+        setSelectedPhotoIds((current) => current.filter((id) => !succeededIds.includes(id)));
+        const nextPage = photos.length === succeededIds.length && photosPage > 1 ? photosPage - 1 : photosPage;
+        await loadPhotos(nextPage, appliedPhotoTagFilter);
+      }
+
+      if (failedCount > 0) {
+        setPhotoNotice(
+          failedReason
+            ? `已删除 ${succeededIds.length} 张，${failedCount} 张失败。原因：${failedReason}`
+            : `已删除 ${succeededIds.length} 张，${failedCount} 张失败。`
+        );
+        return;
+      }
+    } finally {
+      setDeletingIds((current) => current.filter((id) => !targetIds.includes(id)));
+    }
+  }
+
+  function handleBatchDeleteAction() {
+    if (selectedPhotoIds.length === 0 || deletingIds.some((id) => selectedPhotoIds.includes(id))) {
+      return;
+    }
+
+    if (!isConfirmingBatchDelete) {
+      setIsConfirmingBatchDelete(true);
+      return;
+    }
+
+    void handleBatchDelete();
   }
 
   async function handleCreateTag() {
@@ -938,6 +1295,7 @@ export function AdminDashboardShell() {
       const payload: {
         siteTitle?: string;
         siteDescription?: string;
+        homeLayout?: HomeLayout;
         watermarkEnabledByDefault?: boolean;
         watermarkText?: string;
         watermarkPosition?: WatermarkPosition;
@@ -966,6 +1324,10 @@ export function AdminDashboardShell() {
 
       if (siteDescription !== config?.siteDescription) {
         payload.siteDescription = siteDescription;
+      }
+
+      if (homeLayout !== (config?.homeLayout ?? DEFAULT_HOME_LAYOUT)) {
+        payload.homeLayout = homeLayout;
       }
 
       if (watermarkEnabledByDefault !== config?.watermarkEnabledByDefault) {
@@ -1097,6 +1459,14 @@ export function AdminDashboardShell() {
 
   const canSelectTags = uploadQueue.length > 0;
   const visibleTags = [...predefinedTags, ...pendingTags];
+  const selectedPhotos = photos.filter((photo) => selectedPhotoIds.includes(photo.id));
+  const allPhotosSelected = photos.length > 0 && photos.every((photo) => selectedPhotoIds.includes(photo.id));
+  const selectedVisiblePhotoCount = selectedPhotos.filter((photo) => !photo.isHidden).length;
+  const selectedHiddenPhotoCount = selectedPhotos.filter((photo) => photo.isHidden).length;
+  const hasSelectedBusyPhotos = selectedPhotos.some(
+    (photo) => updatingPhotoIds.includes(photo.id) || deletingIds.includes(photo.id)
+  );
+  const isBatchDeleting = selectedPhotoIds.length > 0 && selectedPhotoIds.every((photoId) => deletingIds.includes(photoId));
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -1360,9 +1730,6 @@ export function AdminDashboardShell() {
                   <h2 className="font-display text-2xl text-ink">
                     现有照片 {appliedPhotoTagFilter ? `(${photosTotal} / ${photosUnfilteredTotal})` : `(${photosUnfilteredTotal})`}
                   </h2>
-                  <p className="mt-1 text-sm text-ink/60">
-                    每页 10 条，当前第 {photosPage} 页{appliedPhotoTagFilter ? `，标签筛选：${appliedPhotoTagFilter}，匹配 ${photosTotal} 张` : `，总计 ${photosUnfilteredTotal} 张`}
-                  </p>
                 </div>
 
                 <div className="space-y-3 lg:max-w-[32rem]">
@@ -1429,6 +1796,56 @@ export function AdminDashboardShell() {
               {photoNotice ? <p className="mt-4 text-sm text-amber-700">{photoNotice}</p> : null}
               {photosError ? <p className="mt-4 text-sm text-red-700">{photosError}</p> : null}
 
+              {!isLoadingPhotos && !photosError && photos.length > 0 && selectedPhotoIds.length > 0 ? (
+                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/6 bg-[rgba(245,240,228,0.22)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 text-sm text-ink/70">
+                    <span>已选 {selectedPhotoIds.length} 张</span>
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAllPhotos}
+                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white"
+                    >
+                      {allPhotosSelected ? "清空本页" : "全选本页"}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleBatchPhotoHidden(true)}
+                      disabled={selectedVisiblePhotoCount === 0 || hasSelectedBusyPhotos}
+                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      批量隐藏
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleBatchPhotoHidden(false)}
+                      disabled={selectedHiddenPhotoCount === 0 || hasSelectedBusyPhotos}
+                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      取消隐藏
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBatchDeleteAction}
+                      disabled={selectedPhotoIds.length === 0 || isBatchDeleting || hasSelectedBusyPhotos}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        isConfirmingBatchDelete
+                          ? "border border-red-500 bg-red-500 text-white hover:bg-red-600"
+                          : "border border-red-200 bg-white/70 text-red-600 hover:bg-red-50"
+                      }`}
+                    >
+                      {isBatchDeleting
+                        ? "删除中"
+                        : isConfirmingBatchDelete
+                          ? `确认删除 ${selectedPhotoIds.length} 张`
+                          : "批量删除"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               {isLoadingPhotos ? (
                 <p className="mt-4 text-sm text-ink/70">正在加载...</p>
               ) : photosError ? null : photos.length === 0 ? (
@@ -1438,8 +1855,12 @@ export function AdminDashboardShell() {
                   {photos.map((photo) => (
                     <div
                       key={photo.id}
-                      className={`rounded-xl border border-black/5 px-4 py-3 transition hover:border-black/10 hover:bg-white/70 ${
-                        photo.isHidden ? "bg-black/[0.04]" : "bg-[rgba(245,240,228,0.2)]"
+                      className={`rounded-xl border px-4 py-3 transition hover:border-black/10 hover:bg-white/70 ${
+                        selectedPhotoIds.includes(photo.id)
+                          ? "border-[#d6b28f] bg-[rgba(245,232,218,0.78)] shadow-[0_10px_24px_rgba(192,143,102,0.08)]"
+                          : photo.isHidden
+                            ? "border-black/5 bg-black/[0.04]"
+                            : "border-black/5 bg-[rgba(245,240,228,0.2)]"
                       }`}
                     >
                       {(() => {
@@ -1449,10 +1870,27 @@ export function AdminDashboardShell() {
                         const isEditing = editingPhotoId === photo.id;
                         const isUpdating = updatingPhotoIds.includes(photo.id);
                         const isConfirmingDelete = deleteConfirmPhotoId === photo.id;
+                        const isDeleting = deletingIds.includes(photo.id);
+                        const isBusy = isUpdating || isDeleting;
 
                         return (
                           <>
                       <div className="flex items-center gap-4">
+                        <label className="flex shrink-0 cursor-pointer items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedPhotoIds.includes(photo.id)}
+                            onChange={() => togglePhotoSelection(photo.id)}
+                            disabled={isBusy}
+                            className="peer sr-only"
+                            aria-label={`选择 ${photo.description || photo.id}`}
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="relative h-5 w-5 rounded-[6px] border border-[#d8c9b6] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition after:absolute after:left-[6px] after:top-[2px] after:h-[10px] after:w-[5px] after:rotate-45 after:border-b-2 after:border-r-2 after:border-white after:opacity-0 after:content-[''] peer-checked:border-[#c08f66] peer-checked:bg-[#cf9f78] peer-checked:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28),0_0_0_3px_rgba(231,205,180,0.55)] peer-checked:after:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-[#e7cdb4] peer-focus-visible:ring-offset-0 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+                          />
+                        </label>
+
                         <button
                           type="button"
                           onClick={() =>
@@ -1501,7 +1939,7 @@ export function AdminDashboardShell() {
                             <button
                               type="button"
                               onClick={() => void handleTogglePhotoHidden(photo)}
-                              disabled={isUpdating}
+                              disabled={isBusy}
                               className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {isUpdating && editingPhotoId !== photo.id
@@ -1515,7 +1953,7 @@ export function AdminDashboardShell() {
                               onClick={() =>
                                 isEditing ? void handleSavePhotoTags(photo) : beginPhotoTagEdit(photo)
                               }
-                              disabled={isUpdating}
+                              disabled={isBusy}
                               className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist"
                             >
                               {isUpdating ? "保存中" : isEditing ? "完成" : "标签"}
@@ -1523,14 +1961,14 @@ export function AdminDashboardShell() {
                             <button
                               type="button"
                               onClick={() => handleDeleteAction(photo.id)}
-                              disabled={deletingIds.includes(photo.id)}
+                              disabled={isDeleting}
                               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                 isConfirmingDelete
                                   ? "border border-red-500 bg-red-500 text-white hover:bg-red-600"
                                   : "border border-red-200 text-red-600 hover:bg-red-50"
                               }`}
                             >
-                              {deletingIds.includes(photo.id)
+                              {isDeleting
                                 ? "删除中"
                                 : isConfirmingDelete
                                   ? "确认删除"
@@ -1590,20 +2028,23 @@ export function AdminDashboardShell() {
                     </div>
                   ))}
 
-                  <div className="flex items-center justify-between gap-3 pt-4">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 pt-4">
                     <button
                       type="button"
                       onClick={() => void handlePreviousPhotosPage()}
                       disabled={isLoadingPhotos || photosPage <= 1}
-                      className="rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="justify-self-start rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       上一页
                     </button>
+                    <p className="text-center text-sm font-medium tabular-nums text-ink/65">
+                      {photosPage}/{photosPageCount}
+                    </p>
                     <button
                       type="button"
                       onClick={() => void handleNextPhotosPage()}
                       disabled={isLoadingPhotos || !photosHasMore}
-                      className="rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="justify-self-end rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       下一页
                     </button>
@@ -1653,6 +2094,18 @@ export function AdminDashboardShell() {
                             placeholder="用两到三行介绍站点的气质、主题或拍摄方向。"
                           />
                         </label>
+
+                        <label className="block space-y-2 rounded-2xl border border-black/6 bg-[rgba(255,255,255,0.34)] px-4 py-4 lg:col-span-2">
+                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">首页样式</span>
+                          <SoftSelect
+                            value={homeLayout}
+                            onChange={setHomeLayout}
+                            options={HOME_LAYOUT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                          />
+                          <p className="text-xs leading-5 text-ink/55">
+                            {HOME_LAYOUT_OPTIONS.find((option) => option.value === homeLayout)?.description}
+                          </p>
+                        </label>
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1661,8 +2114,13 @@ export function AdminDashboardShell() {
                             type="checkbox"
                             checked={watermarkEnabledByDefault}
                             onChange={(event) => setWatermarkEnabledByDefault(event.target.checked)}
-                            className="mt-0.5"
+                            className="peer sr-only"
                           />
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border border-[rgba(92,68,48,0.14)] bg-[linear-gradient(180deg,rgba(247,241,232,0.96),rgba(240,232,220,0.96))] text-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition peer-checked:border-[#c78f63] peer-checked:bg-[linear-gradient(180deg,#d8ad84,#c78f63)] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#e8c8a8]/60">
+                            <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3.5 8.25L6.5 11.25L12.5 5.25" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
                           <span>
                             <span className="block font-medium text-ink">默认启用水印</span>
                             <span className="mt-1 block text-xs leading-5 text-ink/55">上传时默认生成带水印展示图。</span>
@@ -1683,17 +2141,13 @@ export function AdminDashboardShell() {
 
                         <label className="flex min-h-[104px] flex-col rounded-2xl border border-black/6 bg-white px-4 py-4 text-sm text-ink">
                           <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">水印位置</span>
-                          <select
+                          <SoftSelect
                             value={watermarkPosition}
-                            onChange={(event) => setWatermarkPosition(event.target.value as WatermarkPosition)}
-                            className="mt-2 w-full rounded-xl border border-black/10 bg-mist px-3 py-2.5 text-sm outline-none transition focus:border-ember"
-                          >
-                            {WATERMARK_POSITION_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={setWatermarkPosition}
+                            options={WATERMARK_POSITION_OPTIONS}
+                            className="mt-2"
+                            buttonClassName="rounded-[16px] px-3 py-2.5"
+                          />
                         </label>
 
                         <label className="group relative flex min-h-[104px] items-start gap-3 rounded-2xl border border-black/6 bg-white px-4 py-4 text-sm text-ink">
@@ -1701,8 +2155,13 @@ export function AdminDashboardShell() {
                             type="checkbox"
                             checked={uploadOriginalEnabled}
                             onChange={(event) => setUploadOriginalEnabled(event.target.checked)}
-                            className="mt-0.5"
+                            className="peer sr-only"
                           />
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border border-[rgba(92,68,48,0.14)] bg-[linear-gradient(180deg,rgba(247,241,232,0.96),rgba(240,232,220,0.96))] text-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition peer-checked:border-[#c78f63] peer-checked:bg-[linear-gradient(180deg,#d8ad84,#c78f63)] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#e8c8a8]/60">
+                            <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3.5 w-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3.5 8.25L6.5 11.25L12.5 5.25" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
                           <span>
                             <span className="flex items-center gap-2 font-medium text-ink">
                               <span>上传原图</span>
@@ -1730,13 +2189,7 @@ export function AdminDashboardShell() {
                           <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">批量上传</span>
                           <div className="mt-2 flex items-center justify-between gap-3">
                             <span className="text-sm text-ink/70">单次队列</span>
-                            <input
-                              type="number"
-                              min={1}
-                              value={maxUploadFiles}
-                              onChange={(event) => setMaxUploadFiles(Number(event.target.value) || 1)}
-                              className="w-20 rounded-xl border border-black/10 bg-mist px-3 py-2 text-sm outline-none transition focus:border-ember"
-                            />
+                            <NumberStepperField value={maxUploadFiles} onChange={setMaxUploadFiles} />
                           </div>
                         </label>
 
@@ -1744,13 +2197,7 @@ export function AdminDashboardShell() {
                           <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">标签总数</span>
                           <div className="mt-2 flex items-center justify-between gap-3">
                             <span className="text-sm text-ink/70">可创建标签</span>
-                            <input
-                              type="number"
-                              min={1}
-                              value={maxTagPoolSize}
-                              onChange={(event) => setMaxTagPoolSize(Number(event.target.value) || 1)}
-                              className="w-20 rounded-xl border border-black/10 bg-mist px-3 py-2 text-sm outline-none transition focus:border-ember"
-                            />
+                            <NumberStepperField value={maxTagPoolSize} onChange={setMaxTagPoolSize} />
                           </div>
                         </label>
 
@@ -1758,13 +2205,7 @@ export function AdminDashboardShell() {
                           <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">单图标签</span>
                           <div className="mt-2 flex items-center justify-between gap-3">
                             <span className="text-sm text-ink/70">每张上限</span>
-                            <input
-                              type="number"
-                              min={1}
-                              value={maxTagsPerPhoto}
-                              onChange={(event) => setMaxTagsPerPhoto(Number(event.target.value) || 1)}
-                              className="w-20 rounded-xl border border-black/10 bg-mist px-3 py-2 text-sm outline-none transition focus:border-ember"
-                            />
+                            <NumberStepperField value={maxTagsPerPhoto} onChange={setMaxTagsPerPhoto} />
                           </div>
                         </label>
                       </div>

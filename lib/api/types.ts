@@ -21,6 +21,8 @@ export type WatermarkPosition =
   | "bottom"
   | "bottom-right";
 
+export type HomeLayout = "masonry" | "editorial" | "spotlight";
+
 export type PhotoExif = {
   aperture?: string;
   shutter?: string;
@@ -28,6 +30,7 @@ export type PhotoExif = {
   focalLength?: string;
   latitude?: number;
   longitude?: number;
+  params?: Record<string, string>;
 };
 
 export type PhotoDetail = PhotoSummary & {
@@ -50,6 +53,7 @@ export type PhotosResponse = {
 export type SiteResponse = {
   siteTitle: string;
   siteDescription: string;
+  homeLayout: HomeLayout;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
   watermarkPosition: WatermarkPosition;
@@ -71,9 +75,14 @@ export type SiteResponse = {
   photographerCustomAccountUrl: string;
 };
 
+export type SiteTagsResponse = {
+  tags: string[];
+};
+
 export type SiteConfigResponse = {
   siteTitle: string;
   siteDescription?: string;
+  homeLayout: HomeLayout;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
   watermarkPosition: WatermarkPosition;

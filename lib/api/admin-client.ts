@@ -1,6 +1,7 @@
 import type { ExtractedExif } from "@/lib/upload/exif";
 import { getClientApiBaseUrl, getServerApiBaseUrl } from "@/lib/api/config";
 import type {
+  HomeLayout,
   PhotoDetail,
   PhotosResponse,
   SiteConfigResponse,
@@ -87,6 +88,7 @@ export type UploadPhotographerAvatarResponse = {
 export type UpdateSitePayload = {
   siteTitle?: string;
   siteDescription?: string;
+  homeLayout?: HomeLayout;
   watermarkEnabledByDefault?: boolean;
   watermarkText?: string;
   watermarkPosition?: WatermarkPosition;
@@ -158,6 +160,7 @@ export type UpdatePhotoResponse = {
 
 export type UploadPayload = {
   files: File[];
+  sourceHashes: string[];
   thumbnails: File[];
   displayFiles: File[];
   watermarkedDisplayFiles: Array<File | null>;
@@ -276,6 +279,7 @@ export async function uploadPhotos(
     "fileNames",
     JSON.stringify(payload.files.map((file) => file.name)),
   );
+  formData.set("sourceHashes", JSON.stringify(payload.sourceHashes));
   formData.set("tags", JSON.stringify(payload.tags));
   if (payload.photoDrafts) {
     formData.set("photoDrafts", JSON.stringify(payload.photoDrafts));
@@ -486,6 +490,7 @@ export async function getSite(): Promise<SiteResponse> {
       siteTitle: "Luminote",
       siteDescription:
         "A lightweight home for photography that lets the work breathe.",
+      homeLayout: "editorial" as HomeLayout,
       watermarkEnabledByDefault: true,
       watermarkText: "© Luminote",
       watermarkPosition: "bottom-right" as WatermarkPosition,

@@ -161,6 +161,26 @@ export async function deleteAvatarObject(env: Env, fileName: string) {
   await env.PHOTOS_BUCKET.delete(avatarObjectKey(fileName));
 }
 
+export async function hasPhotoObjects(env: Env, id: string) {
+  if (!env.PHOTOS_BUCKET) {
+    return false;
+  }
+
+  const [thumb, display, watermarked, originals] = await Promise.all([
+    env.PHOTOS_BUCKET.get(objectKey(id, "thumb")),
+    env.PHOTOS_BUCKET.get(objectKey(id, "display")),
+    env.PHOTOS_BUCKET.get(objectKey(id, "display-watermarked")),
+    env.PHOTOS_BUCKET.list({
+      prefix: `originals/${id}.`,
+      limit: 1,
+    }),
+  ]);
+
+  return Boolean(
+    thumb || display || watermarked || originals.objects.length > 0,
+  );
+}
+
 export async function deletePhotoObjects(env: Env, id: string) {
   if (!env.PHOTOS_BUCKET) {
     return;

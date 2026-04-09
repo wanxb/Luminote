@@ -1,72 +1,139 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { GalleryGrid } from "@/components/gallery/gallery-grid";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
-import { getPhotoDetail } from "@/lib/api/client";
-import { getPhotos } from "@/lib/api/client";
+import { getPhotoDetail, getPhotos } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
 import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
 
-type GalleryExperienceProps = {
+type EditorialArchiveProps = {
   site: SiteResponse;
   initialPhotos: PhotoSummary[];
   initialPage: number;
   initialHasMore: boolean;
   allTags: string[];
+  selectedTag: string | null;
 };
 
 const PAGE_SIZE = 30;
 
-function getTopTags(photos: PhotoSummary[]) {
-  const counts = new Map<string, number>();
+function formatTakenAt(takenAt?: string) {
+  if (!takenAt) {
+    return "";
+  }
 
-  photos.forEach((photo) => {
-    photo.tags?.forEach((tag) => {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  try {
+    return new Date(takenAt).toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
-  });
-
-  return Array.from(counts.entries())
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 3);
+  } catch {
+    return "";
+  }
 }
 
-export function GalleryExperience({
+export function EditorialArchive({
   site,
   initialPhotos,
   initialPage,
   initialHasMore,
-  allTags,
-}: GalleryExperienceProps) {
+  selectedTag,
+}: EditorialArchiveProps) {
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const [loadedPhotos, setLoadedPhotos] = useState(initialPhotos);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [detail, setDetail] = useState<PhotoDetail | null>(null);
   const [isImmersive, setIsImmersive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [loadedPhotos, setLoadedPhotos] = useState<PhotoSummary[]>(initialPhotos);
-  const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(initialPhotos);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const [isFiltering, setIsFiltering] = useState(false);
-  const activePhotos = selectedTags.length === 0 ? loadedPhotos : filteredPhotos;
-  const topTags = getTopTags(loadedPhotos);
-  const displayDescription =
-    site.photographerBio || site.siteDescription || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
-  const tagOptions = Array.from(new Set([...topTags.map(([tag]) => tag), ...allTags])).slice(0, 12);
 
   useEffect(() => {
     setLoadedPhotos(initialPhotos);
-    setFilteredPhotos(initialPhotos);
     setCurrentPage(initialPage);
     setHasMore(initialHasMore);
     setLoadMoreError(null);
   }, [initialHasMore, initialPage, initialPhotos]);
+
+  useEffect(() => {
+    if (!selectedTag) {
+      setLoadedPhotos(initialPhotos);
+      setCurrentPage(initialPage);
+      setHasMore(initialHasMore);
+      setLoadMoreError(null);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    void getPhotos({ page: 1, pageSize: PAGE_SIZE, tag: selectedTag })
+      .then((response) => {
+        if (!active) {
+          return;
+        }
+
+        setLoadedPhotos(response.items);
+        setCurrentPage(response.page);
+        setHasMore(response.hasMore);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setLoadedPhotos([]);
+        setCurrentPage(1);
+        setHasMore(false);
+        setLoadMoreError("标签筛选加载失败，请稍后再试。");
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingMore(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialHasMore, initialPage, initialPhotos, selectedTag]);
+
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current;
+
+    if (!trigger || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+
+        if (!entry?.isIntersecting) {
+          return;
+        }
+
+        void handleLoadMore();
+      },
+      {
+        root: null,
+        rootMargin: "0px 0px 360px 0px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(trigger);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [currentPage, hasMore, isLoadingMore]);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -118,22 +185,7 @@ export function GalleryExperience({
     };
   }, [selectedId]);
 
-  useEffect(() => {
-    setFilteredPhotos(loadedPhotos);
-  }, [loadedPhotos]);
-
-  useEffect(() => {
-    if (selectedTags.length === 0) {
-      setFilteredPhotos(loadedPhotos);
-      setIsFiltering(false);
-      return;
-    }
-
-    setIsFiltering(true);
-
-    setFilteredPhotos(loadedPhotos.filter((photo) => photo.tags?.some((tag) => selectedTags.includes(tag))));
-    setIsFiltering(false);
-  }, [loadedPhotos, selectedTags]);
+  const activePhotos = useMemo(() => loadedPhotos, [loadedPhotos]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -180,42 +232,11 @@ export function GalleryExperience({
     };
   }, [selectedId]);
 
-  useEffect(() => {
-    const trigger = loadMoreTriggerRef.current;
-
-    if (!trigger || !hasMore || isLoadingMore) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
-        void handleLoadMore();
-      },
-      {
-        root: null,
-        rootMargin: "0px 0px 320px 0px",
-        threshold: 0.1,
-      }
-    );
-
-    observer.observe(trigger);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [currentPage, hasMore, isLoadingMore]);
-
   const selectedSummary =
     selectedIndex !== null
       ? activePhotos[selectedIndex]
       : selectedId
-        ? activePhotos.find((photo) => photo.id === selectedId) ?? loadedPhotos.find((photo) => photo.id === selectedId)
+        ? activePhotos.find((photo) => photo.id === selectedId)
         : null;
 
   const activePhoto = detail && detail.id === selectedId ? detail : selectedSummary;
@@ -232,6 +253,7 @@ export function GalleryExperience({
       const response = await getPhotos({
         page: currentPage + 1,
         pageSize: PAGE_SIZE,
+        tag: selectedTag ?? undefined,
       });
 
       setLoadedPhotos((current) => {
@@ -289,29 +311,33 @@ export function GalleryExperience({
 
   return (
     <>
-      <div className="space-y-[2px]">
-        {isFiltering ? <p className="px-1 py-2 text-sm text-white/50">正在筛选...</p> : null}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-[11px] uppercase tracking-[0.28em] text-black/38">
+          <span>{selectedTag ? `Tag / ${selectedTag}` : "Overview"}</span>
+          <span>{String(activePhotos.length).padStart(2, "0")} Photos</span>
+        </div>
 
-        <GalleryGrid
-          site={site}
-          photos={activePhotos}
-          activePhotoId={selectedId}
-          onSelect={handleSelect}
-          filterTags={tagOptions}
-          selectedTags={selectedTags}
-          onSelectTags={setSelectedTags}
-          description={displayDescription}
-        />
+        {activePhotos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {activePhotos.map((photo) => (
+              <ArchivePhotoButton key={photo.id} photo={photo} onSelect={handleSelect} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[24px] border border-black/8 bg-white/55 px-5 py-10 text-center text-sm text-black/50">
+            当前标签下还没有照片。
+          </div>
+        )}
 
-        {loadMoreError ? <p className="px-1 py-4 text-center text-sm text-[#ffd8c7]">{loadMoreError}</p> : null}
+        <div ref={loadMoreTriggerRef} className="h-10" />
 
-        {hasMore || isLoadingMore ? (
-          <div className="px-4 py-8">
-            <div ref={loadMoreTriggerRef} className="h-1 w-full" aria-hidden="true" />
-            {isLoadingMore ? <p className="text-center text-sm tracking-[0.18em] text-white/62">正在加载更多作品...</p> : null}
+        {loadMoreError ? (
+          <div className="rounded-[24px] border border-amber-900/10 bg-amber-50/80 px-5 py-4 text-center text-sm text-amber-900/70">
+            {loadMoreError}
           </div>
         ) : null}
       </div>
+
       <LightboxShell
         photo={activePhoto ?? null}
         photos={activePhotos}
@@ -319,14 +345,14 @@ export function GalleryExperience({
         watermarkText={site.watermarkText}
         watermarkPosition={site.watermarkPosition}
         activeIndex={selectedIndex}
-        hasMorePhotos={selectedTags.length === 0 ? hasMore : false}
+        hasMorePhotos={hasMore}
         isImmersive={isImmersive}
         isOpen={selectedId !== null}
         isLoading={isLoading}
         isLoadingMorePhotos={isLoadingMore}
         error={error}
         onClose={handleClose}
-        onLoadMorePhotos={selectedTags.length === 0 ? handleLoadMore : undefined}
+        onLoadMorePhotos={handleLoadMore}
         onNext={handleNext}
         onPrevious={handlePrevious}
         onSelect={selectPhoto}
@@ -334,5 +360,29 @@ export function GalleryExperience({
         hasMultiple={activePhotos.length > 1}
       />
     </>
+  );
+}
+
+function ArchivePhotoButton({
+  photo,
+  onSelect,
+}: {
+  photo: PhotoSummary;
+  onSelect: (photoId: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(photo.id)}
+      className="group relative aspect-[4/5] overflow-hidden rounded-[4px] bg-[#1b1b1b] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+    >
+      <img
+        src={photo.displayUrl || photo.thumbUrl}
+        alt={photo.description ?? photo.id}
+        loading="lazy"
+        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+      />
+      <div className="absolute inset-0 bg-black/0 transition duration-200 group-hover:bg-black/6" />
+    </button>
   );
 }

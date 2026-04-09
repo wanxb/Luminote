@@ -3,6 +3,7 @@ import {
   getSiteConfig,
   updateSiteConfig,
 } from "../services/site-config-service";
+import { getTagPool } from "../services/tag-service";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
 
@@ -44,6 +45,16 @@ export async function handleSite(
   request: Request,
   env: Env,
 ): Promise<Response> {
+  const url = new URL(request.url);
+
+  if (url.pathname === "/api/site/tags" && request.method === "GET") {
+    const tags = await getTagPool(env);
+
+    return json({
+      tags: tags.map((tag) => tag.name),
+    });
+  }
+
   if (request.method === "PATCH") {
     return handleSiteUpdate(request, env);
   }
@@ -53,6 +64,7 @@ export async function handleSite(
   return json({
     siteTitle: config.siteTitle,
     siteDescription: config.siteDescription,
+    homeLayout: config.homeLayout,
     watermarkEnabledByDefault: config.watermarkEnabledByDefault,
     watermarkText: config.watermarkText,
     watermarkPosition: config.watermarkPosition,
@@ -83,6 +95,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     const body = (await request.json()) as {
       siteTitle?: string;
       siteDescription?: string;
+      homeLayout?: string;
       watermarkEnabledByDefault?: boolean;
       watermarkText?: string;
       watermarkPosition?: string;
@@ -108,6 +121,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     const updates: {
       siteTitle?: string;
       siteDescription?: string;
+      homeLayout?: string;
       watermarkEnabledByDefault?: boolean;
       watermarkText?: string;
       watermarkPosition?: string;
@@ -170,6 +184,17 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         } else {
           updates.siteDescription = result.value;
         }
+      }
+    }
+
+    if (body.homeLayout !== undefined) {
+      if (
+        typeof body.homeLayout !== "string" ||
+        !["masonry", "editorial", "spotlight"].includes(body.homeLayout)
+      ) {
+        errors.push("首页样式格式错误。");
+      } else {
+        updates.homeLayout = body.homeLayout;
       }
     }
 

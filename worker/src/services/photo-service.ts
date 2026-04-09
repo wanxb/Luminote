@@ -1,5 +1,9 @@
 import type { Env } from "../index";
-import { deletePhotoObjects, storePhotoObjects } from "./storage-service";
+import {
+  deletePhotoObjects,
+  hasPhotoObjects,
+  storePhotoObjects,
+} from "./storage-service";
 
 type PersistedPhotoRow = {
   id: string;
@@ -25,6 +29,7 @@ type PhotoDetailRow = PersistedPhotoRow & {
 };
 
 let ensurePhotoVisibilityColumnPromise: Promise<void> | null = null;
+let ensurePhotoSourceHashColumnPromise: Promise<void> | null = null;
 
 type ExifPayload = {
   takenAt?: string;
@@ -38,11 +43,13 @@ type ExifPayload = {
     focalLength?: string;
     latitude?: number;
     longitude?: number;
+    params?: Record<string, string>;
   };
 };
 
 type CreatePhotoInput = {
   fileName: string;
+  sourceHash?: string;
   originalFile?: File;
   thumbnail?: File;
   displayFile?: File;
@@ -62,6 +69,11 @@ type CreatedPhoto = {
   watermarkEnabled: boolean;
   tags: string[];
   persisted: boolean;
+};
+
+type CreatePhotosResult = {
+  uploaded: CreatedPhoto[];
+  failed: Array<{ fileName: string; error: string }>;
 };
 
 type ListPhotosOptions = {
@@ -127,6 +139,92 @@ function extractPhotoIdFromObjectKey(key: string) {
     /^(?:thumbs|display|display-watermarked)\/(photo_[^./]+(?:_[^./]+)?)\.(?:webp|jpg)$/,
   );
   return match?.[1] ?? null;
+}
+
+function parseExifJson(exifJson: string | null) {
+  if (!exifJson) {
+    return {} as NonNullable<ExifPayload["exif"]>;
+  }
+
+  try {
+    const parsed = JSON.parse(exifJson) as ExifPayload["exif"] | null;
+    return parsed ?? {};
+  } catch {
+    return {} as NonNullable<ExifPayload["exif"]>;
+  }
+}
+
+function isDateExifParam(key: string) {
+  return /(date|time|timestamp)/i.test(key);
+}
+
+function isLocationExifParam(key: string) {
+  return /(gps|latitude|longitude|altitude|location|mapdatum|bearing|speed|dest)/i.test(
+    key,
+  );
+}
+
+function filterExifParams(
+  params: Record<string, string> | undefined,
+  options: {
+    showCameraInfo: boolean;
+    showDateInfo: boolean;
+    showLocationInfo: boolean;
+  },
+) {
+  if (!params) {
+    return undefined;
+  }
+
+  const filteredEntries = Object.entries(params).filter(([key]) => {
+    const isDateParam = isDateExifParam(key);
+    const isLocationParam = isLocationExifParam(key);
+
+    if (isDateParam) {
+      return options.showDateInfo;
+    }
+
+    if (isLocationParam) {
+      return options.showLocationInfo;
+    }
+
+    return options.showCameraInfo;
+  });
+
+  return filteredEntries.length > 0
+    ? Object.fromEntries(filteredEntries)
+    : undefined;
+}
+
+function buildVisibleExif(
+  rawExif: ExifPayload["exif"] | undefined,
+  options: {
+    showCameraInfo: boolean;
+    showDateInfo: boolean;
+    showLocationInfo: boolean;
+  },
+) {
+  if (!rawExif) {
+    return undefined;
+  }
+
+  const visibleExif: NonNullable<ExifPayload["exif"]> = {};
+
+  if (options.showCameraInfo) {
+    visibleExif.aperture = rawExif.aperture;
+    visibleExif.shutter = rawExif.shutter;
+    visibleExif.iso = rawExif.iso;
+    visibleExif.focalLength = rawExif.focalLength;
+  }
+
+  if (options.showLocationInfo) {
+    visibleExif.latitude = rawExif.latitude;
+    visibleExif.longitude = rawExif.longitude;
+  }
+
+  visibleExif.params = filterExifParams(rawExif.params, options);
+
+  return Object.keys(visibleExif).length > 0 ? visibleExif : undefined;
 }
 
 async function collectBucketPhotoItems(env: Env, origin: string) {
@@ -276,6 +374,55 @@ async function ensurePhotoVisibilityColumn(env: Env) {
   }
 
   await ensurePhotoVisibilityColumnPromise;
+}
+
+async function ensurePhotoSourceHashColumn(env: Env) {
+  if (!env.DB) {
+    return;
+  }
+
+  if (!ensurePhotoSourceHashColumnPromise) {
+    ensurePhotoSourceHashColumnPromise = (async () => {
+      try {
+        await env
+          .DB!.prepare("ALTER TABLE photos ADD COLUMN source_hash TEXT")
+          .run();
+      } catch {
+        // Ignore if the column already exists.
+      }
+
+      try {
+        await env
+          .DB!.prepare(
+            "CREATE INDEX IF NOT EXISTS idx_photos_source_hash ON photos(source_hash)",
+          )
+          .run();
+      } catch {
+        // Ignore if the database is managed elsewhere.
+      }
+    })();
+  }
+
+  await ensurePhotoSourceHashColumnPromise;
+}
+
+async function findExistingSourceHashes(env: Env, hashes: string[]) {
+  if (!env.DB || hashes.length === 0) {
+    return new Set<string>();
+  }
+
+  const placeholders = hashes.map(() => "?").join(", ");
+  const result = await env.DB.prepare(
+    `SELECT source_hash FROM photos WHERE source_hash IN (${placeholders})`,
+  )
+    .bind(...hashes)
+    .all<{ source_hash: string | null }>();
+
+  return new Set(
+    (result.results ?? [])
+      .map((row) => row.source_hash)
+      .filter((hash): hash is string => Boolean(hash)),
+  );
 }
 
 export async function listPhotos(
@@ -467,12 +614,16 @@ export async function getPhotoById(
     watermarkedDisplayUrl: row.watermarked_display_url || undefined,
     watermarkEnabled: Boolean(row.watermark_enabled),
     isHidden: Boolean(row.is_hidden),
-    takenAt: row.taken_at ?? undefined,
+    takenAt: row.show_date_info ? (row.taken_at ?? undefined) : undefined,
     description: row.description ?? undefined,
     device: row.show_camera_info ? (row.device ?? undefined) : undefined,
     lens: row.show_camera_info ? (row.lens ?? undefined) : undefined,
     location: row.show_location_info ? (row.location ?? undefined) : undefined,
-    exif: row.exif_json ? JSON.parse(row.exif_json) : {},
+    exif: buildVisibleExif(parseExifJson(row.exif_json), {
+      showCameraInfo: Boolean(row.show_camera_info),
+      showDateInfo: Boolean(row.show_date_info),
+      showLocationInfo: Boolean(row.show_location_info),
+    }),
     tags: parseTagsJson(row.tags_json),
   };
 }
@@ -481,35 +632,85 @@ export async function createPhotos(
   env: Env,
   origin: string,
   inputs: CreatePhotoInput[],
-) {
-  const created: CreatedPhoto[] = inputs.map((input, index) => ({
+): Promise<CreatePhotosResult> {
+  if (inputs.length === 0) {
+    return {
+      uploaded: [],
+      failed: [],
+    };
+  }
+
+  if (!env.DB) {
+    return {
+      uploaded: inputs.map((input, index) => ({
+        id: createPhotoId(index),
+        fileName: input.fileName,
+        watermarkEnabled: input.watermarkEnabled,
+        tags: input.tags,
+        persisted: false,
+      })),
+      failed: [],
+    };
+  }
+
+  await ensurePhotoVisibilityColumn(env);
+  await ensurePhotoSourceHashColumn(env);
+
+  const existingHashes = await findExistingSourceHashes(
+    env,
+    inputs.map((input) => input.sourceHash?.trim() ?? "").filter(Boolean),
+  );
+  const seenHashes = new Set(existingHashes);
+  const acceptedInputs: CreatePhotoInput[] = [];
+  const failed: CreatePhotosResult["failed"] = [];
+
+  for (const input of inputs) {
+    const normalizedHash = input.sourceHash?.trim();
+
+    if (normalizedHash && seenHashes.has(normalizedHash)) {
+      failed.push({
+        fileName: input.fileName,
+        error: "图片内容重复，已跳过。",
+      });
+      continue;
+    }
+
+    if (normalizedHash) {
+      seenHashes.add(normalizedHash);
+    }
+
+    acceptedInputs.push(input);
+  }
+
+  if (acceptedInputs.length === 0) {
+    return {
+      uploaded: [],
+      failed,
+    };
+  }
+
+  const created: CreatedPhoto[] = acceptedInputs.map((input, index) => ({
     id: createPhotoId(index),
     fileName: input.fileName,
     watermarkEnabled: input.watermarkEnabled,
     tags: input.tags,
-    persisted: Boolean(env.DB),
+    persisted: true,
   }));
-
-  if (!env.DB || created.length === 0) {
-    return created;
-  }
-
-  await ensurePhotoVisibilityColumn(env);
 
   const createdAt = new Date().toISOString();
   const storageResults = await Promise.all(
     created.map((photo, index) =>
       storePhotoObjects(env, {
         id: photo.id,
-        original: inputs[index].originalFile,
-        thumbnail: inputs[index].thumbnail,
-        display: inputs[index].displayFile,
-        watermarkedDisplay: inputs[index].watermarkedDisplayFile,
+        original: acceptedInputs[index].originalFile,
+        thumbnail: acceptedInputs[index].thumbnail,
+        display: acceptedInputs[index].displayFile,
+        watermarkedDisplay: acceptedInputs[index].watermarkedDisplayFile,
       }),
     ),
   );
   const statements = created.map((photo, index) => {
-    const input = inputs[index];
+    const input = acceptedInputs[index];
     const storage = storageResults[index];
     const thumbUrl = storage.persisted
       ? `${origin}/assets/thumb/${photo.id}`
@@ -538,6 +739,7 @@ export async function createPhotos(
         device,
         lens,
         location,
+        source_hash,
         exif_json,
         tags_json,
         is_hidden,
@@ -546,7 +748,7 @@ export async function createPhotos(
         show_location_info,
         watermark_enabled,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         photo.id,
@@ -561,6 +763,7 @@ export async function createPhotos(
         input.exif?.device ?? null,
         input.exif?.lens ?? null,
         input.exif?.location ?? null,
+        input.sourceHash?.trim() || null,
         input.exif?.exif ? JSON.stringify(input.exif.exif) : null,
         JSON.stringify(input.tags),
         0,
@@ -574,16 +777,31 @@ export async function createPhotos(
 
   await env.DB.batch(statements);
 
-  return created;
+  return {
+    uploaded: created,
+    failed,
+  };
 }
 
 export async function deletePhotoById(env: Env, id: string) {
   if (!env.DB) {
+    const bucketOnlyPhotoExists = await hasPhotoObjects(env, id);
+
+    if (!bucketOnlyPhotoExists) {
+      return {
+        ok: false,
+        deleted: false,
+        persisted: false,
+        error: "照片不存在或已被删除。",
+      };
+    }
+
+    await deletePhotoObjects(env, id);
+
     return {
-      ok: false,
-      deleted: false,
+      ok: true,
+      deleted: true,
       persisted: false,
-      error: "当前环境未绑定 D1，无法执行真实删除。",
     };
   }
 
@@ -594,6 +812,18 @@ export async function deletePhotoById(env: Env, id: string) {
     .first<{ id: string }>();
 
   if (!existing) {
+    const bucketOnlyPhotoExists = await hasPhotoObjects(env, id);
+
+    if (bucketOnlyPhotoExists) {
+      await deletePhotoObjects(env, id);
+
+      return {
+        ok: true,
+        deleted: true,
+        persisted: false,
+      };
+    }
+
     return {
       ok: false,
       deleted: false,

@@ -1,50 +1,10 @@
 import type { Env } from "../index";
 
-const DEFAULT_TAGS = [
-  "人像",
-  "动物",
-  "植物",
-  "建筑",
-  "街拍",
-  "鸟类",
-  "黑白",
-  "夜景",
-];
-
 type TagPool = {
   id: string;
   name: string;
   created_at: string;
 };
-
-async function ensureDefaultTags(env: Env) {
-  if (!env.DB) {
-    return;
-  }
-
-  const countResult = await env.DB.prepare(
-    "SELECT COUNT(*) as count FROM tag_pool",
-  ).first<{ count: number }>();
-
-  if ((countResult?.count ?? 0) > 0) {
-    return;
-  }
-
-  const startedAt = Date.now();
-  const statements = DEFAULT_TAGS.map((name, index) =>
-    env
-      .DB!.prepare(
-        "INSERT INTO tag_pool (id, name, created_at) VALUES (?, ?, ?)",
-      )
-      .bind(
-        `tag_${startedAt}_${index + 1}`,
-        name,
-        new Date(startedAt + index).toISOString(),
-      ),
-  );
-
-  await env.DB.batch(statements);
-}
 
 export async function getTagPool(env: Env) {
   if (!env.DB) {
@@ -52,8 +12,6 @@ export async function getTagPool(env: Env) {
   }
 
   try {
-    await ensureDefaultTags(env);
-
     const result = await env.DB.prepare(
       "SELECT id, name, created_at FROM tag_pool ORDER BY created_at ASC",
     ).all<TagPool>();
@@ -77,8 +35,6 @@ export async function createTag(
   const createdAt = new Date().toISOString();
 
   try {
-    await ensureDefaultTags(env);
-
     const countResult = await env.DB.prepare(
       "SELECT COUNT(*) as count FROM tag_pool",
     ).first<{ count: number }>();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
 import type { PhotoDetail, PhotoSummary, WatermarkPosition } from "@/lib/api/types";
 
@@ -11,11 +11,14 @@ type LightboxShellProps = {
   watermarkText: string;
   watermarkPosition: WatermarkPosition;
   activeIndex: number | null;
+  hasMorePhotos?: boolean;
   isImmersive: boolean;
   isOpen: boolean;
   isLoading: boolean;
+  isLoadingMorePhotos?: boolean;
   error: string | null;
   onClose: () => void;
+  onLoadMorePhotos?: () => void;
   onNext: () => void;
   onPrevious: () => void;
   onSelect: (index: number) => void;
@@ -27,12 +30,61 @@ const metaLabels: Array<{ label: string; value: (photo: PhotoDetail) => string |
   { label: "拍摄时间", value: (photo) => photo.takenAt },
   { label: "机身", value: (photo) => photo.device },
   { label: "镜头", value: (photo) => photo.lens },
-  { label: "位置", value: (photo) => photo.location },
   { label: "光圈", value: (photo) => photo.exif?.aperture },
   { label: "快门", value: (photo) => photo.exif?.shutter },
   { label: "ISO", value: (photo) => (photo.exif?.iso ? String(photo.exif.iso) : undefined) },
   { label: "焦距", value: (photo) => photo.exif?.focalLength }
 ];
+
+const exifLabelMap: Record<string, string> = {
+  DateTimeOriginal: "原始拍摄时间",
+  CreateDate: "创建时间",
+  ModifyDate: "修改时间",
+  Make: "品牌",
+  Model: "机型",
+  LensModel: "镜头型号",
+  FNumber: "光圈值",
+  ExposureTime: "曝光时间",
+  ISO: "ISO",
+  FocalLength: "焦距",
+  FocalLengthIn35mmFormat: "等效焦距",
+  ExposureBiasValue: "曝光补偿",
+  ExposureProgram: "曝光程序",
+  ExposureMode: "曝光模式",
+  MeteringMode: "测光模式",
+  WhiteBalance: "白平衡",
+  Flash: "闪光灯",
+  Orientation: "方向",
+  ExifImageWidth: "图像宽度",
+  ExifImageHeight: "图像高度",
+  ImageWidth: "宽度",
+  ImageHeight: "高度",
+  ColorSpace: "色彩空间",
+  Artist: "作者",
+  Software: "软件",
+  Copyright: "版权",
+  latitude: "纬度",
+  longitude: "经度",
+  GPSLatitude: "GPS 纬度",
+  GPSLongitude: "GPS 经度",
+  GPSAltitude: "GPS 海拔",
+  GPSSpeed: "GPS 速度"
+};
+
+const duplicatedExifKeys = new Set([
+  "DateTimeOriginal",
+  "Make",
+  "Model",
+  "LensModel",
+  "FNumber",
+  "ExposureTime",
+  "ISO",
+  "FocalLength",
+  "latitude",
+  "longitude",
+  "GPSLatitude",
+  "GPSLongitude"
+]);
 
 function isPhotoDetail(photo: PhotoDetail | PhotoSummary | null): photo is PhotoDetail {
   return Boolean(photo && "tags" in photo);
@@ -52,6 +104,33 @@ function formatMetaValue(label: string, value: string) {
   });
 }
 
+function formatExifParamLabel(key: string) {
+  if (exifLabelMap[key]) {
+    return exifLabelMap[key];
+  }
+
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .trim();
+}
+
+function getExtendedExifItems(photo: PhotoDetail) {
+  const params = photo.exif?.params;
+
+  if (!params) {
+    return [] as Array<{ label: string; value: string }>;
+  }
+
+  return Object.entries(params)
+    .filter(([key, value]) => !duplicatedExifKeys.has(key) && Boolean(value))
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey, "zh-CN"))
+    .map(([key, value]) => ({
+      label: formatExifParamLabel(key),
+      value
+    }));
+}
+
 export function LightboxShell({
   photo,
   photos,
@@ -59,11 +138,14 @@ export function LightboxShell({
   watermarkText,
   watermarkPosition,
   activeIndex,
+  hasMorePhotos = false,
   isImmersive,
   isOpen,
   isLoading,
+  isLoadingMorePhotos = false,
   error,
   onClose,
+  onLoadMorePhotos,
   onNext,
   onPrevious,
   onSelect,
@@ -72,6 +154,8 @@ export function LightboxShell({
 }: LightboxShellProps) {
   const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const displayImageRef = useRef<HTMLImageElement | null>(null);
+  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+  const activeThumbnailRef = useRef<HTMLButtonElement | null>(null);
   const [watermarkFrame, setWatermarkFrame] = useState<{
     top: number;
     left: number;
@@ -95,6 +179,7 @@ export function LightboxShell({
         })
         .filter((item): item is { label: string; value: string } => item !== null)
     : [];
+  const extendedExifItems = detail ? getExtendedExifItems(detail) : [];
 
   function updateWatermarkFrame() {
     const viewport = imageViewportRef.current;
@@ -116,6 +201,22 @@ export function LightboxShell({
     });
   }
 
+  function handleImageClick(event: MouseEvent<HTMLImageElement>) {
+    if (!hasMultiple) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const midpoint = rect.left + rect.width / 2;
+
+    if (event.clientX < midpoint) {
+      onPrevious();
+      return;
+    }
+
+    onNext();
+  }
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -131,6 +232,28 @@ export function LightboxShell({
       window.removeEventListener("resize", handleResize);
     };
   }, [displaySrc, isOpen, isImmersive]);
+
+  useEffect(() => {
+    if (activeIndex === null || !hasMorePhotos || isLoadingMorePhotos || !onLoadMorePhotos) {
+      return;
+    }
+
+    if (photos.length - activeIndex <= 6) {
+      onLoadMorePhotos();
+    }
+  }, [activeIndex, hasMorePhotos, isLoadingMorePhotos, onLoadMorePhotos, photos.length]);
+
+  useEffect(() => {
+    if (!isOpen || !activeThumbnailRef.current) {
+      return;
+    }
+
+    activeThumbnailRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeIndex, isOpen]);
 
   if (!isOpen || !photo) {
     return null;
@@ -219,6 +342,7 @@ export function LightboxShell({
                     ref={displayImageRef}
                     src={displaySrc}
                     alt={photo.description ?? photo.id}
+                    onClick={handleImageClick}
                     onLoad={updateWatermarkFrame}
                     className="block h-auto max-h-full w-auto max-w-full object-contain"
                   />
@@ -282,6 +406,17 @@ export function LightboxShell({
                   <p className="text-paper/55">这张照片暂时没有可展示的 EXIF 信息。</p>
                 )}
               </div>
+
+              {extendedExifItems.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">完整参数</p>
+                  <dl className="space-y-2.5">
+                    {extendedExifItems.map((item) => (
+                      <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
             </div>
             </aside>
           )}
@@ -292,7 +427,10 @@ export function LightboxShell({
               isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"
             }`}
           >
-            <div className="flex min-w-0 items-center justify-center gap-2.5">
+            <div
+              ref={thumbnailStripRef}
+              className="flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-x-auto overflow-y-hidden px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {photos.map((item, index) => {
                 const thumbSrc = item.thumbUrl;
                 const isActive = index === activeIndex;
@@ -300,6 +438,7 @@ export function LightboxShell({
                 return (
                   <button
                     key={item.id}
+                    ref={isActive ? activeThumbnailRef : null}
                     type="button"
                     onClick={() => onSelect(index)}
                     className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-[10px] transition ${
@@ -323,6 +462,11 @@ export function LightboxShell({
                   </button>
                 );
               })}
+              {isLoadingMorePhotos ? (
+                <div className="flex h-12 shrink-0 items-center px-2 text-[11px] uppercase tracking-[0.18em] text-paper/48">
+                  Loading
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}

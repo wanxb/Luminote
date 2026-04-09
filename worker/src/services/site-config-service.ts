@@ -6,6 +6,7 @@ export const DEFAULT_UPLOAD_ORIGINAL_ENABLED = false;
 export const DEFAULT_MAX_TAG_POOL_SIZE = 20;
 export const DEFAULT_MAX_UPLOAD_FILES = 20;
 export const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
+export const DEFAULT_HOME_LAYOUT = "editorial";
 export const DEFAULT_WATERMARK_POSITION = "bottom-right";
 export const DEFAULT_PHOTOGRAPHER_AVATAR_URL = "";
 export const DEFAULT_PHOTOGRAPHER_NAME = "";
@@ -23,6 +24,7 @@ export const DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT_URL = "";
 type SiteConfigRow = {
   site_title: string;
   site_description: string;
+  home_layout: string;
   watermark_enabled_by_default: number;
   watermark_text: string;
   watermark_position: string;
@@ -48,6 +50,7 @@ type SiteConfigRow = {
 export type SiteConfig = {
   siteTitle: string;
   siteDescription: string;
+  homeLayout: string;
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
   watermarkPosition: string;
@@ -75,6 +78,7 @@ let ensureSiteConfigPromise: Promise<void> | null = null;
 type LegacySiteConfigRow = {
   site_title: string;
   site_description: string;
+  home_layout?: string;
   watermark_enabled_by_default: number;
   watermark_text: string;
   watermark_position?: string;
@@ -93,6 +97,7 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
   return {
     siteTitle: env.SITE_TITLE,
     siteDescription: DEFAULT_SITE_DESCRIPTION,
+    homeLayout: DEFAULT_HOME_LAYOUT,
     watermarkEnabledByDefault: env.WATERMARK_ENABLED_BY_DEFAULT === "true",
     watermarkText: env.WATERMARK_TEXT,
     watermarkPosition: DEFAULT_WATERMARK_POSITION,
@@ -131,6 +136,7 @@ async function ensureSiteConfig(env: Env) {
           id INTEGER PRIMARY KEY CHECK (id = 1),
           site_title TEXT NOT NULL,
           site_description TEXT NOT NULL,
+          home_layout TEXT NOT NULL DEFAULT 'editorial',
           watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
           watermark_text TEXT NOT NULL,
           watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
@@ -157,6 +163,7 @@ async function ensureSiteConfig(env: Env) {
         .run();
 
       const alterStatements = [
+        "ALTER TABLE site_config ADD COLUMN home_layout TEXT NOT NULL DEFAULT 'editorial'",
         "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN watermark_position TEXT NOT NULL DEFAULT 'bottom-right'",
         "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
@@ -186,6 +193,7 @@ async function ensureSiteConfig(env: Env) {
           id,
           site_title,
           site_description,
+          home_layout,
           watermark_enabled_by_default,
           watermark_text,
           watermark_position,
@@ -207,12 +215,13 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           1,
           defaults.siteTitle,
           defaults.siteDescription,
+          defaults.homeLayout,
           defaults.watermarkEnabledByDefault ? 1 : 0,
           defaults.watermarkText,
           defaults.watermarkPosition,
@@ -266,6 +275,7 @@ function mapSiteConfigRowToConfig(
   return {
     siteTitle: row.site_title ?? defaults.siteTitle,
     siteDescription: row.site_description ?? defaults.siteDescription,
+    homeLayout: row.home_layout ?? defaults.homeLayout,
     watermarkEnabledByDefault:
       row.watermark_enabled_by_default !== undefined
         ? Boolean(row.watermark_enabled_by_default)
@@ -320,11 +330,14 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
     return defaults;
   }
 
+  await ensureSiteConfig(env);
+
   try {
     const row = await env.DB.prepare(
       `SELECT
         site_title,
         site_description,
+        home_layout,
         watermark_enabled_by_default,
         watermark_text,
         watermark_position,
@@ -418,6 +431,11 @@ export async function updateSiteConfig(
   if (updates.siteDescription !== undefined) {
     statements.push("site_description = ?");
     values.push(updates.siteDescription);
+  }
+
+  if (updates.homeLayout !== undefined) {
+    statements.push("home_layout = ?");
+    values.push(updates.homeLayout);
   }
 
   if (updates.watermarkEnabledByDefault !== undefined) {

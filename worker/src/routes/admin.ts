@@ -148,6 +148,24 @@ function parseFileNames(rawValue: FormDataEntryValue | null) {
   return [];
 }
 
+function parseSourceHashes(rawValue: FormDataEntryValue | null) {
+  if (typeof rawValue !== "string") {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as unknown;
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim());
+    }
+  } catch {
+    return [];
+  }
+
+  return [];
+}
+
 function parsePhotoDrafts(
   rawValue: FormDataEntryValue | null,
   maxTagsPerPhoto: number,
@@ -276,6 +294,7 @@ export async function handleAdmin(
       .getAll("files[]")
       .filter((entry): entry is File => entry instanceof File);
     const fileNames = parseFileNames(formData.get("fileNames"));
+    const sourceHashes = parseSourceHashes(formData.get("sourceHashes"));
     const thumbnails = formData
       .getAll("thumbnails[]")
       .filter((entry): entry is File => entry instanceof File);
@@ -404,6 +423,7 @@ export async function handleAdmin(
         thumbnail: thumbnails[index],
         displayFile: displayFiles[index],
         watermarkedDisplayFile: watermarkedDisplayFiles[index],
+        sourceHash: sourceHashes[index],
         exif: exifRecords[index],
         description: photoDrafts[index]?.description ?? description,
         tags: photoDrafts[index]?.tags ?? tags,
@@ -416,8 +436,8 @@ export async function handleAdmin(
 
     return json({
       ok: true,
-      uploaded,
-      failed: [],
+      uploaded: uploaded.uploaded,
+      failed: uploaded.failed,
     });
   }
 

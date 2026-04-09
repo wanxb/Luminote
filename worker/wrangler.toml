@@ -13,10 +13,8 @@ ADMIN_SESSION_TOKEN = "local-dev-admin-token"
 binding = "DB"
 database_name = "luminote-dev"
 database_id = "5e05e500-52f8-4243-a837-1066c3c95082"
-remote = true
 
 # Add a real R2 binding before enabling object storage:
 [[r2_buckets]]
 binding = "PHOTOS_BUCKET"
 bucket_name = "luminote-dev"
-remote = true
