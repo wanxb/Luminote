@@ -9,3 +9,5 @@ coverage
 .env.local
 .env.production
 worker/.dev.vars
+# Copilot/AI agent skills (local only)
+.github/skills/
