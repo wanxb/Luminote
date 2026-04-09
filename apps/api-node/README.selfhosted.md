@@ -7,8 +7,8 @@
 
 ## Persistence drivers
 
-- `PERSISTENCE_DRIVER=file`: current working self-hosted path
-- `PERSISTENCE_DRIVER=sqlite`: reserved migration target, not wired yet
+- `PERSISTENCE_DRIVER=file`: file-backed self-hosted path
+- `PERSISTENCE_DRIVER=sqlite`: SQLite-backed self-hosted path
 
 ## Storage modes
 
@@ -17,11 +17,40 @@
 
 ## Local run
 
+Example environment file:
+
+```bash
+copy .env.example .env.local
+```
+
+File-backed mode:
+
 ```bash
 set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=file
 set STORAGE_MODE=local
 node apps/api-node/src/server.mjs
 ```
+
+SQLite mode:
+
+```bash
+set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=sqlite
+set SQLITE_DB_FILE=apps/api-node/data/luminote.sqlite
+set STORAGE_MODE=local
+node apps/api-node/src/server.mjs
+```
+
+Recommended minimum variables:
+
+- `HOST`
+- `PORT`
+- `PUBLIC_BASE_URL`
+- `PERSISTENCE_DRIVER`
+- `STORAGE_MODE`
+- `ADMIN_PASSWORD`
+- `ADMIN_SESSION_TOKEN`
 
 ## Docker Compose
 
@@ -29,11 +58,41 @@ node apps/api-node/src/server.mjs
 docker compose up --build
 ```
 
-The current Docker path is intended as an early self-hosted scaffold:
+The current Docker path is a practical self-hosted baseline:
 
 - Next.js web app in dev mode
 - Node API runtime
-- file-backed content store
+- SQLite-backed content store
 - local uploaded asset directory
 
-Future stages can replace the file-backed repository with SQLite/Postgres and the local asset store with S3-compatible storage.
+## Current capability
+
+Implemented and verified:
+
+- public gallery read APIs
+- admin login and session flow
+- site settings management
+- tag pool management
+- photo list, edit, delete, and upload
+- avatar upload
+- local asset serving
+- duplicate upload detection
+- SQLite-backed persistence path
+
+Smoke test commands:
+
+```bash
+npm run smoke
+npm run smoke:file
+npm run smoke:sqlite
+```
+
+## Docker troubleshooting
+
+- `docker compose config` has been validated against the repository configuration
+- a full `docker compose build api` still requires a running Docker daemon on the host machine
+- if you see `dockerDesktopLinuxEngine` pipe errors on Windows, start Docker Desktop first and then rerun the build
+
+Acceptance summary:
+
+- [../../docs/selfhosted-acceptance.md](../../docs/selfhosted-acceptance.md)

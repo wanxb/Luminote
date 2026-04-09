@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLightboxGallery } from "@/components/gallery/use-lightbox-gallery";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
-import { getPhotoDetail, getPhotos } from "@/lib/api/client";
-import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
-import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
+import { getPhotos } from "@/lib/api/client";
+import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type EditorialArchiveProps = {
   site: SiteResponse;
@@ -46,12 +46,6 @@ export function EditorialArchive({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [detail, setDetail] = useState<PhotoDetail | null>(null);
-  const [isImmersive, setIsImmersive] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoadedPhotos(initialPhotos);
@@ -91,7 +85,7 @@ export function EditorialArchive({
         setLoadedPhotos([]);
         setCurrentPage(1);
         setHasMore(false);
-        setLoadMoreError("标签筛选加载失败，请稍后再试。");
+        setLoadMoreError("鏍囩绛涢€夊姞杞藉け璐ワ紝璇风◢鍚庡啀璇曘€?");
       })
       .finally(() => {
         if (active) {
@@ -103,6 +97,24 @@ export function EditorialArchive({
       active = false;
     };
   }, [initialHasMore, initialPage, initialPhotos, selectedTag]);
+
+  const activePhotos = useMemo(() => loadedPhotos, [loadedPhotos]);
+  const {
+    selectedIndex,
+    activePhoto,
+    isImmersive,
+    isLoading,
+    error,
+    isOpen,
+    selectPhoto,
+    selectPhotoById,
+    close,
+    next,
+    previous,
+    toggleImmersive,
+  } = useLightboxGallery({
+    photos: activePhotos,
+  });
 
   useEffect(() => {
     const trigger = loadMoreTriggerRef.current;
@@ -135,112 +147,6 @@ export function EditorialArchive({
     };
   }, [currentPage, hasMore, isLoadingMore]);
 
-  useEffect(() => {
-    if (selectedId === null) {
-      return;
-    }
-
-    let active = true;
-    setIsLoading(true);
-    setError(null);
-
-    if (isDefaultGalleryPhotoId(selectedId)) {
-      setDetail(getDefaultGalleryPhotoDetail(selectedId));
-      setIsLoading(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    void getPhotoDetail(selectedId)
-      .then((response) => {
-        if (!active) {
-          return;
-        }
-
-        if (!response) {
-          setDetail(null);
-          setError("这张照片的详情暂时不可用。");
-          return;
-        }
-
-        setDetail(response);
-      })
-      .catch(() => {
-        if (!active) {
-          return;
-        }
-
-        setDetail(null);
-        setError("加载详情时出了点问题，请稍后再试。");
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedId]);
-
-  const activePhotos = useMemo(() => loadedPhotos, [loadedPhotos]);
-
-  useEffect(() => {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (isImmersive) {
-          setIsImmersive(false);
-          return;
-        }
-
-        handleClose();
-        return;
-      }
-
-      if (event.key === "ArrowRight") {
-        selectPhoto((selectedIndex + 1) % activePhotos.length);
-      }
-
-      if (event.key === "ArrowLeft") {
-        selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [activePhotos.length, isImmersive, selectedIndex]);
-
-  useEffect(() => {
-    if (selectedId === null) {
-      return;
-    }
-
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, [selectedId]);
-
-  const selectedSummary =
-    selectedIndex !== null
-      ? activePhotos[selectedIndex]
-      : selectedId
-        ? activePhotos.find((photo) => photo.id === selectedId)
-        : null;
-
-  const activePhoto = detail && detail.id === selectedId ? detail : selectedSummary;
-
   async function handleLoadMore() {
     if (isLoadingMore || !hasMore) {
       return;
@@ -264,49 +170,14 @@ export function EditorialArchive({
       setCurrentPage(response.page);
       setHasMore(response.hasMore);
     } catch {
-      setLoadMoreError("加载更多照片失败，请稍后再试。");
+      setLoadMoreError("鍔犺浇鏇村鐓х墖澶辫触锛岃绋嶅悗鍐嶈瘯銆?");
     } finally {
       setIsLoadingMore(false);
     }
   }
 
-  function selectPhoto(nextIndex: number) {
-    if (nextIndex < 0 || nextIndex >= activePhotos.length) {
-      return;
-    }
-
-    setSelectedIndex(nextIndex);
-    setSelectedId(activePhotos[nextIndex].id);
-    setDetail(null);
-    setError(null);
-  }
-
   function handleSelect(photoId: string) {
-    selectPhoto(activePhotos.findIndex((photo) => photo.id === photoId));
-  }
-
-  function handleClose() {
-    setIsImmersive(false);
-    setSelectedId(null);
-    setSelectedIndex(null);
-    setDetail(null);
-    setError(null);
-  }
-
-  function handleNext() {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    selectPhoto((selectedIndex + 1) % activePhotos.length);
-  }
-
-  function handlePrevious() {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
+    selectPhotoById(photoId);
   }
 
   return (
@@ -325,7 +196,7 @@ export function EditorialArchive({
           </div>
         ) : (
           <div className="rounded-[24px] border border-black/8 bg-white/55 px-5 py-10 text-center text-sm text-black/50">
-            当前标签下还没有照片。
+            褰撳墠鏍囩涓嬭繕娌℃湁鐓х墖銆?
           </div>
         )}
 
@@ -347,16 +218,16 @@ export function EditorialArchive({
         activeIndex={selectedIndex}
         hasMorePhotos={hasMore}
         isImmersive={isImmersive}
-        isOpen={selectedId !== null}
+        isOpen={isOpen}
         isLoading={isLoading}
         isLoadingMorePhotos={isLoadingMore}
         error={error}
-        onClose={handleClose}
+        onClose={close}
         onLoadMorePhotos={handleLoadMore}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
+        onNext={next}
+        onPrevious={previous}
         onSelect={selectPhoto}
-        onToggleImmersive={() => setIsImmersive((current) => !current)}
+        onToggleImmersive={toggleImmersive}
         hasMultiple={activePhotos.length > 1}
       />
     </>
@@ -378,7 +249,7 @@ function ArchivePhotoButton({
     >
       <img
         src={photo.displayUrl || photo.thumbUrl}
-        alt={photo.description ?? photo.id}
+        alt={photo.description ?? formatTakenAt(photo.takenAt) ?? photo.id}
         loading="lazy"
         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
       />

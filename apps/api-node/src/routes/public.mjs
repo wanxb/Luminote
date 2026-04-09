@@ -4,6 +4,7 @@ import {
   getPublicSite,
   getPublicSiteTags,
 } from "../services/public-content-service.mjs";
+import { sendNotFound } from "../utils/http-response.mjs";
 
 export async function handlePublicRoute({ req, res, url, repository, sendJson }) {
   if (url.pathname === "/api/site" && req.method === "GET") {
@@ -38,10 +39,7 @@ export async function handlePublicRoute({ req, res, url, repository, sendJson })
     const detail = await getPublicPhotoDetail(repository, id);
 
     if (!detail) {
-      sendJson(res, 404, {
-        ok: false,
-        error: "Photo not found",
-      });
+      sendNotFound(res, "Photo not found");
       return true;
     }
 

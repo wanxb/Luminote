@@ -9,16 +9,10 @@ import { handlePublicRoute } from "./routes/public.mjs";
 import { createAssetStorage } from "./storage/index.mjs";
 import { buildMockStorageSvg } from "./mock-storage.mjs";
 import { applyCorsHeaders, createCorsPreflightResponse } from "./utils/cors.mjs";
+import { sendError, sendJson } from "./utils/http-response.mjs";
 
 const config = loadRuntimeConfig();
 const { host, port } = config;
-
-function sendJson(res, status, payload) {
-  res.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-  });
-  res.end(JSON.stringify(payload));
-}
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || `${host}:${port}`}`);
@@ -107,16 +101,10 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    sendJson(res, 404, {
-      ok: false,
-      error: "Not Found",
-    });
+    sendError(res, 404, "Not Found");
   } catch (error) {
     console.error("[api-node] request failed", error);
-    sendJson(res, 500, {
-      ok: false,
-      error: "Internal Server Error",
-    });
+    sendError(res, 500, "Internal Server Error");
   }
 });
 

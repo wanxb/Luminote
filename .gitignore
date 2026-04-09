@@ -11,3 +11,10 @@ coverage
 worker/.dev.vars
 # Copilot/AI agent skills (local only)
 .github/skills/
+
+# OpenNext
+.open-next
+
+.dev.vars*
+!.dev.vars.example
+!.env.example

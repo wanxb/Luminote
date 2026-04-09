@@ -4,6 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "node --watch src/server.mjs",
-    "start": "node src/server.mjs"
+    "start": "node src/server.mjs",
+    "start:file": "node src/server.mjs",
+    "start:sqlite": "node src/server.mjs",
+    "smoke": "npm run smoke:file && npm run smoke:sqlite",
+    "smoke:file": "node scripts/smoke-test.mjs file",
+    "smoke:sqlite": "node scripts/smoke-test.mjs sqlite"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1"
   }
 }

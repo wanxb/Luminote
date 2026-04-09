@@ -2,41 +2,58 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-Luminote is a lightweight photography portfolio built with Next.js and Cloudflare Workers. It is aimed at photographers and independent creators who want a simple public gallery, a minimal admin flow, and a deployment model based on D1 and R2.
+Luminote is a lightweight photography portfolio built with Next.js. The project now supports both the original Cloudflare deployment path and a self-hosted Node.js deployment path while keeping the same public gallery and admin workflows.
 
 ## What It Includes
 
 - Public gallery with masonry, editorial, and spotlight home layouts
 - Lightbox viewing with metadata and EXIF-derived details
 - Admin upload flow with batch upload, retries, and tag selection
-- Tag pool stored in D1 instead of hardcoded front-end constants
-- D1 for metadata and R2 for image assets
+- Tag pool support instead of hardcoded front-end constants
+- Cloudflare and self-hosted deployment paths in the same repository
+
+## Deployment Modes
+
+- `Cloudflare`: Next.js front-end + Cloudflare Worker API + D1 + R2
+- `Self-hosted`: Next.js front-end + Node API + local filesystem assets + file or SQLite persistence
+
+Self-hosted notes:
+
+- [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md)
+- [docs/selfhosted-acceptance.md](docs/selfhosted-acceptance.md)
 
 ## Stack
 
 - Front-end: Next.js 15, React 18, TypeScript, Tailwind CSS
-- API: Cloudflare Workers
-- Storage: Cloudflare D1 and R2
+- API: Cloudflare Workers or Node.js
+- Storage: Cloudflare D1/R2 or local filesystem/SQLite
 - EXIF parsing: exifr
 
 ## Project Structure
 
 ```text
-app/         Next.js App Router pages
-components/  gallery, layouts, lightbox, and admin UI
-lib/         front-end helpers, API clients, upload utilities
-worker/      Worker API, schema, routes, services
+app/              Next.js App Router pages
+components/       gallery, layouts, lightbox, and admin UI
+lib/              front-end helpers, API clients, upload utilities
+packages/         shared contracts and runtime-agnostic core services
+worker/           Worker API, schema, routes, services
+apps/api-node/    self-hosted Node API runtime
+docs/             migration and deployment notes
 ```
 
 ## Local Development
 
-### Requirements
+Choose one of the two local API modes below.
+
+### Option A: Cloudflare local development
+
+#### Requirements
 
 - Node.js 20+
 - npm
 - Cloudflare account if you want real D1 or R2-backed deployment
 
-### 1. Install dependencies
+#### 1. Install dependencies
 
 At the repo root:
 
@@ -51,7 +68,7 @@ cd worker
 npm install
 ```
 
-### 2. Configure the front-end
+#### 2. Configure the front-end
 
 Set the local API base in `.env.local`:
 
@@ -60,7 +77,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
 API_BASE_URL=http://127.0.0.1:8787
 ```
 
-### 3. Initialize the local database
+#### 3. Initialize the local database
 
 From [worker/schema.sql](worker/schema.sql):
 
@@ -71,7 +88,7 @@ npx wrangler d1 execute luminote-dev --local --persist-to .wrangler/state/local-
 
 This creates the local schema and seeds the default tag pool.
 
-### 4. Start the services
+#### 4. Start the services
 
 Front-end:
 
@@ -99,28 +116,97 @@ The Worker local state is persisted in:
 worker/.wrangler/state/local-speed
 ```
 
+### Option B: Node self-hosted local development
+
+#### Requirements
+
+- Node.js 20+
+- npm
+
+#### 1. Install dependencies
+
+At the repo root:
+
+```bash
+npm install
+```
+
+In the Node API project:
+
+```bash
+cd apps/api-node
+npm install
+```
+
+#### 2. Configure the front-end
+
+Set the local API base in `.env.local`:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8788
+API_BASE_URL=http://127.0.0.1:8788
+```
+
+#### 3. Start the Node API
+
+File-backed mode:
+
+```bash
+cd apps/api-node
+set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=file
+set STORAGE_MODE=local
+npm run start
+```
+
+SQLite mode:
+
+```bash
+cd apps/api-node
+set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=sqlite
+set SQLITE_DB_FILE=apps/api-node/data/luminote.sqlite
+set STORAGE_MODE=local
+npm run start
+```
+
+Then start the front-end from the repo root:
+
+```bash
+npm run dev
+```
+
+Local URLs:
+
+```text
+Front-end: http://localhost:3000
+Node API:  http://127.0.0.1:8788
+```
+
 ## Local Configuration Notes
 
 The front-end reads `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL`.
 
-The Worker reads local defaults from [worker/wrangler.toml](worker/wrangler.toml). For secrets or local overrides, use `worker/.dev.vars` instead of committing values to git.
+Cloudflare local defaults live in [worker/wrangler.toml](worker/wrangler.toml). For secrets or local overrides, prefer `worker/.dev.vars`.
+
+Node self-hosted defaults live in [apps/api-node/.env.example](apps/api-node/.env.example).
 
 Example:
 
 ```dotenv
 ADMIN_PASSWORD=your-local-password
 ADMIN_SESSION_TOKEN=your-local-session-token
-WATERMARK_TEXT=© Your Name
+WATERMARK_TEXT=Your Name
 ```
 
 ## Data Model Notes
 
-- Photo metadata is stored in D1
-- Image variants are stored in R2 when a bucket is bound
-- Default site tags are seeded by [worker/schema.sql](worker/schema.sql)
+- Cloudflare mode stores photo metadata in D1 and image variants in R2
+- Self-hosted mode stores assets on the local filesystem and metadata in either JSON or SQLite
+- Default site tags are seeded by [worker/schema.sql](worker/schema.sql) and mirrored in [public-content.json](apps/api-node/data/public-content.json)
 - The public site reads tags from `GET /api/site/tags`
 
-Expected object layout in R2:
+Expected asset layout:
 
 ```text
 originals/{photoId}.{ext}
@@ -145,7 +231,36 @@ Worker project:
 - `npm run deploy`
 - `npm run sync:local`
 
+Node API project:
+
+- `npm run dev`
+- `npm run start`
+
 ## Deployment
+
+Luminote currently supports two production-oriented deployment shapes.
+
+### Self-hosted deployment
+
+The current self-hosted path supports:
+
+- Node API runtime
+- local filesystem assets
+- file-backed content or SQLite-backed content
+- Docker Compose for local and small-server deployment
+
+Quick start:
+
+```bash
+docker compose up --build
+```
+
+Detailed self-hosted notes:
+
+- [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md)
+- [docs/selfhosted-acceptance.md](docs/selfhosted-acceptance.md)
+
+### Cloudflare deployment
 
 Recommended production shape:
 
@@ -154,7 +269,7 @@ Recommended production shape:
 - D1 for metadata
 - R2 for assets
 
-### 1. Create Cloudflare resources
+#### 1. Create Cloudflare resources
 
 Create:
 
@@ -170,18 +285,18 @@ Suggested names:
 - Worker: `luminote-api`
 - Pages: `luminote-web`
 
-### 2. Update Worker bindings
+#### 2. Update Worker bindings
 
 In [worker/wrangler.toml](worker/wrangler.toml), set the real D1 and R2 bindings. Keep secrets such as admin credentials out of the file and store them as Wrangler or Cloudflare secrets.
 
-### 3. Apply the production schema
+#### 3. Apply the production schema
 
 ```bash
 cd worker
 npx wrangler d1 execute luminote-prod --remote --file schema.sql
 ```
 
-### 4. Configure Worker secrets
+#### 4. Configure Worker secrets
 
 Minimum values to set:
 
@@ -199,7 +314,7 @@ npx wrangler secret put ADMIN_PASSWORD
 npx wrangler secret put ADMIN_SESSION_TOKEN
 ```
 
-### 5. Deploy the Worker first
+#### 5. Deploy the Worker first
 
 ```bash
 cd worker
@@ -213,7 +328,7 @@ NEXT_PUBLIC_API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
 API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
 ```
 
-### 6. Deploy the front-end
+#### 6. Deploy the front-end
 
 Recommended Pages settings:
 
@@ -223,6 +338,8 @@ Recommended Pages settings:
 
 ## Release Checklist
 
+Cloudflare:
+
 - Production D1 schema applied
 - R2 bucket bound and writable
 - Worker secrets stored outside git
@@ -230,6 +347,15 @@ Recommended Pages settings:
 - Admin password changed from any default value
 - At least one end-to-end production upload verified
 
+Self-hosted:
+
+- API env vars configured
+- `PERSISTENCE_DRIVER` chosen and writable
+- upload directory writable
+- admin password changed from any default value
+- at least one end-to-end upload verified
+- public site and admin dashboard both tested against the Node API
+
 ## Documentation Scope
 
-This README is the primary project guide. If more internal notes are added later, keep them aligned with the running code and treat this file as the main entry point.
+This README is the main project guide. Cloudflare and self-hosted notes should stay aligned with the running code.

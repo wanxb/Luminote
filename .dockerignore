@@ -1,0 +1,8 @@
+node_modules
+.next
+apps/api-node/node_modules
+worker/node_modules
+next-dev.log
+apps/api-node/data/*.sqlite
+apps/api-node/data/uploads*
+worker/.wrangler

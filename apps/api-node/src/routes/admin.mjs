@@ -1,13 +1,14 @@
 import { appendSessionCookie, clearSessionCookie, isAuthenticated } from "../auth/session.mjs";
+import {
+  validateUploadCount,
+} from "../domain/validation.mjs";
+import {
+  resolveMutationStatus,
+  sendUnauthorized,
+  sendValidationError,
+} from "../utils/http-response.mjs";
 import { readFormData } from "../utils/form-data.mjs";
 import { readJsonBody } from "../utils/request-body.mjs";
-
-function unauthorized(sendJson, res, message = "Unauthorized") {
-  sendJson(res, 401, {
-    ok: false,
-    error: message,
-  });
-}
 
 export async function handleAdminRoute({
   req,
@@ -36,7 +37,7 @@ export async function handleAdminRoute({
     const body = await readJsonBody(req);
 
     if (!body.password || body.password !== config.adminPassword) {
-      unauthorized(sendJson, res, "Invalid admin password.");
+      sendUnauthorized(res, "Invalid admin password.");
       return true;
     }
 
@@ -61,7 +62,7 @@ export async function handleAdminRoute({
   }
 
   if (!isAuthenticated(req, config)) {
-    unauthorized(sendJson, res, "Please log in first.");
+    sendUnauthorized(res, "Please log in first.");
     return true;
   }
 
@@ -119,6 +120,21 @@ export async function handleAdminRoute({
     const photoDraftsRaw = formData.get("photoDrafts");
     const photoDrafts =
       typeof photoDraftsRaw === "string" ? JSON.parse(photoDraftsRaw) : [];
+    const siteSettings = await repository.getSiteSettings();
+
+    try {
+      validateUploadCount(fileNames.length, siteSettings.maxUploadFiles || 20);
+    } catch (error) {
+      sendValidationError(
+        res,
+        error instanceof Error ? error.message : "Upload validation failed.",
+        {
+          uploaded: [],
+          failed: [],
+        },
+      );
+      return true;
+    }
 
     const uploaded = [];
     const failed = [];
@@ -169,7 +185,15 @@ export async function handleAdminRoute({
 
   if (url.pathname === "/api/admin/site" && req.method === "PATCH") {
     const body = await readJsonBody(req);
-    await repository.updateSite(body);
+    try {
+      await repository.updateSite(body);
+    } catch (error) {
+      sendValidationError(
+        res,
+        error instanceof Error ? error.message : "Site update failed.",
+      );
+      return true;
+    }
     sendJson(res, 200, {
       ok: true,
       message: "Site configuration updated.",
@@ -182,28 +206,19 @@ export async function handleAdminRoute({
     const file = formData.get("file");
 
     if (!(file instanceof File) || file.size === 0) {
-      sendJson(res, 400, {
-        ok: false,
-        error: "Please choose an avatar image.",
-      });
+      sendValidationError(res, "Please choose an avatar image.");
       return true;
     }
 
     if (!String(file.type || "").startsWith("image/")) {
-      sendJson(res, 400, {
-        ok: false,
-        error: "Avatar must be an image file.",
-      });
+      sendValidationError(res, "Avatar must be an image file.");
       return true;
     }
 
     const stored = await assetStorage.storeAvatarAsset(file);
 
     if (!stored.persisted || !stored.fileName) {
-      sendJson(res, 400, {
-        ok: false,
-        error: "Avatar upload failed.",
-      });
+      sendValidationError(res, "Avatar upload failed.");
       return true;
     }
 
@@ -231,11 +246,18 @@ export async function handleAdminRoute({
 
   if (url.pathname === "/api/admin/tags" && req.method === "POST") {
     const body = await readJsonBody(req);
-    const tag = await repository.createTag(body.name);
-    sendJson(res, 200, {
-      ok: true,
-      tag,
-    });
+    try {
+      const tag = await repository.createTag(body.name);
+      sendJson(res, 200, {
+        ok: true,
+        tag,
+      });
+    } catch (error) {
+      sendValidationError(
+        res,
+        error instanceof Error ? error.message : "Tag creation failed.",
+      );
+    }
     return true;
   }
 
@@ -249,8 +271,15 @@ export async function handleAdminRoute({
   if (url.pathname.startsWith("/api/admin/photos/") && req.method === "PATCH") {
     const id = decodeURIComponent(url.pathname.slice("/api/admin/photos/".length));
     const body = await readJsonBody(req);
-    const result = await repository.updatePhoto(id, body);
-    sendJson(res, result.ok ? 200 : 404, result);
+    try {
+      const result = await repository.updatePhoto(id, body);
+      sendJson(res, resolveMutationStatus(result), result);
+    } catch (error) {
+      sendValidationError(
+        res,
+        error instanceof Error ? error.message : "Photo update failed.",
+      );
+    }
     return true;
   }
 
@@ -260,7 +289,7 @@ export async function handleAdminRoute({
     if (result.ok) {
       await assetStorage.deletePhotoAssets(id);
     }
-    sendJson(res, result.ok ? 200 : 404, result);
+    sendJson(res, resolveMutationStatus(result), result);
     return true;
   }
 

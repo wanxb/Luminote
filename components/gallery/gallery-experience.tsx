@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
+import { useLightboxGallery } from "@/components/gallery/use-lightbox-gallery";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
-import { getPhotoDetail } from "@/lib/api/client";
 import { getPhotos } from "@/lib/api/client";
-import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
-import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
+import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type GalleryExperienceProps = {
   site: SiteResponse;
@@ -40,12 +39,6 @@ export function GalleryExperience({
   allTags,
 }: GalleryExperienceProps) {
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [detail, setDetail] = useState<PhotoDetail | null>(null);
-  const [isImmersive, setIsImmersive] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loadedPhotos, setLoadedPhotos] = useState<PhotoSummary[]>(initialPhotos);
   const [filteredPhotos, setFilteredPhotos] = useState<PhotoSummary[]>(initialPhotos);
@@ -55,9 +48,27 @@ export function GalleryExperience({
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
   const activePhotos = selectedTags.length === 0 ? loadedPhotos : filteredPhotos;
+  const {
+    selectedId,
+    selectedIndex,
+    activePhoto,
+    isImmersive,
+    isLoading,
+    error,
+    isOpen,
+    selectPhoto,
+    selectPhotoById,
+    close,
+    next,
+    previous,
+    toggleImmersive,
+  } = useLightboxGallery({
+    photos: activePhotos,
+    findFallbackPhoto: (photoId) => loadedPhotos.find((photo) => photo.id === photoId),
+  });
   const topTags = getTopTags(loadedPhotos);
   const displayDescription =
-    site.photographerBio || site.siteDescription || "以独立摄影站的方式呈现城市、人物、自然和光线留下的痕迹。";
+    site.photographerBio || site.siteDescription || "浠ョ嫭绔嬫憚褰辩珯鐨勬柟寮忓憟鐜板煄甯傘€佷汉鐗┿€佽嚜鐒跺拰鍏夌嚎鐣欎笅鐨勭棔杩广€?";
   const tagOptions = Array.from(new Set([...topTags.map(([tag]) => tag), ...allTags])).slice(0, 12);
 
   useEffect(() => {
@@ -67,56 +78,6 @@ export function GalleryExperience({
     setHasMore(initialHasMore);
     setLoadMoreError(null);
   }, [initialHasMore, initialPage, initialPhotos]);
-
-  useEffect(() => {
-    if (selectedId === null) {
-      return;
-    }
-
-    let active = true;
-    setIsLoading(true);
-    setError(null);
-
-    if (isDefaultGalleryPhotoId(selectedId)) {
-      setDetail(getDefaultGalleryPhotoDetail(selectedId));
-      setIsLoading(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    void getPhotoDetail(selectedId)
-      .then((response) => {
-        if (!active) {
-          return;
-        }
-
-        if (!response) {
-          setDetail(null);
-          setError("这张照片的详情暂时不可用。");
-          return;
-        }
-
-        setDetail(response);
-      })
-      .catch(() => {
-        if (!active) {
-          return;
-        }
-
-        setDetail(null);
-        setError("加载详情时出了点问题，请稍后再试。");
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedId]);
 
   useEffect(() => {
     setFilteredPhotos(loadedPhotos);
@@ -130,55 +91,9 @@ export function GalleryExperience({
     }
 
     setIsFiltering(true);
-
     setFilteredPhotos(loadedPhotos.filter((photo) => photo.tags?.some((tag) => selectedTags.includes(tag))));
     setIsFiltering(false);
   }, [loadedPhotos, selectedTags]);
-
-  useEffect(() => {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (isImmersive) {
-          setIsImmersive(false);
-          return;
-        }
-
-        handleClose();
-        return;
-      }
-
-      if (event.key === "ArrowRight") {
-        selectPhoto((selectedIndex + 1) % activePhotos.length);
-      }
-
-      if (event.key === "ArrowLeft") {
-        selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [activePhotos.length, isImmersive, selectedIndex]);
-
-  useEffect(() => {
-    if (selectedId === null) {
-      return;
-    }
-
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, [selectedId]);
 
   useEffect(() => {
     const trigger = loadMoreTriggerRef.current;
@@ -211,15 +126,6 @@ export function GalleryExperience({
     };
   }, [currentPage, hasMore, isLoadingMore]);
 
-  const selectedSummary =
-    selectedIndex !== null
-      ? activePhotos[selectedIndex]
-      : selectedId
-        ? activePhotos.find((photo) => photo.id === selectedId) ?? loadedPhotos.find((photo) => photo.id === selectedId)
-        : null;
-
-  const activePhoto = detail && detail.id === selectedId ? detail : selectedSummary;
-
   async function handleLoadMore() {
     if (isLoadingMore || !hasMore) {
       return;
@@ -242,55 +148,20 @@ export function GalleryExperience({
       setCurrentPage(response.page);
       setHasMore(response.hasMore);
     } catch {
-      setLoadMoreError("加载更多照片失败，请稍后再试。");
+      setLoadMoreError("鍔犺浇鏇村鐓х墖澶辫触锛岃绋嶅悗鍐嶈瘯銆?");
     } finally {
       setIsLoadingMore(false);
     }
   }
 
-  function selectPhoto(nextIndex: number) {
-    if (nextIndex < 0 || nextIndex >= activePhotos.length) {
-      return;
-    }
-
-    setSelectedIndex(nextIndex);
-    setSelectedId(activePhotos[nextIndex].id);
-    setDetail(null);
-    setError(null);
-  }
-
   function handleSelect(photoId: string) {
-    selectPhoto(activePhotos.findIndex((photo) => photo.id === photoId));
-  }
-
-  function handleClose() {
-    setIsImmersive(false);
-    setSelectedId(null);
-    setSelectedIndex(null);
-    setDetail(null);
-    setError(null);
-  }
-
-  function handleNext() {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    selectPhoto((selectedIndex + 1) % activePhotos.length);
-  }
-
-  function handlePrevious() {
-    if (selectedIndex === null) {
-      return;
-    }
-
-    selectPhoto((selectedIndex - 1 + activePhotos.length) % activePhotos.length);
+    selectPhotoById(photoId);
   }
 
   return (
     <>
       <div className="space-y-[2px]">
-        {isFiltering ? <p className="px-1 py-2 text-sm text-white/50">正在筛选...</p> : null}
+        {isFiltering ? <p className="px-1 py-2 text-sm text-white/50">姝ｅ湪绛涢€?..</p> : null}
 
         <GalleryGrid
           site={site}
@@ -308,7 +179,7 @@ export function GalleryExperience({
         {hasMore || isLoadingMore ? (
           <div className="px-4 py-8">
             <div ref={loadMoreTriggerRef} className="h-1 w-full" aria-hidden="true" />
-            {isLoadingMore ? <p className="text-center text-sm tracking-[0.18em] text-white/62">正在加载更多作品...</p> : null}
+            {isLoadingMore ? <p className="text-center text-sm tracking-[0.18em] text-white/62">姝ｅ湪鍔犺浇鏇村浣滃搧...</p> : null}
           </div>
         ) : null}
       </div>
@@ -321,16 +192,16 @@ export function GalleryExperience({
         activeIndex={selectedIndex}
         hasMorePhotos={selectedTags.length === 0 ? hasMore : false}
         isImmersive={isImmersive}
-        isOpen={selectedId !== null}
+        isOpen={isOpen}
         isLoading={isLoading}
         isLoadingMorePhotos={isLoadingMore}
         error={error}
-        onClose={handleClose}
+        onClose={close}
         onLoadMorePhotos={selectedTags.length === 0 ? handleLoadMore : undefined}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
+        onNext={next}
+        onPrevious={previous}
         onSelect={selectPhoto}
-        onToggleImmersive={() => setIsImmersive((current) => !current)}
+        onToggleImmersive={toggleImmersive}
         hasMultiple={activePhotos.length > 1}
       />
     </>

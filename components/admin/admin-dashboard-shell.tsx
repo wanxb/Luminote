@@ -22,6 +22,8 @@ import { createThumbnail } from "@/lib/upload/thumbnail";
 import { TEXT_LIMITS } from "@/lib/text-limits";
 import { useAdminSessionTimeout } from "@/lib/use-admin-session-timeout";
 import type { HomeLayout, PhotoSummary, SiteResponse, WatermarkPosition } from "@/lib/api/types";
+import { AdminPhotoLibraryPanel } from "@/components/admin/admin-photo-library-panel";
+import { AdminUploadPanel } from "@/components/admin/admin-upload-panel";
 
 type Tab = "photos" | "settings";
 
@@ -1509,549 +1511,87 @@ export function AdminDashboardShell() {
       <main className="mx-auto max-w-7xl px-6 py-8 md:px-10">
         {activeTab === "photos" ? (
           <div className="space-y-8">
-            <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
-              <div className="flex items-baseline gap-2">
-                <h2 className="font-display text-2xl text-ink">上传照片</h2>
-                <span className="text-sm text-ink/60">{uploadQueue.length}/{maxUploadFiles}</span>
-              </div>
+            <AdminUploadPanel
+              uploadQueue={uploadQueue}
+              maxUploadFiles={maxUploadFiles}
+              onSubmit={handleUpload}
+              isLoadingTags={isLoadingTags}
+              visibleTags={visibleTags}
+              canSelectTags={canSelectTags}
+              batchTags={batchTags}
+              toggleBatchTag={toggleBatchTag}
+              isManagingTags={isManagingTags}
+              onDeleteTag={handleDeleteTag}
+              newTagName={newTagName}
+              onNewTagNameChange={setNewTagName}
+              isCreatingTag={isCreatingTag}
+              onCreateTag={handleCreateTag}
+              predefinedTagCount={predefinedTags.length}
+              maxTagPoolSize={maxTagPoolSize}
+              onToggleTagManagement={handleToggleTagManagement}
+              tagError={tagError}
+              fileInputRef={fileInputRef}
+              onFileSelection={handleFileSelection}
+              uploadNotice={uploadNotice}
+              maxTagsPerPhoto={maxTagsPerPhoto}
+              onPreview={setActivePreview}
+              onRemoveQueuedFile={removeQueuedFile}
+              onToggleQueuedFileTag={toggleQueuedFileTag}
+              uploadError={uploadError}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+              uploadStage={uploadStage}
+              isLoadingConfig={isLoadingConfig}
+            />
 
-              <form className="mt-6 space-y-7" onSubmit={handleUpload}>
-                <div className="space-y-4">
-                  {isLoadingTags ? (
-                    <p className="text-sm text-ink/70">正在加载标签...</p>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      {visibleTags.map((tag) => (
-                        <div key={tag.id} className="relative">
-                          <button
-                            type="button"
-                            disabled={!canSelectTags}
-                            onClick={() => toggleBatchTag(tag.name)}
-                            className={`rounded-full px-4 py-2 text-sm transition ${
-                              batchTags.includes(tag.name)
-                                ? "bg-ink text-paper"
-                                : "border border-black/10 bg-[rgba(255,255,255,0.38)] text-ink/45 hover:bg-[rgba(245,240,228,0.24)]"
-                            } disabled:cursor-not-allowed disabled:opacity-45`}
-                          >
-                            {tag.name}
-                          </button>
-                          {isManagingTags ? (
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteTag(tag)}
-                              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[rgba(255,255,255,0.56)] text-[10px] text-ink shadow-sm ring-1 ring-black/10"
-                              aria-label={`删除 ${tag.name}`}
-                            >
-                              ×
-                            </button>
-                          ) : null}
-                        </div>
-                      ))}
-
-                      {isManagingTags ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={newTagName}
-                            onChange={(event) => setNewTagName(event.target.value)}
-                            maxLength={TEXT_LIMITS.tagName}
-                            placeholder="新标签"
-                            className="w-28 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm outline-none transition focus:border-ember"
-                            disabled={isCreatingTag}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void handleCreateTag()}
-                            disabled={isCreatingTag || !newTagName.trim() || predefinedTags.length >= maxTagPoolSize}
-                            className="rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)] disabled:cursor-not-allowed disabled:opacity-45"
-                          >
-                            添加
-                          </button>
-                        </div>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={() => void handleToggleTagManagement()}
-                        title={isManagingTags ? "完成标签编辑" : "管理标签"}
-                        className="flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)]"
-                        aria-label="管理标签"
-                      >
-                        {isManagingTags ? "✓" : "+"}
-                      </button>
-                    </div>
-                  )}
-
-                  {tagError ? <p className="text-sm text-amber-700">{tagError}</p> : null}
-                </div>
-
-                <div className="space-y-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileSelection}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="添加照片"
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-[rgba(245,240,228,0.38)] text-2xl text-ink transition hover:bg-[rgba(245,240,228,0.26)]"
-                    aria-label="添加照片"
-                  >
-                    +
-                  </button>
-                </div>
-
-                {uploadNotice ? <p className="text-sm text-amber-700">{uploadNotice}</p> : null}
-
-                {uploadQueue.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {uploadQueue.map((item, index) => {
-                      const effectiveTags = uniqueTags([...batchTags, ...item.tags], maxTagsPerPhoto);
-
-                      return (
-                        <div key={item.id} className="rounded-2xl border border-black/5 bg-[rgba(245,240,228,0.24)] px-3 py-2.5">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setActivePreview({ src: item.previewUrl, name: item.file.name })}
-                              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/10 bg-[rgba(255,255,255,0.42)] transition hover:opacity-90"
-                              aria-label={`预览 ${item.file.name}`}
-                            >
-                              <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
-                            </button>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-3">
-                                <p className="truncate text-sm font-medium text-ink">
-                                  <span className="mr-1 text-ink/50">{index + 1}.</span>
-                                  {item.file.name}
-                                </p>
-                                <span className="shrink-0 text-xs text-ink/60">
-                                  {effectiveTags.length}/{maxTagsPerPhoto}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeQueuedFile(item.id)}
-                                  className="ml-auto shrink-0 rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-ink transition hover:bg-[rgba(255,255,255,0.42)]"
-                                >
-                                  移除
-                                </button>
-                              </div>
-
-                              {visibleTags.length > 0 ? (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {visibleTags.map((tag) => {
-                                    const selected = batchTags.includes(tag.name) || item.tags.includes(tag.name);
-
-                                    return (
-                                  <button
-                                    key={`${item.id}-${tag.id}`}
-                                    type="button"
-                                    disabled={!selected && effectiveTags.length >= maxTagsPerPhoto}
-                                    onClick={() => toggleQueuedFileTag(item.id, tag.name)}
-                                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                                      selected
-                                        ? "bg-ink text-paper"
-                                        : "border border-black/10 bg-[rgba(255,255,255,0.42)] text-ink/70 hover:bg-[rgba(245,240,228,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
-                                    }`}
-                                  >
-                                    {tag.name}
-                                  </button>
-                                    );
-                                  })}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-
-                {uploadError ? <p className="text-sm text-red-700">{uploadError}</p> : null}
-                {isUploading || uploadProgress > 0 ? (
-                  <div
-                    className={`space-y-2 rounded-2xl border px-4 py-3 ${
-                      uploadError
-                        ? "border-red-200 bg-red-50/80"
-                        : uploadProgress >= 100 && !isUploading
-                          ? "border-emerald-200 bg-emerald-50/80"
-                          : "border-black/8 bg-white/45"
-                    }`}
-                  >
-                    <div className="h-2 overflow-hidden rounded-full bg-black/8">
-                      <div
-                        className={`h-full rounded-full transition-[width] duration-300 ${
-                          uploadError
-                            ? "bg-red-600"
-                            : uploadProgress >= 100 && !isUploading
-                              ? "bg-emerald-600"
-                              : "bg-ink"
-                        }`}
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-4 text-xs">
-                      <span
-                        className={
-                          uploadError
-                            ? "text-red-700"
-                            : uploadProgress >= 100 && !isUploading
-                              ? "font-medium text-emerald-700"
-                              : "text-ink/60"
-                        }
-                      >
-                        {uploadStage || "等待上传"}
-                      </span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={isUploading || isLoadingConfig}
-                  className="rounded-full bg-ink px-6 py-3 text-sm uppercase tracking-[0.2em] text-paper transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isUploading ? "上传中" : isLoadingConfig ? "读取配置中" : "上传"}
-                </button>
-              </form>
-
-            </section>
-
-            <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h2 className="font-display text-2xl text-ink">
-                    现有照片 {appliedPhotoTagFilter ? `(${photosTotal} / ${photosUnfilteredTotal})` : `(${photosUnfilteredTotal})`}
-                  </h2>
-                </div>
-
-                <div className="space-y-3 lg:max-w-[32rem]">
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      type="text"
-                      value={photoTagFilterInput}
-                      onChange={(event) => setPhotoTagFilterInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void handleApplyPhotoTagFilter();
-                        }
-                      }}
-                      placeholder="按标签搜索图片"
-                      className="min-w-0 flex-1 rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink outline-none transition focus:border-black/20"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleApplyPhotoTagFilter()}
-                        disabled={isLoadingPhotos}
-                        className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        搜索
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleClearPhotoTagFilter()}
-                        disabled={isLoadingPhotos || (!appliedPhotoTagFilter && !photoTagFilterInput)}
-                        className="rounded-full border border-black/10 bg-[rgba(245,240,228,0.45)] px-4 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        清除
-                      </button>
-                    </div>
-                  </div>
-
-                  {visibleTags.length > 0 ? (
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {visibleTags.map((tag) => {
-                        const isActive = appliedPhotoTagFilter === tag.name;
-
-                        return (
-                          <button
-                            key={`photo-filter-${tag.id}`}
-                            type="button"
-                            onClick={() => void handleApplyPhotoTagFilter(isActive ? "" : tag.name)}
-                            disabled={isLoadingPhotos}
-                            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                              isActive
-                                ? "bg-ink text-paper"
-                                : "border border-black/10 bg-white/60 text-ink/70 hover:bg-white"
-                            }`}
-                          >
-                            {tag.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {photoNotice ? <p className="mt-4 text-sm text-amber-700">{photoNotice}</p> : null}
-              {photosError ? <p className="mt-4 text-sm text-red-700">{photosError}</p> : null}
-
-              {!isLoadingPhotos && !photosError && photos.length > 0 && selectedPhotoIds.length > 0 ? (
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/6 bg-[rgba(245,240,228,0.22)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3 text-sm text-ink/70">
-                    <span>已选 {selectedPhotoIds.length} 张</span>
-                    <button
-                      type="button"
-                      onClick={handleToggleSelectAllPhotos}
-                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white"
-                    >
-                      {allPhotosSelected ? "清空本页" : "全选本页"}
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleBatchPhotoHidden(true)}
-                      disabled={selectedVisiblePhotoCount === 0 || hasSelectedBusyPhotos}
-                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      批量隐藏
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleBatchPhotoHidden(false)}
-                      disabled={selectedHiddenPhotoCount === 0 || hasSelectedBusyPhotos}
-                      className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      取消隐藏
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleBatchDeleteAction}
-                      disabled={selectedPhotoIds.length === 0 || isBatchDeleting || hasSelectedBusyPhotos}
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        isConfirmingBatchDelete
-                          ? "border border-red-500 bg-red-500 text-white hover:bg-red-600"
-                          : "border border-red-200 bg-white/70 text-red-600 hover:bg-red-50"
-                      }`}
-                    >
-                      {isBatchDeleting
-                        ? "删除中"
-                        : isConfirmingBatchDelete
-                          ? `确认删除 ${selectedPhotoIds.length} 张`
-                          : "批量删除"}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {isLoadingPhotos ? (
-                <p className="mt-4 text-sm text-ink/70">正在加载...</p>
-              ) : photosError ? null : photos.length === 0 ? (
-                <p className="mt-4 text-sm text-ink/70">暂无照片，请先上传。</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {photos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className={`rounded-xl border px-4 py-3 transition hover:border-black/10 hover:bg-white/70 ${
-                        selectedPhotoIds.includes(photo.id)
-                          ? "border-[#d6b28f] bg-[rgba(245,232,218,0.78)] shadow-[0_10px_24px_rgba(192,143,102,0.08)]"
-                          : photo.isHidden
-                            ? "border-black/5 bg-black/[0.04]"
-                            : "border-black/5 bg-[rgba(245,240,228,0.2)]"
-                      }`}
-                    >
-                      {(() => {
-                        const draftTags = photoTagDrafts[photo.id] ?? uniqueTags(photo.tags ?? [], maxTagsPerPhoto);
-                        const visibleTagNames = new Set(visibleTags.map((tag) => tag.name));
-                        const legacyTags = draftTags.filter((tag) => !visibleTagNames.has(tag));
-                        const isEditing = editingPhotoId === photo.id;
-                        const isUpdating = updatingPhotoIds.includes(photo.id);
-                        const isConfirmingDelete = deleteConfirmPhotoId === photo.id;
-                        const isDeleting = deletingIds.includes(photo.id);
-                        const isBusy = isUpdating || isDeleting;
-
-                        return (
-                          <>
-                      <div className="flex items-center gap-4">
-                        <label className="flex shrink-0 cursor-pointer items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedPhotoIds.includes(photo.id)}
-                            onChange={() => togglePhotoSelection(photo.id)}
-                            disabled={isBusy}
-                            className="peer sr-only"
-                            aria-label={`选择 ${photo.description || photo.id}`}
-                          />
-                          <span
-                            aria-hidden="true"
-                            className="relative h-5 w-5 rounded-[6px] border border-[#d8c9b6] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition after:absolute after:left-[6px] after:top-[2px] after:h-[10px] after:w-[5px] after:rotate-45 after:border-b-2 after:border-r-2 after:border-white after:opacity-0 after:content-[''] peer-checked:border-[#c08f66] peer-checked:bg-[#cf9f78] peer-checked:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28),0_0_0_3px_rgba(231,205,180,0.55)] peer-checked:after:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-[#e7cdb4] peer-focus-visible:ring-offset-0 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
-                          />
-                        </label>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActivePreview({
-                              src: photo.watermarkedDisplayUrl || photo.displayUrl || photo.thumbUrl,
-                              name: photo.description || `照片 ${photo.id.replace("photo_", "")}`
-                            })
-                          }
-                          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-black/10 transition hover:opacity-90"
-                          aria-label={`预览 ${photo.description || photo.id}`}
-                        >
-                          <img
-                            src={photo.thumbUrl}
-                            alt={photo.description || photo.id}
-                            className="h-full w-full object-cover"
-                          />
-                        </button>
-
-                        <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-medium text-ink">
-                                {photo.description || `照片 ${photo.id.replace("photo_", "")}`}
-                              </p>
-                              {photo.isHidden ? (
-                                <span className="shrink-0 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-2 py-0.5 text-[11px] text-ink/60">
-                                  已隐藏
-                                </span>
-                              ) : null}
-                            </div>
-                            {draftTags.length > 0 ? (
-                              <div className="mt-1 flex flex-wrap gap-1.5">
-                                {draftTags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="inline-flex rounded-lg border border-black/10 bg-[rgba(255,255,255,0.42)] px-2 py-0.5 text-xs text-ink/70"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void handleTogglePhotoHidden(photo)}
-                              disabled={isBusy}
-                              className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isUpdating && editingPhotoId !== photo.id
-                                ? "处理中"
-                                : photo.isHidden
-                                  ? "解除隐藏"
-                                  : "隐藏"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                isEditing ? void handleSavePhotoTags(photo) : beginPhotoTagEdit(photo)
-                              }
-                              disabled={isBusy}
-                              className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist"
-                            >
-                              {isUpdating ? "保存中" : isEditing ? "完成" : "标签"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteAction(photo.id)}
-                              disabled={isDeleting}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                                isConfirmingDelete
-                                  ? "border border-red-500 bg-red-500 text-white hover:bg-red-600"
-                                  : "border border-red-200 text-red-600 hover:bg-red-50"
-                              }`}
-                            >
-                              {isDeleting
-                                ? "删除中"
-                                : isConfirmingDelete
-                                  ? "确认删除"
-                                  : "删除"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {isEditing ? (
-                        <div className="mt-3 space-y-2 border-t border-black/5 pt-3">
-                          {legacyTags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                              {legacyTags.map((tag) => (
-                                <button
-                                  key={`${photo.id}-legacy-${tag}`}
-                                  type="button"
-                                  onClick={() => togglePhotoDraftTag(photo, tag)}
-                                  disabled={isUpdating}
-                                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
-                                  title="该标签已不在标签池中，点击可从照片上移除"
-                                >
-                                  {tag} ×
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-
-                          {visibleTags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                              {visibleTags.map((tag) => {
-                                const selected = draftTags.includes(tag.name);
-
-                                return (
-                                  <button
-                                    key={`${photo.id}-${tag.id}`}
-                                    type="button"
-                                    onClick={() => togglePhotoDraftTag(photo, tag.name)}
-                                    disabled={isUpdating || (!selected && draftTags.length >= maxTagsPerPhoto)}
-                                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                                      selected
-                                        ? "bg-ink text-paper"
-                                        : "border border-black/10 bg-[rgba(255,255,255,0.42)] text-ink/70 hover:bg-[rgba(245,240,228,0.3)] disabled:cursor-not-allowed disabled:opacity-40"
-                                    }`}
-                                  >
-                                    {tag.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ))}
-
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => void handlePreviousPhotosPage()}
-                      disabled={isLoadingPhotos || photosPage <= 1}
-                      className="justify-self-start rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      上一页
-                    </button>
-                    <p className="text-center text-sm font-medium tabular-nums text-ink/65">
-                      {photosPage}/{photosPageCount}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => void handleNextPhotosPage()}
-                      disabled={isLoadingPhotos || !photosHasMore}
-                      className="justify-self-end rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      下一页
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
+            <AdminPhotoLibraryPanel
+              appliedPhotoTagFilter={appliedPhotoTagFilter}
+              photosTotal={photosTotal}
+              photosUnfilteredTotal={photosUnfilteredTotal}
+              photoTagFilterInput={photoTagFilterInput}
+              onPhotoTagFilterInputChange={setPhotoTagFilterInput}
+              onPhotoTagFilterKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleApplyPhotoTagFilter();
+                }
+              }}
+              onApplyPhotoTagFilter={handleApplyPhotoTagFilter}
+              onClearPhotoTagFilter={handleClearPhotoTagFilter}
+              isLoadingPhotos={isLoadingPhotos}
+              visibleTags={visibleTags}
+              photoNotice={photoNotice}
+              photosError={photosError}
+              photos={photos}
+              selectedPhotoIds={selectedPhotoIds}
+              onToggleSelectAllPhotos={handleToggleSelectAllPhotos}
+              allPhotosSelected={allPhotosSelected}
+              selectedVisiblePhotoCount={selectedVisiblePhotoCount}
+              selectedHiddenPhotoCount={selectedHiddenPhotoCount}
+              hasSelectedBusyPhotos={hasSelectedBusyPhotos}
+              onBatchPhotoHidden={handleBatchPhotoHidden}
+              onBatchDeleteAction={handleBatchDeleteAction}
+              isBatchDeleting={isBatchDeleting}
+              isConfirmingBatchDelete={isConfirmingBatchDelete}
+              photoTagDrafts={photoTagDrafts}
+              maxTagsPerPhoto={maxTagsPerPhoto}
+              editingPhotoId={editingPhotoId}
+              updatingPhotoIds={updatingPhotoIds}
+              deleteConfirmPhotoId={deleteConfirmPhotoId}
+              deletingIds={deletingIds}
+              onPreview={setActivePreview}
+              onTogglePhotoSelection={togglePhotoSelection}
+              onTogglePhotoHidden={handleTogglePhotoHidden}
+              onSavePhotoTags={handleSavePhotoTags}
+              onBeginPhotoTagEdit={beginPhotoTagEdit}
+              onHandleDeleteAction={handleDeleteAction}
+              onTogglePhotoDraftTag={togglePhotoDraftTag}
+              photosPage={photosPage}
+              photosPageCount={photosPageCount}
+              photosHasMore={photosHasMore}
+              onPreviousPhotosPage={handlePreviousPhotosPage}
+              onNextPhotosPage={handleNextPhotosPage}
+            />
           </div>
         ) : (
           <div className="space-y-8">

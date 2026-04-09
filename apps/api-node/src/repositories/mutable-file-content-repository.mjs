@@ -1,4 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
+import {
+  validatePhotoDescription,
+  validatePhotoTags,
+  validateSitePatch,
+  validateTagName,
+} from "../domain/validation.mjs";
 
 async function loadContentFile(filePath) {
   const raw = await readFile(filePath, "utf8");
@@ -26,11 +32,31 @@ function uniqueTags(tags) {
   );
 }
 
-export function createMutableFileContentRepository({ filePath }) {
+function resolveAssetUrl(baseUrl, pathname) {
+  return new URL(pathname, baseUrl).toString();
+}
+
+function buildAdminPhoto(baseUrl, photo) {
+  return {
+    ...photo,
+    thumbUrl: resolveAssetUrl(baseUrl, photo.thumbUrl),
+    displayUrl: resolveAssetUrl(baseUrl, photo.displayUrl),
+    watermarkedDisplayUrl: photo.watermarkedDisplayUrl
+      ? resolveAssetUrl(baseUrl, photo.watermarkedDisplayUrl)
+      : undefined,
+  };
+}
+
+export function createMutableFileContentRepository({ filePath, baseUrl }) {
   return {
     async listTags() {
       const content = await loadContentFile(filePath);
       return content.tagPool;
+    },
+
+    async getSiteSettings() {
+      const content = await loadContentFile(filePath);
+      return content.site;
     },
 
     async createPhoto(input) {
@@ -45,7 +71,11 @@ export function createMutableFileContentRepository({ filePath }) {
       }
 
       const id = `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const tags = uniqueTags(input.tags || []);
+      validatePhotoDescription(input.description || "");
+      const tags = validatePhotoTags(
+        input.tags || [],
+        content.site.maxTagsPerPhoto || 5,
+      );
       const photo = {
         id,
         thumbUrl: `/assets/thumb/${id}`,
@@ -92,7 +122,9 @@ export function createMutableFileContentRepository({ filePath }) {
       const start = (page - 1) * pageSize;
 
       return {
-        items: filtered.slice(start, start + pageSize),
+        items: filtered
+          .slice(start, start + pageSize)
+          .map((photo) => buildAdminPhoto(baseUrl, photo)),
         hasMore: start + pageSize < filtered.length,
         total: filtered.length,
         unfilteredTotal: content.photos.length,
@@ -112,8 +144,18 @@ export function createMutableFileContentRepository({ filePath }) {
       }
 
       const current = content.photos[index];
+
+      if (updates.description !== undefined) {
+        validatePhotoDescription(updates.description);
+      }
+
       const nextTags =
-        updates.tags !== undefined ? uniqueTags(updates.tags) : current.tags || [];
+        updates.tags !== undefined
+          ? validatePhotoTags(
+              updates.tags,
+              content.site.maxTagsPerPhoto || 5,
+            )
+          : current.tags || [];
 
       content.photos[index] = {
         ...current,
@@ -177,6 +219,7 @@ export function createMutableFileContentRepository({ filePath }) {
 
     async updateSite(updates) {
       const content = await loadContentFile(filePath);
+      validateSitePatch(updates);
       content.site = {
         ...content.site,
         ...updates,
@@ -187,11 +230,7 @@ export function createMutableFileContentRepository({ filePath }) {
 
     async createTag(name) {
       const content = await loadContentFile(filePath);
-      const normalized = String(name).trim();
-
-      if (!normalized) {
-        throw new Error("Tag name is required");
-      }
+      const normalized = validateTagName(name);
 
       const existing = content.tagPool.map((tag) => tag.name);
 
@@ -201,6 +240,12 @@ export function createMutableFileContentRepository({ filePath }) {
           name: normalized,
           createdAt: new Date().toISOString(),
         };
+      }
+
+      if (content.tagPool.length >= (content.site.maxTagPoolSize || 20)) {
+        throw new Error(
+          `Tag pool limit reached: ${content.site.maxTagPoolSize || 20}.`,
+        );
       }
 
       content.tagPool.push({
@@ -222,7 +267,9 @@ export function createMutableFileContentRepository({ filePath }) {
       const content = await loadContentFile(filePath);
       const normalized = String(name).trim();
 
-      content.tagPool = content.tagPool.filter((tag) => tag.name !== normalized);
+      content.tagPool = content.tagPool.filter(
+        (tag) => tag.name !== normalized && tag.id !== normalized,
+      );
 
       await saveContentFile(filePath, content);
 

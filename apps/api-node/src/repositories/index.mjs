@@ -27,10 +27,14 @@ export function createAdminContentRepository(config) {
   if (config.contentSource === "file") {
     return createMutableFileContentRepository({
       filePath: config.dataFile,
+      baseUrl: config.publicBaseUrl,
     });
   }
 
   return {
+    async getSiteSettings() {
+      throw new Error("Admin write operations require CONTENT_SOURCE=file");
+    },
     async listTags() {
       throw new Error("Admin write operations require CONTENT_SOURCE=file");
     },

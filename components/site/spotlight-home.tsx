@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
+import {
+  buildDisplayTags,
+  countPhotoTags,
+  getInitials,
+  usePrefersReducedMotion,
+} from "@/components/site/site-shared";
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotoDetail, getPhotos } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
@@ -17,42 +23,6 @@ type SpotlightHomeProps = {
 
 const COLLECTION_PAGE_SIZE = 60;
 const AUTOPLAY_MS = 5000;
-
-function getInitials(name: string) {
-  const trimmed = name.trim();
-
-  if (!trimmed) {
-    return "PH";
-  }
-
-  if (trimmed.length <= 2) {
-    return trimmed.toUpperCase();
-  }
-
-  return trimmed.slice(0, 2).toUpperCase();
-}
-
-function countPhotoTags(photos: PhotoSummary[]) {
-  const counts = new Map<string, number>();
-
-  photos.forEach((photo) => {
-    photo.tags?.forEach((tag) => {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    });
-  });
-
-  return counts;
-}
-
-function buildDisplayTags(counts: Map<string, number>, allTags: string[]) {
-  const poolTags = Array.from(new Set(allTags.map((tag) => tag.trim()).filter(Boolean)));
-  const poolTagSet = new Set(poolTags);
-  const legacyTags = Array.from(counts.keys())
-    .filter((tag) => !poolTagSet.has(tag))
-    .sort((left, right) => (counts.get(right) ?? 0) - (counts.get(left) ?? 0) || left.localeCompare(right, "zh-CN"));
-
-  return [...poolTags, ...legacyTags];
-}
 
 function normalizeLink(value: string) {
   const trimmed = value.trim();
@@ -128,29 +98,6 @@ function LinkIcon() {
       <path d="m9 15 6-6" />
     </svg>
   );
-}
-
-function usePrefersReducedMotion() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
-
-    updatePreference();
-
-    mediaQuery.addEventListener("change", updatePreference);
-
-    return () => {
-      mediaQuery.removeEventListener("change", updatePreference);
-    };
-  }, []);
-
-  return prefersReducedMotion;
 }
 
 export function SpotlightHome({
