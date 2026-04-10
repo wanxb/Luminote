@@ -122,7 +122,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
     watermarkEnabled: "默认启用水印",
     watermarkEnabledDescription: "上传后默认对展示图应用水印，除非单独关闭。",
     storeOriginalFiles: "保存原图",
-    storeOriginalFilesDescription: "除了展示图外，同时在对象存储中保留原始上传文件。",
+    storeOriginalFilesDescription:
+      "除了展示图外，同时在对象存储中保留原始上传文件。",
     watermarkText: "水印文本",
     watermarkPosition: "水印位置",
     limits: "限制设置",
@@ -226,7 +227,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
     watermarkEnabled: "預設啟用浮水印",
     watermarkEnabledDescription: "除非另外關閉，否則預設會對展示圖套用浮水印。",
     storeOriginalFiles: "保留原圖",
-    storeOriginalFilesDescription: "除了展示圖外，也在物件儲存中保留原始上傳檔案。",
+    storeOriginalFilesDescription:
+      "除了展示圖外，也在物件儲存中保留原始上傳檔案。",
     watermarkText: "浮水印文字",
     watermarkPosition: "浮水印位置",
     limits: "限制設定",
@@ -326,15 +328,19 @@ const messages: Record<SiteLocale, AdminMessages> = {
     homeLayout: "Home Layout",
     siteTitle: "Site Title",
     siteDescription: "Site Description",
-    siteDescriptionPlaceholder: "Describe the mood, theme, or viewing experience of your site.",
+    siteDescriptionPlaceholder:
+      "Describe the mood, theme, or viewing experience of your site.",
     watermarkEnabled: "Watermark Enabled by Default",
-    watermarkEnabledDescription: "Apply watermarks to gallery display assets unless disabled.",
+    watermarkEnabledDescription:
+      "Apply watermarks to gallery display assets unless disabled.",
     storeOriginalFiles: "Store Original Files",
-    storeOriginalFilesDescription: "Keep original uploads in object storage in addition to generated display assets.",
+    storeOriginalFilesDescription:
+      "Keep original uploads in object storage in addition to generated display assets.",
     watermarkText: "Watermark Text",
     watermarkPosition: "Watermark Position",
     limits: "Limits",
-    limitsDescription: "Configure gallery scale, upload behavior, and tag limits.",
+    limitsDescription:
+      "Configure gallery scale, upload behavior, and tag limits.",
     totalPhotos: "Total Photos",
     totalPhotosDescription: "Gallery-wide cap",
     uploadBatch: "Upload Batch",
@@ -344,24 +350,30 @@ const messages: Record<SiteLocale, AdminMessages> = {
     tagsPerPhoto: "Tags Per Photo",
     tagsPerPhotoDescription: "Per photo",
     photoMetadata: "Photo Metadata",
-    photoMetadataDescription: "Control which photo parameters appear in the viewer.",
+    photoMetadataDescription:
+      "Control which photo parameters appear in the viewer.",
     enableMetadata: "Enable Metadata",
-    enableMetadataDescription: "Master switch for all metadata in the lightbox.",
+    enableMetadataDescription:
+      "Master switch for all metadata in the lightbox.",
     dateInfo: "Date Info",
     dateInfoDescription: "Show capture date and time.",
     cameraInfo: "Camera Info",
-    cameraInfoDescription: "Show camera body, lens, aperture, shutter, ISO, and focal length.",
+    cameraInfoDescription:
+      "Show camera body, lens, aperture, shutter, ISO, and focal length.",
     locationInfo: "Location Info",
     locationInfoDescription: "Show location fields and GPS-related metadata.",
     detailedExif: "Detailed EXIF",
-    detailedExifDescription: "Show the extended parameter list beyond the common fields.",
+    detailedExifDescription:
+      "Show the extended parameter list beyond the common fields.",
     photographerProfile: "Photographer Profile",
-    photographerProfileDescription: "These fields are displayed on the public site.",
+    photographerProfileDescription:
+      "These fields are displayed on the public site.",
     photographerAvatar: "Photographer Avatar",
     photographerName: "Name",
     photographerNamePlaceholder: "Your name",
     photographerBio: "Bio",
-    photographerBioPlaceholder: "Describe your focus, city, or long-term interests.",
+    photographerBioPlaceholder:
+      "Describe your focus, city, or long-term interests.",
     email: "Email",
     customAccount: "Custom Account",
     xiaohongshu: "Xiaohongshu",
@@ -370,7 +382,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
     accountNamePlaceholder: "Account name",
     profileUrlPlaceholder: "Profile URL",
     adminPassword: "Admin Password",
-    adminPasswordDescription: "Leave these blank if you do not want to change the current password.",
+    adminPasswordDescription:
+      "Leave these blank if you do not want to change the current password.",
     newPasswordPlaceholder: "New password",
     confirmPasswordPlaceholder: "Confirm new password",
     saving: "Saving...",
@@ -401,8 +414,10 @@ const messages: Record<SiteLocale, AdminMessages> = {
     editorial: "Editorial",
     spotlight: "Spotlight",
     masonryDescription: "Open the site with a masonry image feed.",
-    editorialDescription: "Show profile and tags beside an editorial archive layout.",
-    spotlightDescription: "Show profile and tags beside a spotlight hero presentation.",
+    editorialDescription:
+      "Show profile and tags beside an editorial archive layout.",
+    spotlightDescription:
+      "Show profile and tags beside a spotlight hero presentation.",
     topLeft: "Top left",
     top: "Top",
     topRight: "Top right",

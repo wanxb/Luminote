@@ -920,10 +920,9 @@ export async function getPhotoCount(env: Env) {
     return 0;
   }
 
-  const result = await env.DB
-    .prepare("SELECT COUNT(*) as count FROM photos")
-    .first<{ count: number }>();
+  const result = await env.DB.prepare(
+    "SELECT COUNT(*) as count FROM photos",
+  ).first<{ count: number }>();
 
   return result?.count ?? 0;
 }
-

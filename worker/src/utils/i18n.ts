@@ -54,7 +54,10 @@ type LocaleMessages = {
   invalidRequestBody: string;
   photoDescriptionTooLong: (limit: number) => string;
   tagTooLong: (limit: number) => string;
-  photoDescriptionOrTagTooLong: (descriptionLimit: number, tagLimit: number) => string;
+  photoDescriptionOrTagTooLong: (
+    descriptionLimit: number,
+    tagLimit: number,
+  ) => string;
   noImageFilesReceived: string;
   batchUploadLimit: (limit: number) => string;
   totalPhotoLimit: (limit: number) => string;
@@ -107,7 +110,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowLocationInfo: "位置信息显示开关格式错误。",
     invalidShowDetailedExifInfo: "完整参数显示开关格式错误。",
     invalidPhotographerAvatarUrl: "摄影师头像链接格式错误。",
-    photographerAvatarUrlTooLong: (limit) => `摄影师头像链接不能超过 ${limit} 个字符。`,
+    photographerAvatarUrlTooLong: (limit) =>
+      `摄影师头像链接不能超过 ${limit} 个字符。`,
     invalidPhotographerName: "摄影师姓名格式错误。",
     photographerNameTooLong: (limit) => `摄影师姓名不能超过 ${limit} 个字符。`,
     invalidPhotographerBio: "摄影师简介格式错误。",
@@ -115,7 +119,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidPhotographerEmail: "邮箱格式错误。",
     photographerEmailTooLong: (limit) => `邮箱不能超过 ${limit} 个字符。`,
     invalidXiaohongshuAccount: "小红书账号格式错误。",
-    xiaohongshuAccountTooLong: (limit) => `小红书账号不能超过 ${limit} 个字符。`,
+    xiaohongshuAccountTooLong: (limit) =>
+      `小红书账号不能超过 ${limit} 个字符。`,
     invalidXiaohongshuUrl: "小红书链接格式错误。",
     xiaohongshuUrlTooLong: (limit) => `小红书链接不能超过 ${limit} 个字符。`,
     invalidDouyinAccount: "抖音账号格式错误。",
@@ -123,13 +128,15 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidDouyinUrl: "抖音链接格式错误。",
     douyinUrlTooLong: (limit) => `抖音链接不能超过 ${limit} 个字符。`,
     invalidInstagramAccount: "Instagram 账号格式错误。",
-    instagramAccountTooLong: (limit) => `Instagram 账号不能超过 ${limit} 个字符。`,
+    instagramAccountTooLong: (limit) =>
+      `Instagram 账号不能超过 ${limit} 个字符。`,
     invalidInstagramUrl: "Instagram 链接格式错误。",
     instagramUrlTooLong: (limit) => `Instagram 链接不能超过 ${limit} 个字符。`,
     invalidCustomAccount: "自定义账号名称格式错误。",
     customAccountTooLong: (limit) => `自定义账号名称不能超过 ${limit} 个字符。`,
     invalidCustomAccountUrl: "自定义账号链接格式错误。",
-    customAccountUrlTooLong: (limit) => `自定义账号链接不能超过 ${limit} 个字符。`,
+    customAccountUrlTooLong: (limit) =>
+      `自定义账号链接不能超过 ${limit} 个字符。`,
     saveSettingsFailed: "保存配置失败。",
     settingsUpdated: "站点配置已更新。",
     invalidRequestBody: "请求格式错误。",
@@ -139,7 +146,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
       `照片备注不能超过 ${descriptionLimit} 个字符，单个标签不能超过 ${tagLimit} 个字符。`,
     noImageFilesReceived: "未接收到任何图片文件。",
     batchUploadLimit: (limit) => `单次最多上传 ${limit} 张照片。`,
-    totalPhotoLimit: (limit) => `图片总数最多 ${limit} 张，当前上传会超出限制。`,
+    totalPhotoLimit: (limit) =>
+      `图片总数最多 ${limit} 张，当前上传会超出限制。`,
     existingPhotosLoadFailed: "加载现有照片失败。",
     missingPhotoId: "缺少照片 ID。",
     photoNoteInvalid: "照片备注格式错误。",
@@ -187,7 +195,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowLocationInfo: "位置資訊顯示開關格式錯誤。",
     invalidShowDetailedExifInfo: "完整參數顯示開關格式錯誤。",
     invalidPhotographerAvatarUrl: "攝影師頭像連結格式錯誤。",
-    photographerAvatarUrlTooLong: (limit) => `攝影師頭像連結不能超過 ${limit} 個字元。`,
+    photographerAvatarUrlTooLong: (limit) =>
+      `攝影師頭像連結不能超過 ${limit} 個字元。`,
     invalidPhotographerName: "攝影師姓名格式錯誤。",
     photographerNameTooLong: (limit) => `攝影師姓名不能超過 ${limit} 個字元。`,
     invalidPhotographerBio: "攝影師簡介格式錯誤。",
@@ -195,7 +204,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidPhotographerEmail: "信箱格式錯誤。",
     photographerEmailTooLong: (limit) => `信箱不能超過 ${limit} 個字元。`,
     invalidXiaohongshuAccount: "小紅書帳號格式錯誤。",
-    xiaohongshuAccountTooLong: (limit) => `小紅書帳號不能超過 ${limit} 個字元。`,
+    xiaohongshuAccountTooLong: (limit) =>
+      `小紅書帳號不能超過 ${limit} 個字元。`,
     invalidXiaohongshuUrl: "小紅書連結格式錯誤。",
     xiaohongshuUrlTooLong: (limit) => `小紅書連結不能超過 ${limit} 個字元。`,
     invalidDouyinAccount: "抖音帳號格式錯誤。",
@@ -203,13 +213,15 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidDouyinUrl: "抖音連結格式錯誤。",
     douyinUrlTooLong: (limit) => `抖音連結不能超過 ${limit} 個字元。`,
     invalidInstagramAccount: "Instagram 帳號格式錯誤。",
-    instagramAccountTooLong: (limit) => `Instagram 帳號不能超過 ${limit} 個字元。`,
+    instagramAccountTooLong: (limit) =>
+      `Instagram 帳號不能超過 ${limit} 個字元。`,
     invalidInstagramUrl: "Instagram 連結格式錯誤。",
     instagramUrlTooLong: (limit) => `Instagram 連結不能超過 ${limit} 個字元。`,
     invalidCustomAccount: "自訂帳號名稱格式錯誤。",
     customAccountTooLong: (limit) => `自訂帳號名稱不能超過 ${limit} 個字元。`,
     invalidCustomAccountUrl: "自訂帳號連結格式錯誤。",
-    customAccountUrlTooLong: (limit) => `自訂帳號連結不能超過 ${limit} 個字元。`,
+    customAccountUrlTooLong: (limit) =>
+      `自訂帳號連結不能超過 ${limit} 個字元。`,
     saveSettingsFailed: "儲存設定失敗。",
     settingsUpdated: "站點設定已更新。",
     invalidRequestBody: "請求格式錯誤。",
@@ -219,7 +231,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
       `照片備註不能超過 ${descriptionLimit} 個字元，單個標籤不能超過 ${tagLimit} 個字元。`,
     noImageFilesReceived: "未接收到任何圖片檔案。",
     batchUploadLimit: (limit) => `單次最多上傳 ${limit} 張照片。`,
-    totalPhotoLimit: (limit) => `圖片總數最多 ${limit} 張，目前上傳會超出限制。`,
+    totalPhotoLimit: (limit) =>
+      `圖片總數最多 ${limit} 張，目前上傳會超出限制。`,
     existingPhotosLoadFailed: "載入現有照片失敗。",
     missingPhotoId: "缺少照片 ID。",
     photoNoteInvalid: "照片備註格式錯誤。",
@@ -246,16 +259,20 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     adminLoginRequired: "Please sign in as an admin first.",
     invalidLanguage: "Invalid language format.",
     siteTitleRequired: "Site title is required.",
-    siteTitleTooLong: (limit) => `Site title must be at most ${limit} characters.`,
+    siteTitleTooLong: (limit) =>
+      `Site title must be at most ${limit} characters.`,
     siteDescriptionInvalid: "Invalid site description format.",
-    siteDescriptionTooLong: (limit) => `Site description must be at most ${limit} characters.`,
+    siteDescriptionTooLong: (limit) =>
+      `Site description must be at most ${limit} characters.`,
     invalidHomeLayout: "Invalid home layout format.",
     invalidWatermarkDefault: "Invalid watermark default switch format.",
     watermarkTextRequired: "Watermark text is required.",
-    watermarkTextTooLong: (limit) => `Watermark text must be at most ${limit} characters.`,
+    watermarkTextTooLong: (limit) =>
+      `Watermark text must be at most ${limit} characters.`,
     invalidWatermarkPosition: "Invalid watermark position format.",
     adminPasswordTooShort: "Admin password must be at least 6 characters.",
-    adminPasswordTooLong: (limit) => `Admin password must be at most ${limit} characters.`,
+    adminPasswordTooLong: (limit) =>
+      `Admin password must be at most ${limit} characters.`,
     invalidOriginalUploadSwitch: "Invalid original upload switch format.",
     invalidMaxTagPoolSize: "Tag pool limit must be a positive integer.",
     invalidMaxTotalPhotos: "Total photo limit must be a positive integer.",
@@ -267,39 +284,54 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowLocationInfo: "Invalid location info switch format.",
     invalidShowDetailedExifInfo: "Invalid detailed EXIF switch format.",
     invalidPhotographerAvatarUrl: "Invalid photographer avatar URL format.",
-    photographerAvatarUrlTooLong: (limit) => `Photographer avatar URL must be at most ${limit} characters.`,
+    photographerAvatarUrlTooLong: (limit) =>
+      `Photographer avatar URL must be at most ${limit} characters.`,
     invalidPhotographerName: "Invalid photographer name format.",
-    photographerNameTooLong: (limit) => `Photographer name must be at most ${limit} characters.`,
+    photographerNameTooLong: (limit) =>
+      `Photographer name must be at most ${limit} characters.`,
     invalidPhotographerBio: "Invalid photographer bio format.",
-    photographerBioTooLong: (limit) => `Photographer bio must be at most ${limit} characters.`,
+    photographerBioTooLong: (limit) =>
+      `Photographer bio must be at most ${limit} characters.`,
     invalidPhotographerEmail: "Invalid email format.",
-    photographerEmailTooLong: (limit) => `Email must be at most ${limit} characters.`,
+    photographerEmailTooLong: (limit) =>
+      `Email must be at most ${limit} characters.`,
     invalidXiaohongshuAccount: "Invalid Xiaohongshu account format.",
-    xiaohongshuAccountTooLong: (limit) => `Xiaohongshu account must be at most ${limit} characters.`,
+    xiaohongshuAccountTooLong: (limit) =>
+      `Xiaohongshu account must be at most ${limit} characters.`,
     invalidXiaohongshuUrl: "Invalid Xiaohongshu URL format.",
-    xiaohongshuUrlTooLong: (limit) => `Xiaohongshu URL must be at most ${limit} characters.`,
+    xiaohongshuUrlTooLong: (limit) =>
+      `Xiaohongshu URL must be at most ${limit} characters.`,
     invalidDouyinAccount: "Invalid Douyin account format.",
-    douyinAccountTooLong: (limit) => `Douyin account must be at most ${limit} characters.`,
+    douyinAccountTooLong: (limit) =>
+      `Douyin account must be at most ${limit} characters.`,
     invalidDouyinUrl: "Invalid Douyin URL format.",
-    douyinUrlTooLong: (limit) => `Douyin URL must be at most ${limit} characters.`,
+    douyinUrlTooLong: (limit) =>
+      `Douyin URL must be at most ${limit} characters.`,
     invalidInstagramAccount: "Invalid Instagram account format.",
-    instagramAccountTooLong: (limit) => `Instagram account must be at most ${limit} characters.`,
+    instagramAccountTooLong: (limit) =>
+      `Instagram account must be at most ${limit} characters.`,
     invalidInstagramUrl: "Invalid Instagram URL format.",
-    instagramUrlTooLong: (limit) => `Instagram URL must be at most ${limit} characters.`,
+    instagramUrlTooLong: (limit) =>
+      `Instagram URL must be at most ${limit} characters.`,
     invalidCustomAccount: "Invalid custom account name format.",
-    customAccountTooLong: (limit) => `Custom account name must be at most ${limit} characters.`,
+    customAccountTooLong: (limit) =>
+      `Custom account name must be at most ${limit} characters.`,
     invalidCustomAccountUrl: "Invalid custom account URL format.",
-    customAccountUrlTooLong: (limit) => `Custom account URL must be at most ${limit} characters.`,
+    customAccountUrlTooLong: (limit) =>
+      `Custom account URL must be at most ${limit} characters.`,
     saveSettingsFailed: "Failed to save settings.",
     settingsUpdated: "Site settings updated.",
     invalidRequestBody: "Invalid request body.",
-    photoDescriptionTooLong: (limit) => `Photo note must be at most ${limit} characters.`,
+    photoDescriptionTooLong: (limit) =>
+      `Photo note must be at most ${limit} characters.`,
     tagTooLong: (limit) => `Each tag must be at most ${limit} characters.`,
     photoDescriptionOrTagTooLong: (descriptionLimit, tagLimit) =>
       `Photo note must be at most ${descriptionLimit} characters, and each tag must be at most ${tagLimit} characters.`,
     noImageFilesReceived: "No image files were received.",
-    batchUploadLimit: (limit) => `You can upload up to ${limit} photos per batch.`,
-    totalPhotoLimit: (limit) => `The gallery can contain up to ${limit} photos, and this upload would exceed that limit.`,
+    batchUploadLimit: (limit) =>
+      `You can upload up to ${limit} photos per batch.`,
+    totalPhotoLimit: (limit) =>
+      `The gallery can contain up to ${limit} photos, and this upload would exceed that limit.`,
     existingPhotosLoadFailed: "Failed to load existing photos.",
     missingPhotoId: "Missing photo ID.",
     photoNoteInvalid: "Invalid photo note format.",
@@ -307,7 +339,8 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     updatePhotoFailed: "Failed to update the photo.",
     chooseAvatarFirst: "Please choose an avatar image first.",
     avatarMustBeImage: "Avatar must be an image file.",
-    avatarUploadStorageMissing: "Avatar upload failed because object storage is not configured.",
+    avatarUploadStorageMissing:
+      "Avatar upload failed because object storage is not configured.",
     avatarSaveFailed: "Failed to save the avatar.",
     tagNameRequired: "Tag name is required.",
     tagNameTooLong: (limit) => `Tag name must be at most ${limit} characters.`,
@@ -316,9 +349,12 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     missingTagId: "Missing tag ID.",
     deleteTagFailed: "Failed to delete the tag.",
     duplicatePhotoSkipped: "Duplicate photo content was skipped.",
-    photoMissingOrDeleted: "The photo does not exist or has already been deleted.",
-    d1ConfigMissing: "D1 is not bound in the current environment, so settings cannot be saved.",
-    d1UpdateMissing: "D1 is not bound in the current environment, so updates cannot be applied.",
+    photoMissingOrDeleted:
+      "The photo does not exist or has already been deleted.",
+    d1ConfigMissing:
+      "D1 is not bound in the current environment, so settings cannot be saved.",
+    d1UpdateMissing:
+      "D1 is not bound in the current environment, so updates cannot be applied.",
     photoNotFound: "Photo not found.",
   },
 };

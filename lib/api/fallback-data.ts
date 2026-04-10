@@ -3,7 +3,8 @@ import type { SiteResponse } from "@/lib/api/types";
 export const fallbackSite: SiteResponse = {
   locale: "zh-CN",
   siteTitle: "Luminote",
-  siteDescription: "A lightweight home for photography that lets the work breathe.",
+  siteDescription:
+    "A lightweight home for photography that lets the work breathe.",
   homeLayout: "editorial",
   watermarkEnabledByDefault: true,
   watermarkText: "© Luminote",
