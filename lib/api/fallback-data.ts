@@ -4,7 +4,7 @@ export const fallbackSite: SiteResponse = {
   locale: "zh-CN",
   siteTitle: "Luminote",
   siteDescription:
-    "A lightweight home for photography that lets the work breathe.",
+    "为摄影作品留白，也为灵感片段留一盏灯。",
   homeLayout: "editorial",
   watermarkEnabledByDefault: true,
   watermarkText: "© Luminote",

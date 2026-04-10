@@ -153,6 +153,7 @@ export function AdminPhotosTab({
   return (
     <div className="space-y-8">
       <AdminUploadPanel
+        locale={locale}
         uploadQueue={uploadQueue}
         maxUploadFiles={maxUploadFiles}
         onSubmit={onUploadSubmit}

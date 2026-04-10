@@ -29,16 +29,25 @@ export function validatePendingTagName(params: {
   predefinedTags: TagPool[];
   pendingTags: TagPool[];
   maxTagPoolSize: number;
+  tagPoolLimitMessage: (limit: number) => string;
+  duplicateTagMessage: string;
 }) {
-  const { normalizedName, predefinedTags, pendingTags, maxTagPoolSize } = params;
+  const {
+    normalizedName,
+    predefinedTags,
+    pendingTags,
+    maxTagPoolSize,
+    tagPoolLimitMessage,
+    duplicateTagMessage,
+  } = params;
   const allTags = [...predefinedTags, ...pendingTags];
 
   if (allTags.length >= maxTagPoolSize) {
-    return `鏍囩鎬绘暟鏈€澶?${maxTagPoolSize} 涓€俙`;
+    return tagPoolLimitMessage(maxTagPoolSize);
   }
 
   if (allTags.some((tag) => tag.name === normalizedName)) {
-    return "鏍囩宸插瓨鍦ㄣ€?";
+    return duplicateTagMessage;
   }
 
   return "";

@@ -12,7 +12,7 @@ function SelectCaret({ open }: { open: boolean }) {
     <svg
       viewBox="0 0 20 20"
       aria-hidden="true"
-      className={`h-4 w-4 text-[#9c7655] transition duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+      className={`h-3.5 w-3.5 text-[#9c7655] transition duration-200 ${open ? "rotate-180" : "rotate-0"}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -72,17 +72,17 @@ export function SoftSelect<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className={`flex w-full items-center justify-between gap-3 rounded-[20px] border border-[rgba(92,68,48,0.14)] bg-[linear-gradient(180deg,rgba(247,241,232,0.98),rgba(242,234,222,0.96))] px-4 py-3 text-left text-sm text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_8px_24px_rgba(123,99,71,0.06)] outline-none transition duration-200 hover:border-[rgba(180,136,95,0.34)] focus-visible:border-[#c78f63] focus-visible:ring-2 focus-visible:ring-[#e8c8a8]/60 ${buttonClassName}`}
+        className={`group flex w-full items-center justify-between gap-2.5 rounded-[16px] border border-[rgba(186,152,120,0.18)] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,241,232,0.98))] px-3 py-2 text-left text-[13px] text-[#5b4634] shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_6px_16px_rgba(123,99,71,0.04)] outline-none transition duration-200 hover:border-[rgba(199,143,99,0.28)] hover:bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(250,244,236,0.98))] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_8px_16px_rgba(123,99,71,0.05)] focus-visible:border-[#d39a6d] focus-visible:ring-2 focus-visible:ring-[#f0dec9]/80 ${buttonClassName}`}
       >
-        <span className="truncate">{selected?.label}</span>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(214,185,152,0.18)]">
+        <span className="truncate font-medium text-[#5a4330]">{selected?.label}</span>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[rgba(199,143,99,0.12)] bg-[rgba(255,250,245,0.96)] shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition group-hover:border-[rgba(199,143,99,0.22)] group-hover:bg-[rgba(255,246,236,0.98)]">
           <SelectCaret open={open} />
         </span>
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-[24px] border border-[rgba(92,68,48,0.12)] bg-[rgba(249,244,236,0.98)] p-1.5 shadow-[0_22px_54px_rgba(91,70,45,0.16)] backdrop-blur-sm">
-          <div role="listbox" aria-activedescendant={`select-option-${String(selected?.value ?? "")}`} className="space-y-1">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 overflow-hidden rounded-[20px] border border-[rgba(186,152,120,0.14)] bg-[linear-gradient(180deg,rgba(255,253,249,0.99),rgba(247,240,231,0.98))] p-1.5 shadow-[0_16px_32px_rgba(91,70,45,0.1)] backdrop-blur-md">
+          <div role="listbox" aria-activedescendant={`select-option-${String(selected?.value ?? "")}`} className="max-h-56 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(215,170,127,0.95)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(215,170,127,0.95)] [&::-webkit-scrollbar-track]:bg-transparent">
             {options.map((option) => {
               const isSelected = option.value === value;
 
@@ -97,14 +97,14 @@ export function SoftSelect<T extends string>({
                     onChange(option.value);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between rounded-[18px] px-4 py-2.5 text-sm transition duration-150 ${
+                  className={`flex w-full items-center justify-between rounded-[14px] px-3 py-2 text-[13px] transition duration-150 ${
                     isSelected
-                      ? "bg-[linear-gradient(180deg,rgba(214,178,142,0.26),rgba(201,145,99,0.18))] text-[#5c4330]"
-                      : "text-ink/80 hover:bg-[rgba(214,178,142,0.16)] hover:text-ink"
+                      ? "border border-[rgba(199,143,99,0.16)] bg-[linear-gradient(180deg,rgba(251,238,221,0.72),rgba(245,227,201,0.52))] text-[#7a5a40] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                      : "border border-transparent bg-transparent text-[#6a5340] hover:border-[rgba(199,143,99,0.1)] hover:bg-[rgba(236,214,188,0.2)] hover:text-[#5a4330]"
                   }`}
                 >
-                  <span>{option.label}</span>
-                  <span className={`h-2.5 w-2.5 rounded-full transition ${isSelected ? "bg-[#c78f63]" : "bg-transparent"}`} />
+                  <span className="font-medium">{option.label}</span>
+                  <span className={`h-2 w-2 rounded-full transition ${isSelected ? "bg-[#d49a6d] shadow-[0_0_0_4px_rgba(212,154,109,0.12)]" : "bg-transparent"}`} />
                 </button>
               );
             })}

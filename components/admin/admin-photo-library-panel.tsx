@@ -172,7 +172,7 @@ export function AdminPhotoLibraryPanel({
       {!isLoadingPhotos && !photosError && photos.length > 0 && selectedPhotoIds.length > 0 ? (
         <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-black/6 bg-[rgba(245,240,228,0.22)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 text-sm text-ink/70">
-            <span>{selectedPhotoIds.length} selected</span>
+            <span>{copy.selectedSummary(selectedPhotoIds.length)}</span>
             <button
               type="button"
               onClick={onToggleSelectAllPhotos}
@@ -212,7 +212,7 @@ export function AdminPhotoLibraryPanel({
               {isBatchDeleting
                 ? copy.deletingButton
                 : isConfirmingBatchDelete
-                  ? `${copy.deleteSelectedButton} ${selectedPhotoIds.length}`
+                  ? copy.confirmDeleteSelected(selectedPhotoIds.length)
                   : copy.deleteSelectedButton}
             </button>
           </div>
@@ -220,9 +220,9 @@ export function AdminPhotoLibraryPanel({
       ) : null}
 
       {isLoadingPhotos ? (
-        <p className="mt-4 text-sm text-ink/70">Loading photos...</p>
+        <p className="mt-4 text-sm text-ink/70">{copy.loadingPhotos}</p>
       ) : photosError ? null : photos.length === 0 ? (
-        <p className="mt-4 text-sm text-ink/70">No photos yet. Upload something first.</p>
+        <p className="mt-4 text-sm text-ink/70">{copy.noPhotosYet}</p>
       ) : (
         <div className="mt-4 space-y-2">
           {photos.map((photo) => {
@@ -254,7 +254,7 @@ export function AdminPhotoLibraryPanel({
                       onChange={() => onTogglePhotoSelection(photo.id)}
                       disabled={isBusy}
                       className="peer sr-only"
-                      aria-label={`Select ${photo.description || photo.id}`}
+                      aria-label={copy.selectPhoto(photo.description || copy.previewPhotoFallback(photo.id))}
                     />
                     <span
                       aria-hidden="true"
@@ -267,11 +267,11 @@ export function AdminPhotoLibraryPanel({
                     onClick={() =>
                       onPreview({
                         src: photo.watermarkedDisplayUrl || photo.displayUrl || photo.thumbUrl,
-                        name: photo.description || `Photo ${photo.id.replace("photo_", "")}`,
+                        name: photo.description || copy.previewPhotoFallback(photo.id),
                       })
                     }
                     className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-black/10 transition hover:opacity-90"
-                    aria-label={`Preview ${photo.description || photo.id}`}
+                    aria-label={copy.previewPhoto(photo.description || copy.previewPhotoFallback(photo.id))}
                   >
                     <img
                       src={photo.thumbUrl}
@@ -284,11 +284,11 @@ export function AdminPhotoLibraryPanel({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-medium text-ink">
-                          {photo.description || `Photo ${photo.id.replace("photo_", "")}`}
+                          {photo.description || copy.previewPhotoFallback(photo.id)}
                         </p>
                         {photo.isHidden ? (
                           <span className="shrink-0 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-2 py-0.5 text-[11px] text-ink/60">
-                            Hidden
+                            {copy.hiddenStatus}
                           </span>
                         ) : null}
                       </div>
@@ -325,7 +325,7 @@ export function AdminPhotoLibraryPanel({
                         disabled={isBusy}
                         className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist"
                       >
-                        {isUpdating ? copy.savingButton : isEditing ? copy.doneButton : "Tags"}
+                        {isUpdating ? copy.savingButton : isEditing ? copy.doneButton : copy.tagsLabel}
                       </button>
                       <button
                         type="button"
@@ -354,7 +354,7 @@ export function AdminPhotoLibraryPanel({
                             onClick={() => onTogglePhotoDraftTag(photo, tag)}
                             disabled={isUpdating}
                             className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
-                            title="This tag is no longer in the pool. Click to remove it from the photo."
+                            title={copy.legacyTagHint}
                           >
                             {tag} ×
                           </button>
@@ -398,7 +398,7 @@ export function AdminPhotoLibraryPanel({
               disabled={isLoadingPhotos || photosPage <= 1}
               className="justify-self-start rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Previous
+              {copy.previousPage}
             </button>
             <p className="text-center text-sm font-medium tabular-nums text-ink/65">
               {photosPage}/{photosPageCount}
@@ -409,7 +409,7 @@ export function AdminPhotoLibraryPanel({
               disabled={isLoadingPhotos || !photosHasMore}
               className="justify-self-end rounded-full border border-black/10 bg-white/60 px-5 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Next
+              {copy.nextPage}
             </button>
           </div>
         </div>

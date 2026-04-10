@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { loginAdmin, getAdminSession } from "@/lib/api/admin-client";
+import { getAdminMessages } from "@/lib/admin-i18n";
 import { TEXT_LIMITS } from "@/lib/text-limits";
 
 export function AdminLoginShell() {
+  const copy = getAdminMessages("zh-CN");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -72,7 +74,7 @@ export function AdminLoginShell() {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f0e4] px-6">
         <SummerShadowBackground />
-        <p className="relative z-10 text-sm text-[#3a312a]/70">检查登录状态中...</p>
+        <p className="relative z-10 text-sm text-[#3a312a]/70">{copy.checkingSession}</p>
       </main>
     );
   }
@@ -85,26 +87,26 @@ export function AdminLoginShell() {
         <div className="w-full max-w-[430px] rounded-[30px] border border-[rgba(255,255,255,0.5)] bg-[rgba(245,240,228,0.38)] px-7 py-8 shadow-[0_18px_48px_rgba(96,82,58,0.08)] sm:px-8">
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-2">
-              <label className="block text-xs font-medium uppercase tracking-[0.28em] text-[#312a25]/62">账号</label>
+              <label className="block text-xs font-medium uppercase tracking-[0.28em] text-[#312a25]/62">{copy.username}</label>
               <input
                 type="text"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 maxLength={TEXT_LIMITS.adminUsername}
                 className="w-full rounded-full border border-[rgba(255,255,255,0.52)] bg-[rgba(255,255,255,0.26)] px-5 py-3.5 text-sm text-[#2a231c] outline-none transition placeholder:text-[#5a4e42]/50 focus:border-[rgba(255,255,255,0.82)] focus:bg-[rgba(255,255,255,0.34)]"
-                placeholder="输入管理员账号"
+                placeholder={copy.usernamePlaceholder}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-medium uppercase tracking-[0.28em] text-[#312a25]/62">密码</label>
+              <label className="block text-xs font-medium uppercase tracking-[0.28em] text-[#312a25]/62">{copy.password}</label>
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 maxLength={TEXT_LIMITS.password}
                 className="w-full rounded-full border border-[rgba(255,255,255,0.52)] bg-[rgba(255,255,255,0.26)] px-5 py-3.5 text-sm text-[#2a231c] outline-none transition placeholder:text-[#5a4e42]/50 focus:border-[rgba(255,255,255,0.82)] focus:bg-[rgba(255,255,255,0.34)]"
-                placeholder="输入管理员密码"
+                placeholder={copy.passwordPlaceholder}
               />
             </div>
 
@@ -113,7 +115,7 @@ export function AdminLoginShell() {
               disabled={isLoggingIn}
               className="w-full rounded-full border border-[rgba(255,255,255,0.34)] bg-[rgba(68,60,50,0.54)] px-6 py-3.5 text-sm uppercase tracking-[0.24em] text-[#faf6ef] transition hover:bg-[rgba(52,45,38,0.64)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoggingIn ? "登录中" : "登录"}
+              {isLoggingIn ? copy.loggingIn : copy.login}
             </button>
 
             {loginError ? <p className="text-center text-sm text-[#6f140f]">{loginError}</p> : null}

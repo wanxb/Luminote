@@ -190,20 +190,30 @@ export function LightboxShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(24,19,16,0.86)] backdrop-blur-2xl"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(10,10,10,0.92)] backdrop-blur-[24px]"
       role="dialog"
       aria-modal="true"
       aria-label={copy.lightboxAria}
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#261d18] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
+        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <section className={`relative min-h-0 overflow-hidden bg-[#211915] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`} onDoubleClick={onToggleImmersive}>
+        <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`} onDoubleClick={onToggleImmersive}>
           <div className="absolute inset-0">
-            <Image src={photo.displayUrl} alt="" fill aria-hidden="true" className="scale-125 object-cover blur-[72px] saturate-[0.92] brightness-[0.42] opacity-[0.22]" sizes="100vw" priority />
+            <Image
+              src={photo.displayUrl}
+              alt=""
+              fill
+              aria-hidden="true"
+              className="scale-[1.28] object-cover blur-[120px] saturate-[0.8] brightness-[0.2] opacity-[0.44]"
+              sizes="100vw"
+              priority
+            />
           </div>
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,10,0.48)_0%,rgba(8,8,8,0.68)_50%,rgba(6,6,6,0.82)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0%,rgba(12,12,12,0.12)_28%,rgba(5,5,5,0.72)_100%)]" />
 
           {hasMultiple ? (
             <>
@@ -229,7 +239,7 @@ export function LightboxShell({
         </section>
 
         {!isImmersive ? (
-          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-4 backdrop-blur-2xl sm:p-5 lg:col-start-2 lg:row-span-2">
+          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(21,21,21,0.88)_0%,rgba(14,14,14,0.92)_56%,rgba(9,9,9,0.96)_100%)] p-4 backdrop-blur-[28px] sm:p-5 lg:col-start-2 lg:row-span-2">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
             </div>
@@ -265,7 +275,7 @@ export function LightboxShell({
         ) : null}
 
         {hasMultiple ? (
-          <div className={`hidden justify-center bg-[linear-gradient(180deg,rgba(42,34,29,0.82)_0%,rgba(29,24,21,0.88)_100%)] backdrop-blur-2xl lg:flex ${isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"}`}>
+          <div className={`hidden justify-center bg-[linear-gradient(180deg,rgba(18,18,18,0.84)_0%,rgba(10,10,10,0.9)_100%)] backdrop-blur-[24px] lg:flex ${isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"}`}>
             <div className="flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-x-auto overflow-y-hidden px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {photos.map((item, index) => {
                 const isActive = index === activeIndex;

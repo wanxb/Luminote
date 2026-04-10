@@ -6,10 +6,10 @@ export const metadata: Metadata = {
     default: "Luminote",
     template: "%s | Luminote"
   },
-  description: "Independent photography portfolio and visual journal.",
+  description: "摄影作品与视觉手记的轻盈归档。",
   openGraph: {
     title: "Luminote",
-    description: "Independent photography portfolio and visual journal.",
+    description: "摄影作品与视觉手记的轻盈归档。",
     type: "website"
   }
 };

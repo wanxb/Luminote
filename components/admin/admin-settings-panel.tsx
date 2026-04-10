@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEventHandler, FormEventHandler, RefObject } from "react";
+import type { ChangeEventHandler, FormEventHandler, ReactNode, RefObject } from "react";
 import {
   NumberStepperField,
   SoftSelect,
@@ -105,35 +105,146 @@ type AdminSettingsPanelProps = {
   isSavingConfig: boolean;
 };
 
-function ToggleCard({
+function BlockTitle({ title }: { title: string }) {
+  return (
+    <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7b6754]">
+      {title}
+    </h3>
+  );
+}
+
+function ToggleRow({
   title,
-  description,
   checked,
   onChange,
   disabled = false,
 }: {
-  title: string;
-  description: string;
+  title: ReactNode;
   checked: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-2xl border border-black/6 bg-white px-4 py-4 text-sm text-ink">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        disabled={disabled}
-        className="mt-1 h-4 w-4 rounded border-black/15 text-ink focus:ring-ember disabled:cursor-not-allowed"
-      />
-      <span>
-        <span className="block font-medium">{title}</span>
-        <span className="mt-1 block text-xs leading-5 text-ink/55">
-          {description}
+    <label className="flex items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
+      <span className={`text-[13px] ${disabled ? "text-ink/35" : "text-ink/80"}`}>
+        {title}
+      </span>
+      <span className="relative shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          disabled={disabled}
+          className="peer sr-only"
+        />
+        <span
+          className={`block h-4.5 w-8 rounded-full transition ${
+            checked ? "bg-[#d7aa7f]" : "bg-[rgba(152,120,90,0.18)]"
+          } ${disabled ? "opacity-50" : ""}`}
+        >
+          <span
+            className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${
+              checked ? "left-4" : "left-0.5"
+            }`}
+          />
         </span>
       </span>
     </label>
+  );
+}
+
+function InfoHint({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex items-center">
+      <span className="flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(152,120,90,0.24)] bg-[rgba(255,250,245,0.98)] text-[10px] font-semibold text-[#9c7655]">
+        ?
+      </span>
+      <span className="pointer-events-none absolute left-1/2 top-[calc(100%+0.4rem)] z-30 hidden w-44 -translate-x-1/2 rounded-[10px] border border-[rgba(186,152,120,0.18)] bg-[rgba(255,252,247,0.98)] px-2.5 py-2 text-[11px] leading-4 text-[#6a5340] shadow-[0_12px_24px_rgba(91,70,45,0.12)] group-hover:block">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function LimitRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2 py-1">
+      <span className="text-xs text-ink/80">{label}</span>
+      <NumberStepperField
+        value={value}
+        onChange={onChange}
+        className="scale-[0.74] origin-right"
+      />
+    </label>
+  );
+}
+
+function CompactField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid gap-1 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
+      <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#8e7762]">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function SocialRow({
+  title,
+  accountValue,
+  onAccountChange,
+  accountPlaceholder,
+  urlValue,
+  onUrlChange,
+  urlPlaceholder,
+}: {
+  title: string;
+  accountValue: string;
+  onAccountChange: (value: string) => void;
+  accountPlaceholder: string;
+  urlValue: string;
+  onUrlChange: (value: string) => void;
+  urlPlaceholder: string;
+}) {
+  return (
+    <div className="grid gap-1 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
+      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink/45">
+        {title}
+      </span>
+      <div className="grid gap-1">
+        <input
+          type="text"
+          value={accountValue}
+          onChange={(event) => onAccountChange(event.target.value)}
+          maxLength={TEXT_LIMITS.accountName}
+          className="w-full rounded-[10px] border border-black/10 bg-mist px-2.5 py-1.5 text-sm outline-none transition focus:border-ember"
+          placeholder={accountPlaceholder}
+        />
+        <input
+          type="text"
+          value={urlValue}
+          onChange={(event) => onUrlChange(event.target.value)}
+          maxLength={TEXT_LIMITS.url}
+          className="w-full rounded-[10px] border border-black/10 bg-mist px-2.5 py-1.5 text-sm outline-none transition focus:border-ember"
+          placeholder={urlPlaceholder}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -212,442 +323,290 @@ export function AdminSettingsPanel({
   isSavingConfig,
 }: AdminSettingsPanelProps) {
   const copy = getAdminMessages(locale);
+  const cardClass =
+    "rounded-[16px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2.5";
+  const fieldClass =
+    "w-full rounded-[10px] border border-[rgba(152,120,90,0.18)] bg-[linear-gradient(180deg,rgba(245,240,232,0.85),rgba(239,232,221,0.92))] px-2.5 py-1.5 text-[13px] text-ink outline-none transition placeholder:text-ink/35 focus:border-[#c78f63] focus:bg-[rgba(255,250,244,0.96)] focus:ring-2 focus:ring-[#ecd5bb]/60";
+
   return (
-    <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
-      <h2 className="font-display text-2xl text-ink">{copy.siteSettings}</h2>
-
+    <section className="flex h-full min-h-0 flex-col rounded-[22px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-3 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
       {isLoadingConfig ? (
-        <p className="mt-4 text-sm text-ink/70">{copy.loadingSettings}</p>
+        <p className="text-sm text-ink/70">{copy.loadingSettings}</p>
       ) : (
-        <form className="mt-6 space-y-6" onSubmit={onSubmit}>
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-            <section className="rounded-[24px] border border-black/5 bg-[rgba(245,240,228,0.22)] p-4 md:p-5">
-              <div className="grid gap-3 lg:grid-cols-2">
-                <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.language}
-                  </span>
-                  <SoftSelect
-                    value={locale}
-                    onChange={onLocaleChange}
-                    options={localeOptions as Array<SelectOption<SiteLocale>>}
-                  />
-                </label>
-
-                <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.homeLayout}
-                  </span>
-                  <SoftSelect
-                    value={homeLayout}
-                    onChange={onHomeLayoutChange}
-                    options={
-                      homeLayoutOptions.map((option) => ({
-                        value: option.value,
-                        label: option.label,
-                      })) as Array<SelectOption<HomeLayout>>
-                    }
-                  />
-                  <p className="text-xs leading-5 text-ink/55">
-                    {homeLayoutOptions.find((option) => option.value === homeLayout)?.description}
-                  </p>
-                </label>
-
-                <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.siteTitle}
-                  </span>
-                  <input
-                    type="text"
-                    value={siteTitle}
-                    onChange={(event) => onSiteTitleChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.siteTitle}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder="Luminote"
-                  />
-                </label>
-
-                <label className="block space-y-2 rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.siteDescription}
-                  </span>
-                  <textarea
-                    value={siteDescription}
-                    onChange={(event) => onSiteDescriptionChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.siteDescription}
-                    className="min-h-[132px] w-full resize-none rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm leading-6 outline-none transition focus:border-ember"
-                    placeholder={copy.siteDescriptionPlaceholder}
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <ToggleCard
-                  title={copy.watermarkEnabled}
-                  description={copy.watermarkEnabledDescription}
-                  checked={watermarkEnabledByDefault}
-                  onChange={onWatermarkEnabledByDefaultChange}
-                />
-                <ToggleCard
-                  title={copy.storeOriginalFiles}
-                  description={copy.storeOriginalFilesDescription}
-                  checked={uploadOriginalEnabled}
-                  onChange={onUploadOriginalEnabledChange}
-                />
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.watermarkText}
-                  </span>
-                  <input
-                    type="text"
-                    value={watermarkText}
-                    onChange={(event) => onWatermarkTextChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.watermarkText}
-                    className="mt-2 w-full rounded-xl border border-black/10 bg-mist px-3 py-2.5 text-sm outline-none transition focus:border-ember"
-                    placeholder="© Luminote"
-                  />
-                </label>
-
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-4">
-                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                    {copy.watermarkPosition}
-                  </span>
-                  <SoftSelect
-                    value={watermarkPosition}
-                    onChange={onWatermarkPositionChange}
-                    options={
-                      watermarkPositionOptions as Array<SelectOption<WatermarkPosition>>
-                    }
-                    className="mt-2"
-                    buttonClassName="rounded-[16px] px-3 py-2.5"
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="rounded-[24px] border border-black/5 bg-[#f7f1e8] p-4 md:p-5">
-              <div>
-                <h3 className="text-sm font-semibold text-ink">{copy.limits}</h3>
-                <p className="mt-1 text-xs text-ink/55">
-                  {copy.limitsDescription}
-                </p>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-3">
-                  <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">
-                    {copy.totalPhotos}
-                  </span>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-sm text-ink/70">{copy.totalPhotosDescription}</span>
-                    <NumberStepperField value={maxTotalPhotos} onChange={onMaxTotalPhotosChange} />
+        <form className="flex h-full min-h-0 flex-col gap-2" onSubmit={onSubmit}>
+          <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="grid min-h-0 gap-2" style={{ gridTemplateRows: "auto auto minmax(0,1fr)" }}>
+              <div className="grid gap-2 lg:grid-cols-2">
+                <section className="h-full rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2">
+                  <BlockTitle title={copy.siteSettings} />
+                  <div className="mt-1 grid gap-1">
+                    <CompactField label={copy.language}>
+                      <SoftSelect
+                        value={locale}
+                        onChange={onLocaleChange}
+                        options={localeOptions as Array<SelectOption<SiteLocale>>}
+                        buttonClassName="rounded-[10px] py-0.5"
+                      />
+                    </CompactField>
+                    <CompactField label={copy.siteTitle}>
+                      <input
+                        type="text"
+                        value={siteTitle}
+                        onChange={(event) => onSiteTitleChange(event.target.value)}
+                        maxLength={TEXT_LIMITS.siteTitle}
+                        className={fieldClass}
+                        placeholder={copy.siteTitlePlaceholder}
+                      />
+                    </CompactField>
+                    <CompactField label={copy.siteDescription}>
+                      <textarea
+                        value={siteDescription}
+                        onChange={(event) => onSiteDescriptionChange(event.target.value)}
+                        maxLength={TEXT_LIMITS.siteDescription}
+                        className={`h-[4.4rem] resize-none leading-5 ${fieldClass}`}
+                        placeholder={copy.siteDescriptionPlaceholder}
+                      />
+                    </CompactField>
                   </div>
-                </label>
+                </section>
 
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-3">
-                  <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">
-                    {copy.uploadBatch}
-                  </span>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-sm text-ink/70">{copy.uploadBatchDescription}</span>
-                    <NumberStepperField value={maxUploadFiles} onChange={onMaxUploadFilesChange} />
+                <section className="h-full rounded-[12px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-1.5">
+                  <BlockTitle title={copy.limits} />
+                  <div className="mt-1 grid gap-0.5">
+                    <LimitRow label={copy.totalPhotos} value={maxTotalPhotos} onChange={onMaxTotalPhotosChange} />
+                    <LimitRow label={copy.uploadBatch} value={maxUploadFiles} onChange={onMaxUploadFilesChange} />
+                    <LimitRow label={copy.tagPool} value={maxTagPoolSize} onChange={onMaxTagPoolSizeChange} />
+                    <LimitRow label={copy.tagsPerPhoto} value={maxTagsPerPhoto} onChange={onMaxTagsPerPhotoChange} />
                   </div>
-                </label>
-
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-3">
-                  <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">
-                    {copy.tagPool}
-                  </span>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-sm text-ink/70">{copy.tagPoolDescription}</span>
-                    <NumberStepperField value={maxTagPoolSize} onChange={onMaxTagPoolSizeChange} />
-                  </div>
-                </label>
-
-                <label className="rounded-2xl border border-black/6 bg-white px-4 py-3">
-                  <span className="block text-xs font-medium uppercase tracking-[0.14em] text-ink/45">
-                    {copy.tagsPerPhoto}
-                  </span>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-sm text-ink/70">{copy.tagsPerPhotoDescription}</span>
-                    <NumberStepperField value={maxTagsPerPhoto} onChange={onMaxTagsPerPhotoChange} />
-                  </div>
-                </label>
+                </section>
               </div>
-            </section>
-          </div>
 
-          <section className="rounded-[24px] border border-black/5 bg-mist/35 p-4 md:p-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-ink">{copy.photoMetadata}</h3>
-              <p className="mt-1 text-xs text-ink/55">
-                {copy.photoMetadataDescription}
-              </p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <ToggleCard
-                title={copy.enableMetadata}
-                description={copy.enableMetadataDescription}
-                checked={photoMetadataEnabled}
-                onChange={onPhotoMetadataEnabledChange}
-              />
-              <ToggleCard
-                title={copy.dateInfo}
-                description={copy.dateInfoDescription}
-                checked={showDateInfo}
-                onChange={onShowDateInfoChange}
-                disabled={!photoMetadataEnabled}
-              />
-              <ToggleCard
-                title={copy.cameraInfo}
-                description={copy.cameraInfoDescription}
-                checked={showCameraInfo}
-                onChange={onShowCameraInfoChange}
-                disabled={!photoMetadataEnabled}
-              />
-              <ToggleCard
-                title={copy.locationInfo}
-                description={copy.locationInfoDescription}
-                checked={showLocationInfo}
-                onChange={onShowLocationInfoChange}
-                disabled={!photoMetadataEnabled}
-              />
-              <ToggleCard
-                title={copy.detailedExif}
-                description={copy.detailedExifDescription}
-                checked={showDetailedExifInfo}
-                onChange={onShowDetailedExifInfoChange}
-                disabled={!photoMetadataEnabled}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[24px] border border-black/5 bg-mist/35 p-4 md:p-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-ink">{copy.photographerProfile}</h3>
-              <p className="mt-1 text-xs text-ink/55">
-                {copy.photographerProfileDescription}
-              </p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[132px_minmax(0,1fr)] md:items-stretch">
-              <div className="rounded-[28px] border border-black/6 bg-white p-3">
-                <input
-                  ref={avatarInputRef as RefObject<HTMLInputElement>}
-                  type="file"
-                  accept="image/*"
-                  onChange={onAvatarFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  className="group block w-full text-left"
-                >
-                  <div className="overflow-hidden rounded-[22px] border border-black/10 bg-mist">
-                    <div className="relative aspect-square w-full">
-                      {avatarPreviewUrl || photographerAvatarUrl ? (
-                        <img
-                          src={avatarPreviewUrl || photographerAvatarUrl}
-                          alt={photographerName || siteTitle || copy.photographerAvatar}
-                          className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-4xl font-light text-ink/35">
-                          +
-                        </div>
-                      )}
+              <section className="rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2">
+                <BlockTitle title="Watermark" />
+                <div className="mt-1 grid gap-1 lg:grid-cols-[170px_minmax(0,1fr)_180px] lg:items-end">
+                    <div className="rounded-[10px] border border-black/6 bg-white/88 px-2 py-1">
+                      <ToggleRow
+                        title={copy.watermarkEnabled.replace("默认", "").replace("榛樿", "")}
+                        checked={watermarkEnabledByDefault}
+                        onChange={onWatermarkEnabledByDefaultChange}
+                      />
                     </div>
+                  <CompactField label={copy.watermarkText}>
+                    <input
+                      type="text"
+                      value={watermarkText}
+                      onChange={(event) => onWatermarkTextChange(event.target.value)}
+                      maxLength={TEXT_LIMITS.watermarkText}
+                      className={fieldClass}
+                      placeholder={copy.watermarkTextPlaceholder}
+                    />
+                  </CompactField>
+                  <CompactField label={copy.watermarkPosition}>
+                    <SoftSelect
+                      value={watermarkPosition}
+                      onChange={onWatermarkPositionChange}
+                      options={watermarkPositionOptions as Array<SelectOption<WatermarkPosition>>}
+                      buttonClassName="rounded-[10px] py-1"
+                    />
+                  </CompactField>
+                </div>
+              </section>
+
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-1.5">
+                <BlockTitle title={copy.photographerProfile} />
+                <div className="mt-1 grid gap-1 xl:grid-cols-[60px_136px_160px_minmax(0,1fr)]">
+                  <div className="rounded-[10px] border border-black/6 bg-white/88 p-1">
+                    <input
+                      ref={avatarInputRef as RefObject<HTMLInputElement>}
+                      type="file"
+                      accept="image/*"
+                      onChange={onAvatarFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="block w-full"
+                    >
+                      <div className="overflow-hidden rounded-[10px] border border-black/10 bg-mist">
+                        <div className="relative aspect-square w-full">
+                          {avatarPreviewUrl || photographerAvatarUrl ? (
+                            <img
+                              src={avatarPreviewUrl || photographerAvatarUrl}
+                              alt={photographerName || siteTitle || copy.photographerAvatar}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-3xl font-light text-ink/35">
+                              +
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   </div>
-                </button>
-              </div>
 
-              <label className="flex flex-col justify-between rounded-[28px] border border-black/6 bg-white px-5 py-4">
-                <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.photographerName}
-                </span>
-                <input
-                  type="text"
-                  value={photographerName}
-                  onChange={(event) => onPhotographerNameChange(event.target.value)}
-                  maxLength={TEXT_LIMITS.photographerName}
-                  className="mt-3 w-full border-0 bg-transparent px-0 py-0 font-display text-2xl text-ink outline-none placeholder:text-base placeholder:text-ink/28"
-                  placeholder={copy.photographerNamePlaceholder}
-                />
-              </label>
+                  <div className="xl:col-span-3 grid gap-1 xl:grid-cols-[136px_160px_minmax(0,1fr)] xl:items-start">
+                    <CompactField label={copy.photographerName}>
+                      <input
+                        type="text"
+                        value={photographerName}
+                        onChange={(event) => onPhotographerNameChange(event.target.value)}
+                        maxLength={TEXT_LIMITS.photographerName}
+                        className={`${fieldClass} py-0.5`}
+                        placeholder={copy.photographerNamePlaceholder}
+                      />
+                    </CompactField>
 
-              <label className="md:col-span-2 block space-y-2 rounded-[28px] border border-black/6 bg-white px-5 py-4">
-                <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.photographerBio}
-                </span>
-                <textarea
-                  value={photographerBio}
-                  onChange={(event) => onPhotographerBioChange(event.target.value)}
-                  maxLength={TEXT_LIMITS.photographerBio}
-                  className="min-h-[128px] w-full resize-none border-0 bg-transparent px-0 py-0 text-sm leading-7 text-ink outline-none placeholder:text-ink/28"
-                  placeholder={copy.photographerBioPlaceholder}
-                />
-              </label>
-            </div>
+                    <CompactField label={copy.email}>
+                      <input
+                        type="email"
+                        value={photographerEmail}
+                        onChange={(event) => onPhotographerEmailChange(event.target.value)}
+                        maxLength={TEXT_LIMITS.email}
+                        className={`${fieldClass} py-0.5`}
+                        placeholder={copy.emailPlaceholder}
+                      />
+                    </CompactField>
 
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              <label className="rounded-2xl border border-black/6 bg-white p-4">
-                <span className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.email}
-                </span>
-                <input
-                  type="email"
-                  value={photographerEmail}
-                  onChange={(event) => onPhotographerEmailChange(event.target.value)}
-                  maxLength={TEXT_LIMITS.email}
-                  className="mt-3 w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                  placeholder="name@example.com"
-                />
-              </label>
+                    <CompactField label={copy.photographerBio}>
+                      <textarea
+                        value={photographerBio}
+                        onChange={(event) => onPhotographerBioChange(event.target.value)}
+                        maxLength={TEXT_LIMITS.photographerBio}
+                        className={`h-[4rem] resize-none leading-5 ${fieldClass}`}
+                        placeholder={copy.photographerBioPlaceholder}
+                      />
+                    </CompactField>
+                  </div>
+                </div>
 
-              <div className="rounded-2xl border border-black/6 bg-white p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.customAccount}
-                </p>
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    value={photographerCustomAccount}
-                    onChange={(event) => onPhotographerCustomAccountChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.accountName}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.accountNamePlaceholder}
+                <div className="mt-1 grid gap-1 xl:grid-cols-2">
+                  <SocialRow
+                    title={copy.xiaohongshu}
+                    accountValue={photographerXiaohongshu}
+                    onAccountChange={onPhotographerXiaohongshuChange}
+                    accountPlaceholder={copy.accountNamePlaceholder}
+                    urlValue={photographerXiaohongshuUrl}
+                    onUrlChange={onPhotographerXiaohongshuUrlChange}
+                    urlPlaceholder={copy.profileUrlPlaceholder}
                   />
-                  <input
-                    type="text"
-                    value={photographerCustomAccountUrl}
-                    onChange={(event) => onPhotographerCustomAccountUrlChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.url}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder="https://example.com"
+                  <SocialRow
+                    title={copy.douyin}
+                    accountValue={photographerDouyin}
+                    onAccountChange={onPhotographerDouyinChange}
+                    accountPlaceholder={copy.accountNamePlaceholder}
+                    urlValue={photographerDouyinUrl}
+                    onUrlChange={onPhotographerDouyinUrlChange}
+                    urlPlaceholder={copy.profileUrlPlaceholder}
+                  />
+                  <SocialRow
+                    title={copy.instagram}
+                    accountValue={photographerInstagram}
+                    onAccountChange={onPhotographerInstagramChange}
+                    accountPlaceholder={copy.instagramPlaceholder}
+                    urlValue={photographerInstagramUrl}
+                    onUrlChange={onPhotographerInstagramUrlChange}
+                    urlPlaceholder={copy.profileUrlPlaceholder}
+                  />
+                  <SocialRow
+                    title={copy.customAccount}
+                    accountValue={photographerCustomAccount}
+                    onAccountChange={onPhotographerCustomAccountChange}
+                    accountPlaceholder={copy.accountNamePlaceholder}
+                    urlValue={photographerCustomAccountUrl}
+                    onUrlChange={onPhotographerCustomAccountUrlChange}
+                    urlPlaceholder={copy.profileUrlPlaceholder}
                   />
                 </div>
-              </div>
+              </section>
+            </div>
 
-              <div className="rounded-2xl border border-black/6 bg-white p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.xiaohongshu}
-                </p>
-                <div className="mt-3 space-y-3">
+            <div className="grid gap-2" style={{ gridTemplateRows: "auto auto minmax(0,1fr)" }}>
+              <section className={cardClass}>
+                <BlockTitle title="Parameters" />
+                <div className="mt-1 grid gap-1">
+                  <ToggleRow
+                    title={
+                      <span className="inline-flex items-center gap-2">
+                        <span>{copy.storeOriginalFiles}</span>
+                        <InfoHint text={copy.storeOriginalFilesDescription} />
+                      </span>
+                    }
+                    checked={uploadOriginalEnabled}
+                    onChange={onUploadOriginalEnabledChange}
+                  />
+                  <div className="mx-1 h-px bg-[rgba(152,120,90,0.12)]" />
+                  <ToggleRow
+                    title={copy.enableMetadata}
+                    checked={photoMetadataEnabled}
+                    onChange={onPhotoMetadataEnabledChange}
+                  />
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    <ToggleRow
+                      title={copy.dateInfo}
+                      checked={showDateInfo}
+                      onChange={onShowDateInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={copy.cameraInfo}
+                      checked={showCameraInfo}
+                      onChange={onShowCameraInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={copy.locationInfo}
+                      checked={showLocationInfo}
+                      onChange={onShowLocationInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={copy.detailedExif}
+                      checked={showDetailedExifInfo}
+                      onChange={onShowDetailedExifInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className={cardClass}>
+                <BlockTitle title={copy.adminPassword} />
+                <div className="mt-1.5 grid gap-1.5">
                   <input
-                    type="text"
-                    value={photographerXiaohongshu}
-                    onChange={(event) => onPhotographerXiaohongshuChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.accountName}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.accountNamePlaceholder}
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) => onNewPasswordChange(event.target.value)}
+                    maxLength={TEXT_LIMITS.password}
+                    className={fieldClass}
+                    placeholder={copy.newPasswordPlaceholder}
                   />
                   <input
-                    type="text"
-                    value={photographerXiaohongshuUrl}
-                    onChange={(event) => onPhotographerXiaohongshuUrlChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.url}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.profileUrlPlaceholder}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => onConfirmPasswordChange(event.target.value)}
+                    maxLength={TEXT_LIMITS.password}
+                    className={fieldClass}
+                    placeholder={copy.confirmPasswordPlaceholder}
                   />
                 </div>
-              </div>
+              </section>
 
-              <div className="rounded-2xl border border-black/6 bg-white p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.douyin}
-                </p>
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    value={photographerDouyin}
-                    onChange={(event) => onPhotographerDouyinChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.accountName}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.accountNamePlaceholder}
-                  />
-                  <input
-                    type="text"
-                    value={photographerDouyinUrl}
-                    onChange={(event) => onPhotographerDouyinUrlChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.url}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.profileUrlPlaceholder}
-                  />
+              <section className={`${cardClass} self-end`}>
+                <div className="space-y-2">
+                  {configSuccess ? <p className="text-sm text-emerald-700">{configSuccess}</p> : null}
+                  {configError ? <p className="text-sm text-red-700">{configError}</p> : null}
+                  <button
+                    type="submit"
+                    disabled={isSavingConfig}
+                    className="w-full rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSavingConfig ? copy.saving : copy.saveSettings}
+                  </button>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-black/6 bg-white p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink/45">
-                  {copy.instagram}
-                </p>
-                <div className="mt-3 space-y-3">
-                  <input
-                    type="text"
-                    value={photographerInstagram}
-                    onChange={(event) => onPhotographerInstagramChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.accountName}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder="@luminote.photo"
-                  />
-                  <input
-                    type="text"
-                    value={photographerInstagramUrl}
-                    onChange={(event) => onPhotographerInstagramUrlChange(event.target.value)}
-                    maxLength={TEXT_LIMITS.url}
-                    className="w-full rounded-2xl border border-black/10 bg-mist px-4 py-3 text-sm outline-none transition focus:border-ember"
-                    placeholder={copy.profileUrlPlaceholder}
-                  />
-                </div>
-              </div>
+              </section>
             </div>
-          </section>
-
-          <section className="rounded-[24px] border border-black/5 bg-mist/35 p-4 md:p-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-ink">{copy.adminPassword}</h3>
-              <p className="mt-1 text-xs text-ink/55">
-                {copy.adminPasswordDescription}
-              </p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(event) => onNewPasswordChange(event.target.value)}
-                maxLength={TEXT_LIMITS.password}
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-ember"
-                placeholder={copy.newPasswordPlaceholder}
-              />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => onConfirmPasswordChange(event.target.value)}
-                maxLength={TEXT_LIMITS.password}
-                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-ember"
-                placeholder={copy.confirmPasswordPlaceholder}
-              />
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-h-6">
-              {configSuccess ? <p className="text-sm text-emerald-700">{configSuccess}</p> : null}
-              {configError ? <p className="text-sm text-red-700">{configError}</p> : null}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSavingConfig}
-              className="rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSavingConfig ? copy.saving : copy.saveSettings}
-            </button>
           </div>
         </form>
       )}

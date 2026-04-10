@@ -6,7 +6,6 @@ import {
   buildDisplayTags,
   countPhotoTags,
   getInitials,
-  usePrefersReducedMotion,
 } from "@/components/site/site-shared";
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotoDetail, getPhotos } from "@/lib/api/client";
@@ -114,7 +113,6 @@ export function SpotlightHome({
     site.photographerBio ||
     site.siteDescription ||
     copy.profileFallbackBio;
-  const prefersReducedMotion = usePrefersReducedMotion();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [allTagCounts, setAllTagCounts] = useState<Map<string, number>>(() => countPhotoTags(initialPhotos));
   const [collection, setCollection] = useState<PhotoSummary[]>(initialPhotos);
@@ -126,13 +124,14 @@ export function SpotlightHome({
   const [isImmersive, setIsImmersive] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
   const displayImageRef = useRef<HTMLImageElement | null>(null);
 
   const displayTags = useMemo(() => buildDisplayTags(allTagCounts, allTags), [allTagCounts, allTags]);
   const profileLinks = [
     site.photographerEmail ? { label: copy.email, href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
     site.photographerInstagram && site.photographerInstagramUrl
-      ? { label: "Instagram", href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
+      ? { label: copy.instagram, href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
       : null,
     site.photographerXiaohongshu && site.photographerXiaohongshuUrl
       ? { label: copy.xiaohongshu, href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }
@@ -237,6 +236,10 @@ export function SpotlightHome({
   }, [initialHasMore, initialPage, initialPhotos, selectedTag]);
 
   useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (collection.length === 0) {
       setCurrentIndex(0);
       return;
@@ -246,7 +249,7 @@ export function SpotlightHome({
   }, [collection]);
 
   useEffect(() => {
-    if (prefersReducedMotion || selectedId !== null || collection.length <= 1) {
+    if (!hasMounted || selectedId !== null || collection.length <= 1) {
       return;
     }
 
@@ -257,7 +260,7 @@ export function SpotlightHome({
     return () => {
       window.clearInterval(timer);
     };
-  }, [collection.length, prefersReducedMotion, selectedId]);
+  }, [collection.length, hasMounted, selectedId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

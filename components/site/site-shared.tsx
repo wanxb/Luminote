@@ -122,7 +122,7 @@ export function buildProfileLinks(site: SiteResponse): ProfileLink[] {
   return [
     site.photographerEmail ? { label: copy.email, href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
     site.photographerInstagram && site.photographerInstagramUrl
-      ? { label: "Instagram", href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
+      ? { label: copy.instagram, href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
       : null,
     site.photographerXiaohongshu && site.photographerXiaohongshuUrl
       ? { label: copy.xiaohongshu, href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }

@@ -114,7 +114,7 @@ export function AdminUploadPanel({
                       type="button"
                       onClick={() => void onDeleteTag(tag)}
                       className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[rgba(255,255,255,0.56)] text-[10px] text-ink shadow-sm ring-1 ring-black/10"
-                      aria-label={`Delete ${tag.name}`}
+                      aria-label={copy.deleteTag(tag.name)}
                     >
                       ×
                     </button>
@@ -193,7 +193,7 @@ export function AdminUploadPanel({
                       type="button"
                       onClick={() => onPreview({ src: item.previewUrl, name: item.file.name })}
                       className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-black/10 bg-[rgba(255,255,255,0.42)] transition hover:opacity-90"
-                      aria-label={`Preview ${item.file.name}`}
+                      aria-label={copy.previewPhoto(item.file.name)}
                     >
                       <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
                     </button>

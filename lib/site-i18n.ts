@@ -22,6 +22,7 @@ type Messages = {
   galleryIntro: string;
   profileFallbackBio: string;
   email: string;
+  instagram: string;
   xiaohongshu: string;
   douyin: string;
   customLink: string;
@@ -61,7 +62,7 @@ const messages: Record<SiteLocale, Messages> = {
     clear: "清除",
     taggedWith: "标签",
     photoUnit: "张",
-    contact: "联系",
+    contact: "联系方式",
     filterTags: "筛选标签",
     noPublicContact: "暂未设置公开联系方式。",
     noResults: "无结果",
@@ -76,6 +77,7 @@ const messages: Record<SiteLocale, Messages> = {
     galleryIntro: "收纳摄影作品与灵感片段，保持轻盈、专注的观看体验。",
     profileFallbackBio: "用影像记录日常、城市和光线落下来的那几秒。",
     email: "邮箱",
+    instagram: "Instagram",
     xiaohongshu: "小红书",
     douyin: "抖音",
     customLink: "自定义链接",
@@ -128,6 +130,7 @@ const messages: Record<SiteLocale, Messages> = {
     galleryIntro: "收納攝影作品與靈感片段，保持輕盈、專注的觀看體驗。",
     profileFallbackBio: "用影像記錄日常、城市與光線落下的那幾秒。",
     email: "信箱",
+    instagram: "Instagram",
     xiaohongshu: "小紅書",
     douyin: "抖音",
     customLink: "自訂連結",
@@ -180,6 +183,7 @@ const messages: Record<SiteLocale, Messages> = {
     galleryIntro: "A place for photo work and fragments of inspiration, kept light and focused.",
     profileFallbackBio: "Recording everyday life, cities, and those few seconds when the light lands.",
     email: "Email",
+    instagram: "Instagram",
     xiaohongshu: "Xiaohongshu",
     douyin: "Douyin",
     customLink: "Custom Link",

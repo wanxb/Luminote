@@ -184,12 +184,12 @@ function renderIconLinks(site: SiteResponse) {
         </IconLink>
       ) : null}
       {site.photographerInstagram && site.photographerInstagramUrl ? (
-        <IconLink label="Instagram" href={site.photographerInstagramUrl} title={site.photographerInstagram}>
+        <IconLink label={copy.instagram} href={site.photographerInstagramUrl} title={site.photographerInstagram}>
           <InstagramIcon />
         </IconLink>
       ) : null}
       {site.photographerCustomAccount && site.photographerCustomAccountUrl ? (
-        <IconLink label={copy.customAccount} href={site.photographerCustomAccountUrl} title={site.photographerCustomAccount}>
+        <IconLink label={copy.customLink} href={site.photographerCustomAccountUrl} title={site.photographerCustomAccount}>
           <LinkIcon />
         </IconLink>
       ) : null}
@@ -242,7 +242,7 @@ function renderLightIconLinks(site: SiteResponse) {
           href={normalizeLink(site.photographerInstagramUrl)}
           target="_blank"
           rel="noreferrer"
-          aria-label="Instagram"
+          aria-label={copy.instagram}
           title={site.photographerInstagram}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-ember"
         >
@@ -256,7 +256,7 @@ function renderLightIconLinks(site: SiteResponse) {
           href={normalizeLink(site.photographerCustomAccountUrl)}
           target="_blank"
           rel="noreferrer"
-          aria-label={copy.customAccount}
+          aria-label={copy.customLink}
           title={site.photographerCustomAccount}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-ember"
         >
