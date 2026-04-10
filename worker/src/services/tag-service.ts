@@ -1,4 +1,6 @@
 import type { Env } from "../index";
+import { getLocaleMessages } from "../utils/i18n";
+import { getSiteConfig } from "./site-config-service";
 
 type TagPool = {
   id: string;
@@ -56,10 +58,12 @@ export async function createTag(
 }
 
 export async function deleteTag(env: Env, id: string) {
+  const t = getLocaleMessages((await getSiteConfig(env)).locale);
+
   if (!env.DB) {
     return {
       ok: false,
-      error: "当前环境未绑定 D1，无法删除标签。",
+      error: t.d1UpdateMissing,
     };
   }
 
@@ -88,7 +92,7 @@ export async function deleteTag(env: Env, id: string) {
   } catch {
     return {
       ok: false,
-      error: "删除标签失败。",
+      error: t.deleteTagFailed,
     };
   }
 }

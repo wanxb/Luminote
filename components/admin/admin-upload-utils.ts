@@ -22,7 +22,7 @@ export function haveSameTags(left: string[], right: string[], maxTagsPerPhoto: n
   );
 }
 
-function buildFileKey(file: File) {
+export function buildFileKey(file: File) {
   return [file.name, file.size, file.lastModified].join(":");
 }
 

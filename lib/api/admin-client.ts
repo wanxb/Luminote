@@ -4,6 +4,7 @@ import type {
   HomeLayout,
   PhotoDetail,
   PhotosResponse,
+  SiteLocale,
   SiteConfigResponse,
   SiteResponse,
   WatermarkPosition,
@@ -86,6 +87,7 @@ export type UploadPhotographerAvatarResponse = {
 };
 
 export type UpdateSitePayload = {
+  locale?: SiteLocale;
   siteTitle?: string;
   siteDescription?: string;
   homeLayout?: HomeLayout;
@@ -94,9 +96,15 @@ export type UpdateSitePayload = {
   watermarkPosition?: WatermarkPosition;
   adminPassword?: string;
   uploadOriginalEnabled?: boolean;
+  maxTotalPhotos?: number;
   maxTagPoolSize?: number;
   maxUploadFiles?: number;
   maxTagsPerPhoto?: number;
+  photoMetadataEnabled?: boolean;
+  showDateInfo?: boolean;
+  showCameraInfo?: boolean;
+  showLocationInfo?: boolean;
+  showDetailedExifInfo?: boolean;
   photographerAvatarUrl?: string;
   photographerName?: string;
   photographerBio?: string;
@@ -487,6 +495,7 @@ export async function getSite(): Promise<SiteResponse> {
     return await fetchJson<SiteResponse>("/api/site");
   } catch {
     return {
+      locale: "zh-CN",
       siteTitle: "Luminote",
       siteDescription:
         "A lightweight home for photography that lets the work breathe.",
@@ -495,9 +504,15 @@ export async function getSite(): Promise<SiteResponse> {
       watermarkText: "© Luminote",
       watermarkPosition: "bottom-right" as WatermarkPosition,
       uploadOriginalEnabled: false,
+      maxTotalPhotos: 200,
       maxTagPoolSize: 20,
       maxUploadFiles: 20,
       maxTagsPerPhoto: 5,
+      photoMetadataEnabled: true,
+      showDateInfo: true,
+      showCameraInfo: true,
+      showLocationInfo: true,
+      showDetailedExifInfo: true,
       photographerAvatarUrl: "",
       photographerName: "",
       photographerBio: "",
@@ -513,7 +528,6 @@ export async function getSite(): Promise<SiteResponse> {
     };
   }
 }
-
 export async function getPhotos(
   options: GetPhotosOptions = {},
 ): Promise<PhotosResponse> {

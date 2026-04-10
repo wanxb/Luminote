@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { SiteTagFilterChips } from "@/components/site/site-tag-filter-chips";
 import type { ProfileLink } from "@/components/site/site-shared";
+import { getSiteMessages } from "@/lib/site-i18n";
+import type { SiteLocale } from "@/lib/api/types";
 
 type SiteProfileSidebarProps = {
   displayName: string;
@@ -13,6 +15,7 @@ type SiteProfileSidebarProps = {
   displayTags: string[];
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
+  locale?: SiteLocale;
   asideClassName?: string;
   cardClassName?: string;
 };
@@ -26,9 +29,11 @@ export function SiteProfileSidebar({
   displayTags,
   selectedTag,
   onSelectTag,
+  locale = "zh-CN",
   asideClassName = "lg:sticky lg:top-6 lg:self-start",
   cardClassName = "space-y-7 rounded-[28px] border border-black/8 bg-[rgba(255,252,247,0.76)] p-5 shadow-[0_20px_70px_rgba(20,20,20,0.08)] backdrop-blur-xl sm:p-6",
 }: SiteProfileSidebarProps) {
+  const copy = getSiteMessages(locale);
   return (
     <aside className={asideClassName}>
       <div className={cardClassName}>
@@ -44,7 +49,7 @@ export function SiteProfileSidebar({
           )}
 
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-black/36">Photographer</p>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-black/36">{copy.photographer}</p>
             <h1 className="mt-2 text-[2rem] font-semibold leading-[0.95] tracking-[-0.04em] text-[#202020]">
               {displayName}
             </h1>
@@ -54,7 +59,7 @@ export function SiteProfileSidebar({
         <p className="text-sm leading-7 text-black/58">{displayBio}</p>
 
         <div className="space-y-2 border-t border-black/8 pt-4 text-sm text-black/60">
-          <div className="text-[11px] uppercase tracking-[0.28em] text-black/34">Contact</div>
+          <div className="text-[11px] uppercase tracking-[0.28em] text-black/34">{copy.contact}</div>
           {profileLinks.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {profileLinks.map((link) => (
@@ -72,7 +77,7 @@ export function SiteProfileSidebar({
               ))}
             </div>
           ) : (
-            <p className="text-black/42">No public contact set.</p>
+            <p className="text-black/42">{copy.noPublicContact}</p>
           )}
         </div>
 
@@ -80,6 +85,7 @@ export function SiteProfileSidebar({
           tags={displayTags}
           selectedTag={selectedTag}
           onSelectTag={onSelectTag}
+          locale={locale}
         />
       </div>
     </aside>

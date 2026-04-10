@@ -11,6 +11,7 @@ import {
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotoDetail, getPhotos } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
+import { getSiteMessages } from "@/lib/site-i18n";
 import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type SpotlightHomeProps = {
@@ -107,11 +108,12 @@ export function SpotlightHome({
   initialHasMore,
   allTags,
 }: SpotlightHomeProps) {
+  const copy = getSiteMessages(site.locale);
   const displayName = site.photographerName || site.siteTitle || "Luminote";
   const displayBio =
     site.photographerBio ||
     site.siteDescription ||
-    "Photographic notes arranged as a single-screen viewing experience.";
+    copy.profileFallbackBio;
   const prefersReducedMotion = usePrefersReducedMotion();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [allTagCounts, setAllTagCounts] = useState<Map<string, number>>(() => countPhotoTags(initialPhotos));
@@ -128,18 +130,18 @@ export function SpotlightHome({
 
   const displayTags = useMemo(() => buildDisplayTags(allTagCounts, allTags), [allTagCounts, allTags]);
   const profileLinks = [
-    site.photographerEmail ? { label: "邮箱", href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
+    site.photographerEmail ? { label: copy.email, href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
     site.photographerInstagram && site.photographerInstagramUrl
       ? { label: "Instagram", href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
       : null,
     site.photographerXiaohongshu && site.photographerXiaohongshuUrl
-      ? { label: "小红书", href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }
+      ? { label: copy.xiaohongshu, href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }
       : null,
     site.photographerDouyin && site.photographerDouyinUrl
-      ? { label: "抖音", href: normalizeLink(site.photographerDouyinUrl), icon: <DouyinIcon /> }
+      ? { label: copy.douyin, href: normalizeLink(site.photographerDouyinUrl), icon: <DouyinIcon /> }
       : null,
     site.photographerCustomAccount && site.photographerCustomAccountUrl
-      ? { label: "自定义链接", href: normalizeLink(site.photographerCustomAccountUrl), icon: <LinkIcon /> }
+      ? { label: copy.customLink, href: normalizeLink(site.photographerCustomAccountUrl), icon: <LinkIcon /> }
       : null,
   ].filter(Boolean) as Array<{ label: string; href: string; icon: ReactNode }>;
   const activePhoto = collection[currentIndex] ?? null;
@@ -216,7 +218,7 @@ export function SpotlightHome({
 
         if (selectedTag) {
           setCollection([]);
-          setCollectionError("标签图片加载失败，请稍后重试。");
+          setCollectionError(copy.loadMoreFailed);
         } else {
           setCollection(initialPhotos);
         }
@@ -308,7 +310,7 @@ export function SpotlightHome({
     setDetailError(null);
 
     if (isDefaultGalleryPhotoId(selectedId)) {
-      setDetail(getDefaultGalleryPhotoDetail(selectedId));
+      setDetail(getDefaultGalleryPhotoDetail(selectedId, site.locale));
       setIsLoadingDetail(false);
       return () => {
         active = false;
@@ -323,7 +325,7 @@ export function SpotlightHome({
 
         if (!response) {
           setDetail(null);
-          setDetailError("这张照片的详情暂时不可用。");
+          setDetailError(copy.detailUnavailable);
           return;
         }
 
@@ -335,7 +337,7 @@ export function SpotlightHome({
         }
 
         setDetail(null);
-        setDetailError("加载详情时出了点问题，请稍后再试。");
+        setDetailError(copy.detailLoadFailed);
       })
       .finally(() => {
         if (active) {
@@ -346,7 +348,7 @@ export function SpotlightHome({
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [copy.detailLoadFailed, copy.detailUnavailable, selectedId, site.locale]);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -465,7 +467,7 @@ export function SpotlightHome({
                 )}
 
                 <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-black/42">Photographer</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-black/42">{copy.photographer}</p>
                   <h1 className="mt-2 text-[2rem] font-semibold leading-[0.94] tracking-[-0.06em] text-black sm:text-[2.5rem]">
                     {displayName}
                   </h1>
@@ -497,14 +499,14 @@ export function SpotlightHome({
 
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-black/42">Tags</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-black/42">{copy.tags}</p>
                 {selectedTag ? (
                   <button
                     type="button"
                     onClick={() => handleSelectTag(null)}
                     className="text-[11px] uppercase tracking-[0.24em] text-black/56 transition hover:text-black"
                   >
-                    Clear
+                    {copy.clear}
                   </button>
                 ) : null}
               </div>
@@ -516,7 +518,7 @@ export function SpotlightHome({
                   aria-pressed={selectedTag === null}
                   className={`border px-3 py-2 text-[12px] uppercase tracking-[0.16em] transition ${selectedTag === null ? "border-black bg-black text-[#f2ede4]" : "border-black/14 bg-transparent text-black/66 hover:border-black/32 hover:text-black"}`}
                 >
-                  全部
+                  {copy.all}
                 </button>
                 {displayTags.map((tag) => {
                   const isActive = selectedTag === tag;
@@ -544,7 +546,7 @@ export function SpotlightHome({
             onClick={handleImageClick}
             disabled={!activePhoto}
             className="group relative block min-h-0 overflow-hidden text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30 disabled:cursor-default"
-            aria-label="点击图片进入查看模式，点击左右留白切换上一张或下一张"
+            aria-label={copy.openViewerHint}
           >
             {activePhoto ? (
               <div className="flex h-full w-full items-center justify-center">
@@ -558,19 +560,31 @@ export function SpotlightHome({
               </div>
             ) : (
               <div className="flex h-full items-center justify-center px-6 text-center text-sm text-black/54">
-                {isCollectionLoading ? "正在加载图片..." : "当前标签下还没有图片。"}
+                {isCollectionLoading ? copy.loadingWorks : copy.noWorksForTag}
               </div>
             )}
           </button>
+
+          {collectionError ? (
+            <p className="text-center text-sm text-amber-900/70">{collectionError}</p>
+          ) : (
+            <div />
+          )}
         </section>
       </div>
 
       <LightboxShell
         photo={activeLightboxPhoto ?? null}
         photos={collection}
+        locale={site.locale}
         watermarkEnabled={site.watermarkEnabledByDefault}
         watermarkText={site.watermarkText}
         watermarkPosition={site.watermarkPosition}
+        photoMetadataEnabled={site.photoMetadataEnabled}
+        showDateInfo={site.showDateInfo}
+        showCameraInfo={site.showCameraInfo}
+        showLocationInfo={site.showLocationInfo}
+        showDetailedExifInfo={site.showDetailedExifInfo}
         activeIndex={selectedIndex !== null && selectedIndex >= 0 ? selectedIndex : null}
         hasMorePhotos={false}
         isImmersive={isImmersive}

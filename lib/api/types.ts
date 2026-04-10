@@ -4,6 +4,7 @@ export type {
   PhotoExif,
   PhotosResponse,
   PhotoSummary,
+  SiteLocale,
   SiteConfigResponse,
   SiteResponse,
   SiteTagsResponse,

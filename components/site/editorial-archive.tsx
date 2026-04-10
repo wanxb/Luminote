@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLightboxGallery } from "@/components/gallery/use-lightbox-gallery";
 import { LightboxShell } from "@/components/lightbox/lightbox-shell";
 import { getPhotos } from "@/lib/api/client";
+import { getSiteMessages } from "@/lib/site-i18n";
 import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type EditorialArchiveProps = {
@@ -17,13 +18,14 @@ type EditorialArchiveProps = {
 
 const PAGE_SIZE = 30;
 
-function formatTakenAt(takenAt?: string) {
+function formatTakenAt(takenAt: string | undefined, locale: string) {
   if (!takenAt) {
     return "";
   }
 
   try {
-    return new Date(takenAt).toLocaleDateString("zh-CN", {
+    const localeTag = locale === "zh-TW" ? "zh-TW" : locale === "en" ? "en-US" : "zh-CN";
+    return new Date(takenAt).toLocaleDateString(localeTag, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -40,6 +42,7 @@ export function EditorialArchive({
   initialHasMore,
   selectedTag,
 }: EditorialArchiveProps) {
+  const copy = getSiteMessages(site.locale);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const [loadedPhotos, setLoadedPhotos] = useState(initialPhotos);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -85,7 +88,7 @@ export function EditorialArchive({
         setLoadedPhotos([]);
         setCurrentPage(1);
         setHasMore(false);
-        setLoadMoreError("鏍囩绛涢€夊姞杞藉け璐ワ紝璇风◢鍚庡啀璇曘€?");
+        setLoadMoreError(copy.loadMoreFailed);
       })
       .finally(() => {
         if (active) {
@@ -114,6 +117,7 @@ export function EditorialArchive({
     toggleImmersive,
   } = useLightboxGallery({
     photos: activePhotos,
+    locale: site.locale,
   });
 
   useEffect(() => {
@@ -170,7 +174,7 @@ export function EditorialArchive({
       setCurrentPage(response.page);
       setHasMore(response.hasMore);
     } catch {
-      setLoadMoreError("鍔犺浇鏇村鐓х墖澶辫触锛岃绋嶅悗鍐嶈瘯銆?");
+      setLoadMoreError(copy.loadMoreFailed);
     } finally {
       setIsLoadingMore(false);
     }
@@ -184,19 +188,19 @@ export function EditorialArchive({
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-[11px] uppercase tracking-[0.28em] text-black/38">
-          <span>{selectedTag ? `Tag / ${selectedTag}` : "Overview"}</span>
-          <span>{String(activePhotos.length).padStart(2, "0")} Photos</span>
+          <span>{selectedTag ? `${copy.taggedWith} / ${selectedTag}` : copy.allWorks}</span>
+          <span>{String(activePhotos.length).padStart(2, "0")} {copy.photoUnit}</span>
         </div>
 
         {activePhotos.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {activePhotos.map((photo) => (
-              <ArchivePhotoButton key={photo.id} photo={photo} onSelect={handleSelect} />
+              <ArchivePhotoButton key={photo.id} photo={photo} locale={site.locale} onSelect={handleSelect} />
             ))}
           </div>
         ) : (
           <div className="rounded-[24px] border border-black/8 bg-white/55 px-5 py-10 text-center text-sm text-black/50">
-            褰撳墠鏍囩涓嬭繕娌℃湁鐓х墖銆?
+            {copy.noWorksForTag}
           </div>
         )}
 
@@ -212,9 +216,15 @@ export function EditorialArchive({
       <LightboxShell
         photo={activePhoto ?? null}
         photos={activePhotos}
+        locale={site.locale}
         watermarkEnabled={site.watermarkEnabledByDefault}
         watermarkText={site.watermarkText}
         watermarkPosition={site.watermarkPosition}
+        photoMetadataEnabled={site.photoMetadataEnabled}
+        showDateInfo={site.showDateInfo}
+        showCameraInfo={site.showCameraInfo}
+        showLocationInfo={site.showLocationInfo}
+        showDetailedExifInfo={site.showDetailedExifInfo}
         activeIndex={selectedIndex}
         hasMorePhotos={hasMore}
         isImmersive={isImmersive}
@@ -236,9 +246,11 @@ export function EditorialArchive({
 
 function ArchivePhotoButton({
   photo,
+  locale,
   onSelect,
 }: {
   photo: PhotoSummary;
+  locale: string;
   onSelect: (photoId: string) => void;
 }) {
   return (
@@ -249,7 +261,7 @@ function ArchivePhotoButton({
     >
       <img
         src={photo.displayUrl || photo.thumbUrl}
-        alt={photo.description ?? formatTakenAt(photo.takenAt) ?? photo.id}
+        alt={photo.description ?? formatTakenAt(photo.takenAt, locale) ?? photo.id}
         loading="lazy"
         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
       />

@@ -10,7 +10,17 @@ const persistTo = path.join(workerDir, ".wrangler", "state", "local-speed");
 const tempDir = mkdtempSync(path.join(tmpdir(), "luminote-sync-"));
 const exportPath = path.join(tempDir, "remote-d1-export.sql");
 const downloadDir = path.join(tempDir, "objects");
-const bucketName = "luminote-dev";
+const remoteDatabaseName = process.env.REMOTE_D1_DATABASE_NAME ?? "";
+const remoteBucketName = process.env.REMOTE_R2_BUCKET_NAME ?? "";
+const localDatabaseName = "luminote-dev";
+const localBucketName = "luminote-dev";
+const localConfigArgs = ["--config", "wrangler.local.toml"];
+
+if (!remoteDatabaseName || !remoteBucketName) {
+  console.error("Missing REMOTE_D1_DATABASE_NAME or REMOTE_R2_BUCKET_NAME.");
+  console.error("Set them in the current shell before running sync:local.");
+  process.exit(1);
+}
 
 function runWrangler(args, options = {}) {
   console.log(`\n> wrangler ${args.join(" ")}`);
@@ -60,7 +70,7 @@ function trySyncObject(objectKey) {
       "r2",
       "object",
       "get",
-      `${bucketName}/${objectKey}`,
+      `${remoteBucketName}/${objectKey}`,
       "--remote",
       "--file",
       targetPath,
@@ -74,7 +84,8 @@ function trySyncObject(objectKey) {
     "r2",
     "object",
     "put",
-    `${bucketName}/${objectKey}`,
+    ...localConfigArgs,
+    `${localBucketName}/${objectKey}`,
     "--local",
     "--persist-to",
     persistTo,
@@ -107,7 +118,7 @@ mkdirSync(persistTo, { recursive: true });
 const photoResults = runWranglerJson([
   "d1",
   "execute",
-  bucketName,
+  remoteDatabaseName,
   "--remote",
   "--command",
   "SELECT id, original_file_name, watermark_enabled FROM photos ORDER BY created_at ASC;",
@@ -117,7 +128,7 @@ const photoResults = runWranglerJson([
 const avatarResults = runWranglerJson([
   "d1",
   "execute",
-  bucketName,
+  remoteDatabaseName,
   "--remote",
   "--command",
   "SELECT photographer_avatar_url FROM site_config WHERE id = 1;",
@@ -134,7 +145,7 @@ rmSync(path.join(persistTo, "r2"), { recursive: true, force: true });
 runWrangler([
   "d1",
   "export",
-  bucketName,
+  remoteDatabaseName,
   "--remote",
   "--output",
   exportPath,
@@ -143,7 +154,8 @@ runWrangler([
 runWrangler([
   "d1",
   "execute",
-  bucketName,
+  ...localConfigArgs,
+  localDatabaseName,
   "--local",
   "--persist-to",
   persistTo,

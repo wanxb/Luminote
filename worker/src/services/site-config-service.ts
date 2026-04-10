@@ -2,12 +2,19 @@ import type { Env } from "../index";
 
 export const DEFAULT_SITE_DESCRIPTION =
   "A lightweight home for photography that lets the work breathe.";
+export const DEFAULT_SITE_LOCALE = "zh-CN";
 export const DEFAULT_UPLOAD_ORIGINAL_ENABLED = false;
+export const DEFAULT_MAX_TOTAL_PHOTOS = 200;
 export const DEFAULT_MAX_TAG_POOL_SIZE = 20;
 export const DEFAULT_MAX_UPLOAD_FILES = 20;
 export const DEFAULT_MAX_TAGS_PER_PHOTO = 5;
 export const DEFAULT_HOME_LAYOUT = "editorial";
 export const DEFAULT_WATERMARK_POSITION = "bottom-right";
+export const DEFAULT_PHOTO_METADATA_ENABLED = true;
+export const DEFAULT_SHOW_DATE_INFO = true;
+export const DEFAULT_SHOW_CAMERA_INFO = true;
+export const DEFAULT_SHOW_LOCATION_INFO = true;
+export const DEFAULT_SHOW_DETAILED_EXIF_INFO = true;
 export const DEFAULT_PHOTOGRAPHER_AVATAR_URL = "";
 export const DEFAULT_PHOTOGRAPHER_NAME = "";
 export const DEFAULT_PHOTOGRAPHER_BIO = "";
@@ -22,6 +29,7 @@ export const DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT = "";
 export const DEFAULT_PHOTOGRAPHER_CUSTOM_ACCOUNT_URL = "";
 
 type SiteConfigRow = {
+  locale: string;
   site_title: string;
   site_description: string;
   home_layout: string;
@@ -30,9 +38,15 @@ type SiteConfigRow = {
   watermark_position: string;
   admin_password: string;
   upload_original_enabled: number;
+  max_total_photos: number;
   max_tag_pool_size: number;
   max_upload_files: number;
   max_tags_per_photo: number;
+  photo_metadata_enabled: number;
+  show_date_info: number;
+  show_camera_info: number;
+  show_location_info: number;
+  show_detailed_exif_info: number;
   photographer_avatar_url: string;
   photographer_name: string;
   photographer_bio: string;
@@ -48,6 +62,7 @@ type SiteConfigRow = {
 };
 
 export type SiteConfig = {
+  locale: string;
   siteTitle: string;
   siteDescription: string;
   homeLayout: string;
@@ -56,9 +71,15 @@ export type SiteConfig = {
   watermarkPosition: string;
   adminPassword: string;
   uploadOriginalEnabled: boolean;
+  maxTotalPhotos: number;
   maxTagPoolSize: number;
   maxUploadFiles: number;
   maxTagsPerPhoto: number;
+  photoMetadataEnabled: boolean;
+  showDateInfo: boolean;
+  showCameraInfo: boolean;
+  showLocationInfo: boolean;
+  showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
   photographerBio: string;
@@ -76,6 +97,7 @@ export type SiteConfig = {
 let ensureSiteConfigPromise: Promise<void> | null = null;
 
 type LegacySiteConfigRow = {
+  locale?: string;
   site_title: string;
   site_description: string;
   home_layout?: string;
@@ -84,9 +106,15 @@ type LegacySiteConfigRow = {
   watermark_position?: string;
   admin_password: string;
   upload_original_enabled?: number;
+  max_total_photos?: number;
   max_tag_pool_size?: number;
   max_upload_files?: number;
   max_tags_per_photo?: number;
+  photo_metadata_enabled?: number;
+  show_date_info?: number;
+  show_camera_info?: number;
+  show_location_info?: number;
+  show_detailed_exif_info?: number;
 };
 
 function sanitizePositiveInt(value: number, fallback: number) {
@@ -95,6 +123,7 @@ function sanitizePositiveInt(value: number, fallback: number) {
 
 function buildDefaultSiteConfig(env: Env): SiteConfig {
   return {
+    locale: DEFAULT_SITE_LOCALE,
     siteTitle: env.SITE_TITLE,
     siteDescription: DEFAULT_SITE_DESCRIPTION,
     homeLayout: DEFAULT_HOME_LAYOUT,
@@ -103,9 +132,15 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     watermarkPosition: DEFAULT_WATERMARK_POSITION,
     adminPassword: env.ADMIN_PASSWORD,
     uploadOriginalEnabled: DEFAULT_UPLOAD_ORIGINAL_ENABLED,
+    maxTotalPhotos: DEFAULT_MAX_TOTAL_PHOTOS,
     maxTagPoolSize: DEFAULT_MAX_TAG_POOL_SIZE,
     maxUploadFiles: DEFAULT_MAX_UPLOAD_FILES,
     maxTagsPerPhoto: DEFAULT_MAX_TAGS_PER_PHOTO,
+    photoMetadataEnabled: DEFAULT_PHOTO_METADATA_ENABLED,
+    showDateInfo: DEFAULT_SHOW_DATE_INFO,
+    showCameraInfo: DEFAULT_SHOW_CAMERA_INFO,
+    showLocationInfo: DEFAULT_SHOW_LOCATION_INFO,
+    showDetailedExifInfo: DEFAULT_SHOW_DETAILED_EXIF_INFO,
     photographerAvatarUrl: DEFAULT_PHOTOGRAPHER_AVATAR_URL,
     photographerName: DEFAULT_PHOTOGRAPHER_NAME,
     photographerBio: DEFAULT_PHOTOGRAPHER_BIO,
@@ -134,6 +169,7 @@ async function ensureSiteConfig(env: Env) {
         .DB!.prepare(
           `CREATE TABLE IF NOT EXISTS site_config (
           id INTEGER PRIMARY KEY CHECK (id = 1),
+          locale TEXT NOT NULL DEFAULT 'zh-CN',
           site_title TEXT NOT NULL,
           site_description TEXT NOT NULL,
           home_layout TEXT NOT NULL DEFAULT 'editorial',
@@ -142,9 +178,15 @@ async function ensureSiteConfig(env: Env) {
           watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
           admin_password TEXT NOT NULL,
           upload_original_enabled INTEGER NOT NULL DEFAULT 0,
+          max_total_photos INTEGER NOT NULL DEFAULT 200,
           max_tag_pool_size INTEGER NOT NULL DEFAULT 20,
           max_upload_files INTEGER NOT NULL DEFAULT 20,
           max_tags_per_photo INTEGER NOT NULL DEFAULT 5,
+          photo_metadata_enabled INTEGER NOT NULL DEFAULT 1,
+          show_date_info INTEGER NOT NULL DEFAULT 1,
+          show_camera_info INTEGER NOT NULL DEFAULT 1,
+          show_location_info INTEGER NOT NULL DEFAULT 1,
+          show_detailed_exif_info INTEGER NOT NULL DEFAULT 1,
           photographer_avatar_url TEXT NOT NULL DEFAULT '',
           photographer_name TEXT NOT NULL DEFAULT '',
           photographer_bio TEXT NOT NULL DEFAULT '',
@@ -164,8 +206,15 @@ async function ensureSiteConfig(env: Env) {
 
       const alterStatements = [
         "ALTER TABLE site_config ADD COLUMN home_layout TEXT NOT NULL DEFAULT 'editorial'",
+        "ALTER TABLE site_config ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh-CN'",
         "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN watermark_position TEXT NOT NULL DEFAULT 'bottom-right'",
+        "ALTER TABLE site_config ADD COLUMN max_total_photos INTEGER NOT NULL DEFAULT 200",
+        "ALTER TABLE site_config ADD COLUMN photo_metadata_enabled INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_date_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_camera_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_location_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_detailed_exif_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_bio TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_email TEXT NOT NULL DEFAULT ''",
@@ -191,6 +240,7 @@ async function ensureSiteConfig(env: Env) {
         .DB!.prepare(
           `INSERT OR IGNORE INTO site_config (
           id,
+          locale,
           site_title,
           site_description,
           home_layout,
@@ -199,9 +249,15 @@ async function ensureSiteConfig(env: Env) {
           watermark_position,
           admin_password,
           upload_original_enabled,
+          max_total_photos,
           max_tag_pool_size,
           max_upload_files,
           max_tags_per_photo,
+          photo_metadata_enabled,
+          show_date_info,
+          show_camera_info,
+          show_location_info,
+          show_detailed_exif_info,
           photographer_avatar_url,
           photographer_name,
           photographer_bio,
@@ -215,10 +271,11 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           1,
+          defaults.locale,
           defaults.siteTitle,
           defaults.siteDescription,
           defaults.homeLayout,
@@ -227,9 +284,15 @@ async function ensureSiteConfig(env: Env) {
           defaults.watermarkPosition,
           defaults.adminPassword,
           defaults.uploadOriginalEnabled ? 1 : 0,
+          defaults.maxTotalPhotos,
           defaults.maxTagPoolSize,
           defaults.maxUploadFiles,
           defaults.maxTagsPerPhoto,
+          defaults.photoMetadataEnabled ? 1 : 0,
+          defaults.showDateInfo ? 1 : 0,
+          defaults.showCameraInfo ? 1 : 0,
+          defaults.showLocationInfo ? 1 : 0,
+          defaults.showDetailedExifInfo ? 1 : 0,
           defaults.photographerAvatarUrl,
           defaults.photographerName,
           defaults.photographerBio,
@@ -273,6 +336,7 @@ function mapSiteConfigRowToConfig(
   }
 
   return {
+    locale: row.locale ?? defaults.locale,
     siteTitle: row.site_title ?? defaults.siteTitle,
     siteDescription: row.site_description ?? defaults.siteDescription,
     homeLayout: row.home_layout ?? defaults.homeLayout,
@@ -287,6 +351,10 @@ function mapSiteConfigRowToConfig(
       row.upload_original_enabled !== undefined
         ? Boolean(row.upload_original_enabled)
         : defaults.uploadOriginalEnabled,
+    maxTotalPhotos: sanitizePositiveInt(
+      row.max_total_photos ?? defaults.maxTotalPhotos,
+      defaults.maxTotalPhotos,
+    ),
     maxTagPoolSize: sanitizePositiveInt(
       row.max_tag_pool_size ?? defaults.maxTagPoolSize,
       defaults.maxTagPoolSize,
@@ -299,6 +367,26 @@ function mapSiteConfigRowToConfig(
       row.max_tags_per_photo ?? defaults.maxTagsPerPhoto,
       defaults.maxTagsPerPhoto,
     ),
+    photoMetadataEnabled:
+      row.photo_metadata_enabled !== undefined
+        ? Boolean(row.photo_metadata_enabled)
+        : defaults.photoMetadataEnabled,
+    showDateInfo:
+      row.show_date_info !== undefined
+        ? Boolean(row.show_date_info)
+        : defaults.showDateInfo,
+    showCameraInfo:
+      row.show_camera_info !== undefined
+        ? Boolean(row.show_camera_info)
+        : defaults.showCameraInfo,
+    showLocationInfo:
+      row.show_location_info !== undefined
+        ? Boolean(row.show_location_info)
+        : defaults.showLocationInfo,
+    showDetailedExifInfo:
+      row.show_detailed_exif_info !== undefined
+        ? Boolean(row.show_detailed_exif_info)
+        : defaults.showDetailedExifInfo,
     photographerAvatarUrl:
       row.photographer_avatar_url ?? defaults.photographerAvatarUrl,
     photographerName: row.photographer_name ?? defaults.photographerName,
@@ -336,6 +424,7 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
     const row = await env.DB.prepare(
       `SELECT
         site_title,
+        locale,
         site_description,
         home_layout,
         watermark_enabled_by_default,
@@ -343,9 +432,15 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         watermark_position,
         admin_password,
         upload_original_enabled,
+        max_total_photos,
         max_tag_pool_size,
         max_upload_files,
         max_tags_per_photo,
+        photo_metadata_enabled,
+        show_date_info,
+        show_camera_info,
+        show_location_info,
+        show_detailed_exif_info,
         photographer_avatar_url,
         photographer_name,
         photographer_bio,
@@ -374,11 +469,13 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
     const legacyRow = await env.DB.prepare(
       `SELECT
         site_title,
+        locale,
         site_description,
         watermark_enabled_by_default,
         watermark_text,
         admin_password,
         upload_original_enabled,
+        max_total_photos,
         max_tag_pool_size,
         max_upload_files,
         max_tags_per_photo
@@ -428,6 +525,11 @@ export async function updateSiteConfig(
     values.push(updates.siteTitle);
   }
 
+  if (updates.locale !== undefined) {
+    statements.push("locale = ?");
+    values.push(updates.locale);
+  }
+
   if (updates.siteDescription !== undefined) {
     statements.push("site_description = ?");
     values.push(updates.siteDescription);
@@ -463,6 +565,11 @@ export async function updateSiteConfig(
     values.push(updates.uploadOriginalEnabled ? 1 : 0);
   }
 
+  if (updates.maxTotalPhotos !== undefined) {
+    statements.push("max_total_photos = ?");
+    values.push(updates.maxTotalPhotos);
+  }
+
   if (updates.maxTagPoolSize !== undefined) {
     statements.push("max_tag_pool_size = ?");
     values.push(updates.maxTagPoolSize);
@@ -476,6 +583,31 @@ export async function updateSiteConfig(
   if (updates.maxTagsPerPhoto !== undefined) {
     statements.push("max_tags_per_photo = ?");
     values.push(updates.maxTagsPerPhoto);
+  }
+
+  if (updates.photoMetadataEnabled !== undefined) {
+    statements.push("photo_metadata_enabled = ?");
+    values.push(updates.photoMetadataEnabled ? 1 : 0);
+  }
+
+  if (updates.showDateInfo !== undefined) {
+    statements.push("show_date_info = ?");
+    values.push(updates.showDateInfo ? 1 : 0);
+  }
+
+  if (updates.showCameraInfo !== undefined) {
+    statements.push("show_camera_info = ?");
+    values.push(updates.showCameraInfo ? 1 : 0);
+  }
+
+  if (updates.showLocationInfo !== undefined) {
+    statements.push("show_location_info = ?");
+    values.push(updates.showLocationInfo ? 1 : 0);
+  }
+
+  if (updates.showDetailedExifInfo !== undefined) {
+    statements.push("show_detailed_exif_info = ?");
+    values.push(updates.showDetailedExifInfo ? 1 : 0);
   }
 
   if (updates.photographerAvatarUrl !== undefined) {

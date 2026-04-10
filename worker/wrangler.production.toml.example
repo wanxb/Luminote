@@ -1,0 +1,25 @@
+name = "your-worker-name"
+main = "src/index.ts"
+compatibility_date = "2026-04-02"
+workers_dev = true
+
+routes = [
+  { pattern = "your-api.example.com", custom_domain = true, zone_name = "example.com" }
+]
+
+[vars]
+SITE_TITLE = "Luminote"
+WATERMARK_ENABLED_BY_DEFAULT = "true"
+WATERMARK_TEXT = "Your Watermark"
+CORS_ALLOWED_ORIGINS = "https://your-site.example.com"
+ADMIN_COOKIE_SAME_SITE = "None"
+ADMIN_COOKIE_SECURE = "true"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "your-d1-database-name"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[r2_buckets]]
+binding = "PHOTOS_BUCKET"
+bucket_name = "your-r2-bucket-name"

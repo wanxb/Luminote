@@ -2,14 +2,26 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
-import type { PhotoDetail, PhotoSummary, WatermarkPosition } from "@/lib/api/types";
+import { getSiteMessages } from "@/lib/site-i18n";
+import type {
+  PhotoDetail,
+  PhotoSummary,
+  SiteLocale,
+  WatermarkPosition,
+} from "@/lib/api/types";
 
 type LightboxShellProps = {
   photo: PhotoDetail | PhotoSummary | null;
   photos: PhotoSummary[];
+  locale?: SiteLocale;
   watermarkEnabled: boolean;
   watermarkText: string;
   watermarkPosition: WatermarkPosition;
+  photoMetadataEnabled?: boolean;
+  showDateInfo?: boolean;
+  showCameraInfo?: boolean;
+  showLocationInfo?: boolean;
+  showDetailedExifInfo?: boolean;
   activeIndex: number | null;
   hasMorePhotos?: boolean;
   isImmersive: boolean;
@@ -26,117 +38,53 @@ type LightboxShellProps = {
   hasMultiple: boolean;
 };
 
-const metaLabels: Array<{ label: string; value: (photo: PhotoDetail) => string | undefined }> = [
-  { label: "拍摄时间", value: (photo) => photo.takenAt },
-  { label: "机身", value: (photo) => photo.device },
-  { label: "镜头", value: (photo) => photo.lens },
-  { label: "光圈", value: (photo) => photo.exif?.aperture },
-  { label: "快门", value: (photo) => photo.exif?.shutter },
-  { label: "ISO", value: (photo) => (photo.exif?.iso ? String(photo.exif.iso) : undefined) },
-  { label: "焦距", value: (photo) => photo.exif?.focalLength }
-];
-
-const exifLabelMap: Record<string, string> = {
-  DateTimeOriginal: "原始拍摄时间",
-  CreateDate: "创建时间",
-  ModifyDate: "修改时间",
-  Make: "品牌",
-  Model: "机型",
-  LensModel: "镜头型号",
-  FNumber: "光圈值",
-  ExposureTime: "曝光时间",
-  ISO: "ISO",
-  FocalLength: "焦距",
-  FocalLengthIn35mmFormat: "等效焦距",
-  ExposureBiasValue: "曝光补偿",
-  ExposureProgram: "曝光程序",
-  ExposureMode: "曝光模式",
-  MeteringMode: "测光模式",
-  WhiteBalance: "白平衡",
-  Flash: "闪光灯",
-  Orientation: "方向",
-  ExifImageWidth: "图像宽度",
-  ExifImageHeight: "图像高度",
-  ImageWidth: "宽度",
-  ImageHeight: "高度",
-  ColorSpace: "色彩空间",
-  Artist: "作者",
-  Software: "软件",
-  Copyright: "版权",
-  latitude: "纬度",
-  longitude: "经度",
-  GPSLatitude: "GPS 纬度",
-  GPSLongitude: "GPS 经度",
-  GPSAltitude: "GPS 海拔",
-  GPSSpeed: "GPS 速度"
-};
-
-const duplicatedExifKeys = new Set([
-  "DateTimeOriginal",
-  "Make",
-  "Model",
-  "LensModel",
-  "FNumber",
-  "ExposureTime",
-  "ISO",
-  "FocalLength",
-  "latitude",
-  "longitude",
-  "GPSLatitude",
-  "GPSLongitude"
-]);
-
 function isPhotoDetail(photo: PhotoDetail | PhotoSummary | null): photo is PhotoDetail {
   return Boolean(photo && "tags" in photo);
 }
 
-function formatMetaValue(label: string, value: string) {
-  if (label !== "拍摄时间") {
-    return value;
-  }
-
-  return new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[76px_minmax(0,1fr)] items-start gap-3">
+      <dt className="text-paper/42">{label}</dt>
+      <dd className="break-words text-right font-medium text-paper/88">{value}</dd>
+    </div>
+  );
 }
 
-function formatExifParamLabel(key: string) {
-  if (exifLabelMap[key]) {
-    return exifLabelMap[key];
-  }
+function WatermarkOverlay({ text, position }: { text: string; position: WatermarkPosition }) {
+  const map: Record<WatermarkPosition, string> = {
+    "top-left": "left-6 top-6 items-start justify-start text-left",
+    top: "left-1/2 top-6 -translate-x-1/2 items-start justify-center text-center",
+    "top-right": "right-6 top-6 items-start justify-end text-right",
+    left: "left-6 top-1/2 -translate-y-1/2 items-center justify-start text-left",
+    center: "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center",
+    right: "right-6 top-1/2 -translate-y-1/2 items-center justify-end text-right",
+    "bottom-left": "bottom-6 left-6 items-end justify-start text-left",
+    bottom: "bottom-6 left-1/2 -translate-x-1/2 items-end justify-center text-center",
+    "bottom-right": "bottom-6 right-6 items-end justify-end text-right",
+  };
 
-  return key
-    .replace(/[_-]+/g, " ")
-    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
-    .trim();
-}
-
-function getExtendedExifItems(photo: PhotoDetail) {
-  const params = photo.exif?.params;
-
-  if (!params) {
-    return [] as Array<{ label: string; value: string }>;
-  }
-
-  return Object.entries(params)
-    .filter(([key, value]) => !duplicatedExifKeys.has(key) && Boolean(value))
-    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey, "zh-CN"))
-    .map(([key, value]) => ({
-      label: formatExifParamLabel(key),
-      value
-    }));
+  return (
+    <div className={`pointer-events-none absolute inset-0 z-[2] flex ${map[position]}`}>
+      <div className="max-w-[58vw] px-4 py-2 text-[clamp(12px,1.3vw,18px)] font-semibold tracking-[0.28em] text-[rgba(0,0,0,0.72)]">
+        {text}
+      </div>
+    </div>
+  );
 }
 
 export function LightboxShell({
   photo,
   photos,
+  locale = "zh-CN",
   watermarkEnabled,
   watermarkText,
   watermarkPosition,
+  photoMetadataEnabled = true,
+  showDateInfo = true,
+  showCameraInfo = true,
+  showLocationInfo = true,
+  showDetailedExifInfo = true,
   activeIndex,
   hasMorePhotos = false,
   isImmersive,
@@ -150,11 +98,11 @@ export function LightboxShell({
   onPrevious,
   onSelect,
   onToggleImmersive,
-  hasMultiple
+  hasMultiple,
 }: LightboxShellProps) {
+  const copy = getSiteMessages(locale);
   const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const displayImageRef = useRef<HTMLImageElement | null>(null);
-  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
   const activeThumbnailRef = useRef<HTMLButtonElement | null>(null);
   const [watermarkFrame, setWatermarkFrame] = useState<{
     top: number;
@@ -164,35 +112,46 @@ export function LightboxShell({
   } | null>(null);
 
   const detail = isPhotoDetail(photo) ? photo : null;
-  const displaySrc = photo?.displayUrl ?? "";
-  const metaItems = detail
-    ? metaLabels
-        .map(({ label, value }) => {
-          const currentValue = value(detail);
+  const metaItems: Array<{ label: string; value: string }> = [];
 
-          return currentValue
-            ? {
-                label,
-                value: formatMetaValue(label, currentValue)
-              }
-            : null;
-        })
-        .filter((item): item is { label: string; value: string } => item !== null)
-    : [];
-  const extendedExifItems = detail ? getExtendedExifItems(detail) : [];
+  if (detail && photoMetadataEnabled) {
+    if (showDateInfo && detail.takenAt) {
+      try {
+        const localeTag = locale === "zh-TW" ? "zh-TW" : locale === "en" ? "en-US" : "zh-CN";
+        metaItems.push({
+          label: copy.takenAt,
+          value: new Date(detail.takenAt).toLocaleString(localeTag),
+        });
+      } catch {
+        // Fallback if locale is not supported
+        metaItems.push({
+          label: copy.takenAt,
+          value: new Date(detail.takenAt).toLocaleString(),
+        });
+      }
+    }
+    if (showCameraInfo && detail.device) metaItems.push({ label: copy.device, value: detail.device });
+    if (showCameraInfo && detail.lens) metaItems.push({ label: copy.lens, value: detail.lens });
+    if (showCameraInfo && detail.exif?.aperture) metaItems.push({ label: copy.aperture, value: detail.exif.aperture });
+    if (showCameraInfo && detail.exif?.shutter) metaItems.push({ label: copy.shutter, value: detail.exif.shutter });
+    if (showCameraInfo && detail.exif?.iso) metaItems.push({ label: copy.iso, value: String(detail.exif.iso) });
+    if (showCameraInfo && detail.exif?.focalLength) metaItems.push({ label: copy.focalLength, value: detail.exif.focalLength });
+  }
+
+  const extendedExifItems =
+    detail && photoMetadataEnabled && showDetailedExifInfo && detail.exif?.params
+      ? Object.entries(detail.exif.params).map(([label, value]) => ({ label, value }))
+      : [];
 
   function updateWatermarkFrame() {
     const viewport = imageViewportRef.current;
     const image = displayImageRef.current;
-
     if (!viewport || !image) {
       setWatermarkFrame(null);
       return;
     }
-
     const viewportRect = viewport.getBoundingClientRect();
     const imageRect = image.getBoundingClientRect();
-
     setWatermarkFrame({
       top: imageRect.top - viewportRect.top,
       left: imageRect.left - viewportRect.left,
@@ -202,305 +161,124 @@ export function LightboxShell({
   }
 
   function handleImageClick(event: MouseEvent<HTMLImageElement>) {
-    if (!hasMultiple) {
-      return;
-    }
-
+    if (!hasMultiple) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const midpoint = rect.left + rect.width / 2;
-
-    if (event.clientX < midpoint) {
-      onPrevious();
-      return;
-    }
-
-    onNext();
+    if (event.clientX < midpoint) onPrevious();
+    else onNext();
   }
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleResize = () => {
-      updateWatermarkFrame();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [displaySrc, isOpen, isImmersive]);
+    if (!isOpen) return;
+    const onResize = () => updateWatermarkFrame();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [isOpen, isImmersive, photo?.displayUrl]);
 
   useEffect(() => {
-    if (activeIndex === null || !hasMorePhotos || isLoadingMorePhotos || !onLoadMorePhotos) {
-      return;
-    }
-
-    if (photos.length - activeIndex <= 6) {
-      onLoadMorePhotos();
-    }
+    if (activeIndex === null || !hasMorePhotos || isLoadingMorePhotos || !onLoadMorePhotos) return;
+    if (photos.length - activeIndex <= 6) onLoadMorePhotos();
   }, [activeIndex, hasMorePhotos, isLoadingMorePhotos, onLoadMorePhotos, photos.length]);
 
   useEffect(() => {
-    if (!isOpen || !activeThumbnailRef.current) {
-      return;
+    if (isOpen && activeThumbnailRef.current) {
+      activeThumbnailRef.current.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }
-
-    activeThumbnailRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
   }, [activeIndex, isOpen]);
 
-  if (!isOpen || !photo) {
-    return null;
-  }
+  if (!isOpen || !photo) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(24,19,16,0.86)] backdrop-blur-2xl"
       role="dialog"
       aria-modal="true"
-      aria-label="照片详情"
+      aria-label={copy.lightboxAria}
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#261d18] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${
-          isImmersive
-            ? "grid-rows-[minmax(0,1fr)_72px]"
-            : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"
-        }`}
+        className={`grid h-screen w-screen overflow-hidden bg-[#261d18] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.45)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <section
-          className={`relative min-h-0 overflow-hidden bg-[#211915] ${
-            isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"
-          }`}
-          onDoubleClick={onToggleImmersive}
-        >
+        <section className={`relative min-h-0 overflow-hidden bg-[#211915] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`} onDoubleClick={onToggleImmersive}>
           <div className="absolute inset-0">
-            <Image
-              src={displaySrc}
-              alt=""
-              fill
-              aria-hidden="true"
-              className="scale-125 object-cover blur-[72px] saturate-[0.92] brightness-[0.42] opacity-[0.22]"
-              sizes="100vw"
-              priority
-            />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,234,205,0.12),transparent_28%),linear-gradient(180deg,rgba(42,31,25,0.62)_0%,rgba(28,22,19,0.72)_54%,rgba(18,15,13,0.9)_100%)]" />
+            <Image src={photo.displayUrl} alt="" fill aria-hidden="true" className="scale-125 object-cover blur-[72px] saturate-[0.92] brightness-[0.42] opacity-[0.22]" sizes="100vw" priority />
           </div>
 
           {hasMultiple ? (
             <>
-                <button
-                  type="button"
-                  aria-label="上一张"
-                  onClick={onPrevious}
-                  className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${
-                    isImmersive ? "hidden" : "hidden lg:flex"
-                  }`}
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  aria-label="下一张"
-                  onClick={onNext}
-                  className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${
-                    isImmersive ? "hidden" : "hidden lg:flex"
-                  }`}
-                >
-                  →
-                </button>
+              <button type="button" aria-label={copy.previousPhoto} onClick={onPrevious} className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "hidden" : "hidden lg:flex lg:items-center lg:justify-center"}`}>‹</button>
+              <button type="button" aria-label={copy.nextPhoto} onClick={onNext} className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "hidden" : "hidden lg:flex lg:items-center lg:justify-center"}`}>›</button>
             </>
           ) : null}
 
-          {isImmersive ? null : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34 sm:right-4 sm:top-4 lg:right-6"
-            >
-              ×
-            </button>
-          )}
+          {!isImmersive ? (
+            <button type="button" onClick={onClose} className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34">×</button>
+          ) : null}
 
-            <div
-              className={`relative z-[1] flex h-full min-h-0 justify-center ${
-                isImmersive
-                  ? "items-center px-3 py-0 sm:px-4 md:px-8 lg:px-10"
-                  : "items-stretch px-3 py-2 sm:px-4 md:px-8 md:py-2 lg:px-10 lg:py-3"
-              }`}
-            >
-              <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
-                <div className="flex h-full w-full items-center justify-center">
-                  <img
-                    ref={displayImageRef}
-                    src={displaySrc}
-                    alt={photo.description ?? photo.id}
-                    onClick={handleImageClick}
-                    onLoad={updateWatermarkFrame}
-                    className="block h-auto max-h-full w-auto max-w-full object-contain"
-                  />
-                </div>
-                {watermarkEnabled && watermarkText && watermarkFrame ? (
-                  <div
-                    className="pointer-events-none absolute z-[2]"
-                    style={{
-                      top: `${watermarkFrame.top}px`,
-                      left: `${watermarkFrame.left}px`,
-                      width: `${watermarkFrame.width}px`,
-                      height: `${watermarkFrame.height}px`,
-                    }}
-                  >
-                    <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </section>
-
-          {isImmersive ? null : (
-            <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-4 backdrop-blur-2xl sm:p-5 lg:col-start-2 lg:row-span-2 lg:overflow-hidden">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
-            </div>
-
-            <div className="mt-4 flex-1 space-y-5 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76 lg:mt-5 lg:overflow-hidden">
-              {isLoading ? (
-                <p className="rounded-2xl border border-white/6 bg-white/[0.045] px-4 py-3 text-paper/70 backdrop-blur-md">
-                  正在拉取这张照片的完整信息…
-                </p>
-              ) : null}
-
-              {error ? (
-                <p className="rounded-2xl border border-[#c96b51]/18 bg-[#c96b51]/12 px-4 py-3 leading-5 text-[#ffd7cc] backdrop-blur-md">
-                  {error}
-                </p>
-              ) : null}
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">基本信息</p>
-                <dl className="space-y-2.5">
-                  <MetaRow label="文件名" value={`${photo.id}.jpg`} />
-                  <MetaRow label="备注" value={photo.description ?? "暂无备注"} />
-                  <MetaRow label="水印" value={watermarkEnabled ? "已启用" : "未启用"} />
-                  {detail?.location ? <MetaRow label="位置" value={detail.location} /> : null}
-                  {detail?.tags.length ? <MetaRow label="标签" value={detail.tags.join(", ")} /> : null}
-                </dl>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">拍摄参数</p>
-                {metaItems.length > 0 ? (
-                  <dl className="space-y-2.5">
-                    {metaItems.map((item) => (
-                      <MetaRow key={item.label} label={item.label} value={item.value} />
-                    ))}
-                  </dl>
-                ) : (
-                  <p className="text-paper/55">这张照片暂时没有可展示的 EXIF 信息。</p>
-                )}
-              </div>
-
-              {extendedExifItems.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">完整参数</p>
-                  <dl className="space-y-2.5">
-                    {extendedExifItems.map((item) => (
-                      <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
-                    ))}
-                  </dl>
-                </div>
-              ) : null}
-            </div>
-            </aside>
-          )}
-
-        {hasMultiple ? (
-          <div
-            className={`hidden justify-center bg-[linear-gradient(180deg,rgba(42,34,29,0.82)_0%,rgba(29,24,21,0.88)_100%)] backdrop-blur-2xl lg:flex ${
-              isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"
-            }`}
-          >
-            <div
-              ref={thumbnailStripRef}
-              className="flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-x-auto overflow-y-hidden px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {photos.map((item, index) => {
-                const thumbSrc = item.thumbUrl;
-                const isActive = index === activeIndex;
-
-                return (
-                  <button
-                    key={item.id}
-                    ref={isActive ? activeThumbnailRef : null}
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-[10px] transition ${
-                      isActive
-                        ? "scale-[1.08] bg-white/[0.08] shadow-[0_0_0_2px_rgba(232,222,193,0.72),0_10px_24px_rgba(0,0,0,0.28)]"
-                        : "opacity-75 hover:opacity-100"
-                    }`}
-                  >
-                    <div
-                      className={`absolute inset-0 z-[1] rounded-[10px] ${
-                        isActive ? "bg-[#f0e6c8]/14" : "bg-black/8"
-                      }`}
-                    />
-                    <Image
-                      src={thumbSrc}
-                      alt={item.description ?? item.id}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  </button>
-                );
-              })}
-              {isLoadingMorePhotos ? (
-                <div className="flex h-12 shrink-0 items-center px-2 text-[11px] uppercase tracking-[0.18em] text-paper/48">
-                  Loading
+          <div className={`relative z-[1] flex h-full min-h-0 justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
+            <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
+              <img ref={displayImageRef} src={photo.displayUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
+              {watermarkEnabled && watermarkText && watermarkFrame ? (
+                <div className="pointer-events-none absolute z-[2]" style={{ top: watermarkFrame.top, left: watermarkFrame.left, width: watermarkFrame.width, height: watermarkFrame.height }}>
+                  <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
                 </div>
               ) : null}
             </div>
           </div>
+        </section>
+
+        {!isImmersive ? (
+          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(48,37,30,0.88)_0%,rgba(32,26,22,0.9)_56%,rgba(24,20,17,0.94)_100%)] p-4 backdrop-blur-2xl sm:p-5 lg:col-start-2 lg:row-span-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
+            </div>
+
+            <div className="mt-4 flex-1 space-y-5 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76">
+              {isLoading ? <p className="rounded-2xl border border-white/6 bg-white/[0.045] px-4 py-3 text-paper/70">{copy.loadingPhotoDetails}</p> : null}
+              {error ? <p className="rounded-2xl border border-[#c96b51]/18 bg-[#c96b51]/12 px-4 py-3 text-[#ffd7cc]">{error}</p> : null}
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.basicInfo}</p>
+                <dl className="space-y-2.5">
+                  <MetaRow label={copy.fileName} value={`${photo.id}.jpg`} />
+                  <MetaRow label={copy.note} value={photo.description ?? copy.noNote} />
+                  <MetaRow label={copy.watermark} value={watermarkEnabled ? copy.enabled : copy.disabled} />
+                  {photoMetadataEnabled && showLocationInfo && detail?.location ? <MetaRow label={copy.location} value={detail.location} /> : null}
+                  {detail?.tags.length ? <MetaRow label={copy.tags} value={detail.tags.join(", ")} /> : null}
+                </dl>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.photoParams}</p>
+                {metaItems.length ? <dl className="space-y-2.5">{metaItems.map((item) => <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />)}</dl> : <p className="text-paper/55">{copy.noExif}</p>}
+              </div>
+
+              {extendedExifItems.length ? (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.fullParams}</p>
+                  <dl className="space-y-2.5">{extendedExifItems.map((item) => <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />)}</dl>
+                </div>
+              ) : null}
+            </div>
+          </aside>
         ) : null}
-      </div>
-    </div>
-  );
-}
 
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[76px_minmax(0,1fr)] items-start gap-3">
-      <dt className="text-paper/42">{label}</dt>
-      <dd className="break-words text-right font-medium text-paper/88">{value}</dd>
-    </div>
-  );
-}
-
-function WatermarkOverlay({ text, position }: { text: string; position: WatermarkPosition }) {
-  const positionClassMap: Record<WatermarkPosition, string> = {
-    "top-left": "left-6 top-6 items-start justify-start text-left",
-    top: "left-1/2 top-6 -translate-x-1/2 items-start justify-center text-center",
-    "top-right": "right-6 top-6 items-start justify-end text-right",
-    left: "left-6 top-1/2 -translate-y-1/2 items-center justify-start text-left",
-    center: "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center",
-    right: "right-6 top-1/2 -translate-y-1/2 items-center justify-end text-right",
-    "bottom-left": "bottom-6 left-6 items-end justify-start text-left",
-    bottom: "bottom-6 left-1/2 -translate-x-1/2 items-end justify-center text-center",
-    "bottom-right": "bottom-6 right-6 items-end justify-end text-right",
-  };
-
-  return (
-    <div className={`pointer-events-none absolute inset-0 z-[2] flex ${positionClassMap[position]}`}>
-      <div className="max-w-[58vw] px-4 py-2 text-[clamp(12px,1.3vw,18px)] font-semibold tracking-[0.28em] text-[rgba(0,0,0,0.72)]">
-        {text}
+        {hasMultiple ? (
+          <div className={`hidden justify-center bg-[linear-gradient(180deg,rgba(42,34,29,0.82)_0%,rgba(29,24,21,0.88)_100%)] backdrop-blur-2xl lg:flex ${isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"}`}>
+            <div className="flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-x-auto overflow-y-hidden px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {photos.map((item, index) => {
+                const isActive = index === activeIndex;
+                return (
+                  <button key={item.id} ref={isActive ? activeThumbnailRef : null} type="button" onClick={() => onSelect(index)} className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-[10px] transition ${isActive ? "scale-[1.08] bg-white/[0.08] shadow-[0_0_0_2px_rgba(232,222,193,0.72),0_10px_24px_rgba(0,0,0,0.28)]" : "opacity-75 hover:opacity-100"}`}>
+                    <Image src={item.thumbUrl} alt={item.description ?? item.id} fill className="object-cover" sizes="48px" />
+                  </button>
+                );
+              })}
+              {isLoadingMorePhotos ? <div className="flex h-12 shrink-0 items-center px-2 text-[11px] uppercase tracking-[0.18em] text-paper/48">{copy.loadingMoreLabel}</div> : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

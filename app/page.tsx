@@ -3,7 +3,7 @@ import { SpotlightHome } from "@/components/site/spotlight-home";
 import { GalleryExperience } from "@/components/gallery/gallery-experience";
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotos, getSite, getSiteTags } from "@/lib/api/client";
-import { defaultGalleryPhotos } from "@/lib/gallery-defaults";
+import { getDefaultGalleryPhotos } from "@/lib/gallery-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,9 @@ export default async function HomePage() {
     getSiteTags(),
   ]);
   const hasRemotePhotos = photoResponse.items.length > 0;
-  const galleryPhotos = hasRemotePhotos ? photoResponse.items : defaultGalleryPhotos;
+  const galleryPhotos = hasRemotePhotos
+    ? photoResponse.items
+    : getDefaultGalleryPhotos(site.locale);
   const allTags = siteTags.length > 0
     ? siteTags
     : collectFallbackTags(galleryPhotos.map((photo) => photo.tags ?? []));

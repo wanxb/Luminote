@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "127.0.0.1",
         port: "8787"
+      },
+      {
+        protocol: "https",
+        hostname: "luminote-api.bbing.xyz"
+      },
+      {
+        protocol: "http",
+        hostname: "luminote-api.bbing.xyz"
       }
     ]
   }

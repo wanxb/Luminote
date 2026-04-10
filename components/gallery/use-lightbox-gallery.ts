@@ -2,21 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { getPhotoDetail } from "@/lib/api/client";
+import type { PhotoDetail, PhotoSummary, SiteLocale } from "@/lib/api/types";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
-import type { PhotoDetail, PhotoSummary } from "@/lib/api/types";
+import { getSiteMessages } from "@/lib/site-i18n";
 
 type UseLightboxGalleryOptions = {
   photos: PhotoSummary[];
+  locale: SiteLocale;
   findFallbackPhoto?: (photoId: string) => PhotoSummary | undefined;
 };
 
-export function useLightboxGallery({ photos, findFallbackPhoto }: UseLightboxGalleryOptions) {
+export function useLightboxGallery({
+  photos,
+  locale,
+  findFallbackPhoto,
+}: UseLightboxGalleryOptions) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [detail, setDetail] = useState<PhotoDetail | null>(null);
   const [isImmersive, setIsImmersive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const copy = getSiteMessages(locale);
 
   useEffect(() => {
     if (selectedId === null) {
@@ -28,7 +35,7 @@ export function useLightboxGallery({ photos, findFallbackPhoto }: UseLightboxGal
     setError(null);
 
     if (isDefaultGalleryPhotoId(selectedId)) {
-      setDetail(getDefaultGalleryPhotoDetail(selectedId));
+      setDetail(getDefaultGalleryPhotoDetail(selectedId, locale));
       setIsLoading(false);
       return () => {
         active = false;
@@ -43,7 +50,7 @@ export function useLightboxGallery({ photos, findFallbackPhoto }: UseLightboxGal
 
         if (!response) {
           setDetail(null);
-          setError("这张照片的详情暂时不可用。");
+          setError(copy.detailUnavailable);
           return;
         }
 
@@ -55,7 +62,7 @@ export function useLightboxGallery({ photos, findFallbackPhoto }: UseLightboxGal
         }
 
         setDetail(null);
-        setError("加载详情时出了点问题，请稍后再试。");
+        setError(copy.detailLoadFailed);
       })
       .finally(() => {
         if (active) {
@@ -66,7 +73,7 @@ export function useLightboxGallery({ photos, findFallbackPhoto }: UseLightboxGal
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [copy.detailLoadFailed, copy.detailUnavailable, locale, selectedId]);
 
   useEffect(() => {
     if (selectedIndex === null) {

@@ -1,11 +1,18 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "luminote-local",
+  "name": "your-production-worker-name",
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "routes": [
+    {
+      "pattern": "your-site.example.com",
+      "custom_domain": true,
+      "zone_name": "example.com"
+    }
   ],
   "assets": {
     "directory": ".open-next/assets",
@@ -14,13 +21,13 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "luminote-local"
+      "service": "your-production-worker-name"
     }
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "luminote-local-cache"
+      "bucket_name": "your-opennext-cache-bucket"
     }
   ],
   "images": {

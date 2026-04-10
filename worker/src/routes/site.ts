@@ -11,6 +11,7 @@ import {
   getPublicSiteTags,
 } from "../../../packages/core/src";
 import type { SiteResponse } from "../../../packages/shared/src/api-types";
+import { getLocaleMessages, normalizeLocale } from "../utils/i18n";
 
 function resolvePublicAssetUrl(request: Request, assetUrl: string) {
   const trimmed = assetUrl.trim();
@@ -56,6 +57,7 @@ export async function handleSite(
       const config = await getSiteConfig(env);
 
       return {
+        locale: config.locale as SiteResponse["locale"],
         siteTitle: config.siteTitle,
         siteDescription: config.siteDescription,
         homeLayout: config.homeLayout as SiteResponse["homeLayout"],
@@ -64,9 +66,15 @@ export async function handleSite(
         watermarkPosition:
           config.watermarkPosition as SiteResponse["watermarkPosition"],
         uploadOriginalEnabled: config.uploadOriginalEnabled,
+        maxTotalPhotos: config.maxTotalPhotos,
         maxTagPoolSize: config.maxTagPoolSize,
         maxUploadFiles: config.maxUploadFiles,
         maxTagsPerPhoto: config.maxTagsPerPhoto,
+        photoMetadataEnabled: config.photoMetadataEnabled,
+        showDateInfo: config.showDateInfo,
+        showCameraInfo: config.showCameraInfo,
+        showLocationInfo: config.showLocationInfo,
+        showDetailedExifInfo: config.showDetailedExifInfo,
         photographerAvatarUrl: resolvePublicAssetUrl(
           request,
           config.photographerAvatarUrl,
@@ -103,7 +111,9 @@ export async function handleSite(
 
 async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
   try {
+    const currentConfig = await getSiteConfig(env);
     const body = (await request.json()) as {
+      locale?: string;
       siteTitle?: string;
       siteDescription?: string;
       homeLayout?: string;
@@ -112,9 +122,15 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       watermarkPosition?: string;
       adminPassword?: string;
       uploadOriginalEnabled?: boolean;
+      maxTotalPhotos?: number;
       maxTagPoolSize?: number;
       maxUploadFiles?: number;
       maxTagsPerPhoto?: number;
+      photoMetadataEnabled?: boolean;
+      showDateInfo?: boolean;
+      showCameraInfo?: boolean;
+      showLocationInfo?: boolean;
+      showDetailedExifInfo?: boolean;
       photographerAvatarUrl?: string;
       photographerName?: string;
       photographerBio?: string;
@@ -128,8 +144,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       photographerCustomAccount?: string;
       photographerCustomAccountUrl?: string;
     };
+    const locale = normalizeLocale(
+      typeof body.locale === "string" ? body.locale : currentConfig.locale,
+    );
+    const t = getLocaleMessages(locale);
 
     const updates: {
+      locale?: string;
       siteTitle?: string;
       siteDescription?: string;
       homeLayout?: string;
@@ -138,9 +159,15 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       watermarkPosition?: string;
       adminPassword?: string;
       uploadOriginalEnabled?: boolean;
+      maxTotalPhotos?: number;
       maxTagPoolSize?: number;
       maxUploadFiles?: number;
       maxTagsPerPhoto?: number;
+      photoMetadataEnabled?: boolean;
+      showDateInfo?: boolean;
+      showCameraInfo?: boolean;
+      showLocationInfo?: boolean;
+      showDetailedExifInfo?: boolean;
       photographerAvatarUrl?: string;
       photographerName?: string;
       photographerBio?: string;
@@ -156,18 +183,29 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
     } = {};
     const errors: string[] = [];
 
+    if (body.locale !== undefined) {
+      if (
+        typeof body.locale !== "string" ||
+        !["zh-CN", "zh-TW", "en"].includes(body.locale)
+      ) {
+        errors.push(t.invalidLanguage);
+      } else {
+        updates.locale = body.locale;
+      }
+    }
+
     if (body.siteTitle !== undefined) {
       if (
         typeof body.siteTitle !== "string" ||
         body.siteTitle.trim().length === 0
       ) {
-        errors.push("站点标题不能为空。");
+        errors.push(t.siteTitleRequired);
       } else {
         const result = validateTextField(
           body.siteTitle,
           TEXT_LIMITS.siteTitle,
-          "站点标题不能为空。",
-          `站点标题不能超过 ${TEXT_LIMITS.siteTitle} 个字符。`,
+          t.siteTitleRequired,
+          t.siteTitleTooLong(TEXT_LIMITS.siteTitle),
         );
 
         if (!result.ok) {
@@ -180,13 +218,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.siteDescription !== undefined) {
       if (typeof body.siteDescription !== "string") {
-        errors.push("站点简介格式错误。");
+        errors.push(t.siteDescriptionInvalid);
       } else {
         const result = validateTextField(
           body.siteDescription,
           TEXT_LIMITS.siteDescription,
-          "站点简介格式错误。",
-          `站点简介不能超过 ${TEXT_LIMITS.siteDescription} 个字符。`,
+          t.siteDescriptionInvalid,
+          t.siteDescriptionTooLong(TEXT_LIMITS.siteDescription),
           { allowEmpty: true },
         );
 
@@ -203,7 +241,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         typeof body.homeLayout !== "string" ||
         !["masonry", "editorial", "spotlight"].includes(body.homeLayout)
       ) {
-        errors.push("首页样式格式错误。");
+        errors.push(t.invalidHomeLayout);
       } else {
         updates.homeLayout = body.homeLayout;
       }
@@ -211,7 +249,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.watermarkEnabledByDefault !== undefined) {
       if (typeof body.watermarkEnabledByDefault !== "boolean") {
-        errors.push("水印默认开关格式错误。");
+        errors.push(t.invalidWatermarkDefault);
       } else {
         updates.watermarkEnabledByDefault = body.watermarkEnabledByDefault;
       }
@@ -222,13 +260,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         typeof body.watermarkText !== "string" ||
         body.watermarkText.trim().length === 0
       ) {
-        errors.push("水印文本不能为空。");
+        errors.push(t.watermarkTextRequired);
       } else {
         const result = validateTextField(
           body.watermarkText,
           TEXT_LIMITS.watermarkText,
-          "水印文本不能为空。",
-          `水印文本不能超过 ${TEXT_LIMITS.watermarkText} 个字符。`,
+          t.watermarkTextRequired,
+          t.watermarkTextTooLong(TEXT_LIMITS.watermarkText),
         );
 
         if (!result.ok) {
@@ -254,7 +292,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
           "bottom-right",
         ].includes(body.watermarkPosition)
       ) {
-        errors.push("水印位置格式错误。");
+        errors.push(t.invalidWatermarkPosition);
       } else {
         updates.watermarkPosition = body.watermarkPosition;
       }
@@ -265,9 +303,9 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         typeof body.adminPassword !== "string" ||
         body.adminPassword.length < 6
       ) {
-        errors.push("管理员密码至少需要 6 个字符。");
+        errors.push(t.adminPasswordTooShort);
       } else if (!isWithinTextLimit(body.adminPassword, TEXT_LIMITS.password)) {
-        errors.push(`管理员密码不能超过 ${TEXT_LIMITS.password} 个字符。`);
+        errors.push(t.adminPasswordTooLong(TEXT_LIMITS.password));
       } else {
         updates.adminPassword = body.adminPassword;
       }
@@ -275,7 +313,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.uploadOriginalEnabled !== undefined) {
       if (typeof body.uploadOriginalEnabled !== "boolean") {
-        errors.push("原图上传开关格式错误。");
+        errors.push(t.invalidOriginalUploadSwitch);
       } else {
         updates.uploadOriginalEnabled = body.uploadOriginalEnabled;
       }
@@ -283,15 +321,23 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.maxTagPoolSize !== undefined) {
       if (!Number.isInteger(body.maxTagPoolSize) || body.maxTagPoolSize <= 0) {
-        errors.push("标签总数上限必须是正整数。");
+        errors.push(t.invalidMaxTagPoolSize);
       } else {
         updates.maxTagPoolSize = body.maxTagPoolSize;
       }
     }
 
+    if (body.maxTotalPhotos !== undefined) {
+      if (!Number.isInteger(body.maxTotalPhotos) || body.maxTotalPhotos <= 0) {
+        errors.push(t.invalidMaxTotalPhotos);
+      } else {
+        updates.maxTotalPhotos = body.maxTotalPhotos;
+      }
+    }
+
     if (body.maxUploadFiles !== undefined) {
       if (!Number.isInteger(body.maxUploadFiles) || body.maxUploadFiles <= 0) {
-        errors.push("批量上传数量上限必须是正整数。");
+        errors.push(t.invalidMaxUploadFiles);
       } else {
         updates.maxUploadFiles = body.maxUploadFiles;
       }
@@ -302,21 +348,61 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         !Number.isInteger(body.maxTagsPerPhoto) ||
         body.maxTagsPerPhoto <= 0
       ) {
-        errors.push("单张图片标签上限必须是正整数。");
+        errors.push(t.invalidMaxTagsPerPhoto);
       } else {
         updates.maxTagsPerPhoto = body.maxTagsPerPhoto;
       }
     }
 
+    if (body.photoMetadataEnabled !== undefined) {
+      if (typeof body.photoMetadataEnabled !== "boolean") {
+        errors.push(t.invalidPhotoMetadataSwitch);
+      } else {
+        updates.photoMetadataEnabled = body.photoMetadataEnabled;
+      }
+    }
+
+    if (body.showDateInfo !== undefined) {
+      if (typeof body.showDateInfo !== "boolean") {
+        errors.push(t.invalidShowDateInfo);
+      } else {
+        updates.showDateInfo = body.showDateInfo;
+      }
+    }
+
+    if (body.showCameraInfo !== undefined) {
+      if (typeof body.showCameraInfo !== "boolean") {
+        errors.push(t.invalidShowCameraInfo);
+      } else {
+        updates.showCameraInfo = body.showCameraInfo;
+      }
+    }
+
+    if (body.showLocationInfo !== undefined) {
+      if (typeof body.showLocationInfo !== "boolean") {
+        errors.push(t.invalidShowLocationInfo);
+      } else {
+        updates.showLocationInfo = body.showLocationInfo;
+      }
+    }
+
+    if (body.showDetailedExifInfo !== undefined) {
+      if (typeof body.showDetailedExifInfo !== "boolean") {
+        errors.push(t.invalidShowDetailedExifInfo);
+      } else {
+        updates.showDetailedExifInfo = body.showDetailedExifInfo;
+      }
+    }
+
     if (body.photographerAvatarUrl !== undefined) {
       if (typeof body.photographerAvatarUrl !== "string") {
-        errors.push("摄影师头像链接格式错误。");
+        errors.push(t.invalidPhotographerAvatarUrl);
       } else {
         const result = validateTextField(
           body.photographerAvatarUrl,
           TEXT_LIMITS.url,
-          "摄影师头像链接格式错误。",
-          `摄影师头像链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
+          t.invalidPhotographerAvatarUrl,
+          t.photographerAvatarUrlTooLong(TEXT_LIMITS.url),
           { allowEmpty: true },
         );
 
@@ -330,13 +416,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerName !== undefined) {
       if (typeof body.photographerName !== "string") {
-        errors.push("摄影师姓名格式错误。");
+        errors.push(t.invalidPhotographerName);
       } else {
         const result = validateTextField(
           body.photographerName,
           TEXT_LIMITS.photographerName,
-          "摄影师姓名格式错误。",
-          `摄影师姓名不能超过 ${TEXT_LIMITS.photographerName} 个字符。`,
+          t.invalidPhotographerName,
+          t.photographerNameTooLong(TEXT_LIMITS.photographerName),
           { allowEmpty: true },
         );
 
@@ -350,13 +436,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerBio !== undefined) {
       if (typeof body.photographerBio !== "string") {
-        errors.push("摄影师简介格式错误。");
+        errors.push(t.invalidPhotographerBio);
       } else {
         const result = validateTextField(
           body.photographerBio,
           TEXT_LIMITS.photographerBio,
-          "摄影师简介格式错误。",
-          `摄影师简介不能超过 ${TEXT_LIMITS.photographerBio} 个字符。`,
+          t.invalidPhotographerBio,
+          t.photographerBioTooLong(TEXT_LIMITS.photographerBio),
           { allowEmpty: true },
         );
 
@@ -370,13 +456,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerEmail !== undefined) {
       if (typeof body.photographerEmail !== "string") {
-        errors.push("邮箱格式错误。");
+        errors.push(t.invalidPhotographerEmail);
       } else {
         const result = validateTextField(
           body.photographerEmail,
           TEXT_LIMITS.email,
-          "邮箱格式错误。",
-          `邮箱不能超过 ${TEXT_LIMITS.email} 个字符。`,
+          t.invalidPhotographerEmail,
+          t.photographerEmailTooLong(TEXT_LIMITS.email),
           { allowEmpty: true },
         );
 
@@ -390,13 +476,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerXiaohongshu !== undefined) {
       if (typeof body.photographerXiaohongshu !== "string") {
-        errors.push("小红书账号格式错误。");
+        errors.push(t.invalidXiaohongshuAccount);
       } else {
         const result = validateTextField(
           body.photographerXiaohongshu,
           TEXT_LIMITS.accountName,
-          "小红书账号格式错误。",
-          `小红书账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
+          t.invalidXiaohongshuAccount,
+          t.xiaohongshuAccountTooLong(TEXT_LIMITS.accountName),
           { allowEmpty: true },
         );
 
@@ -410,13 +496,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerXiaohongshuUrl !== undefined) {
       if (typeof body.photographerXiaohongshuUrl !== "string") {
-        errors.push("小红书链接格式错误。");
+        errors.push(t.invalidXiaohongshuUrl);
       } else {
         const result = validateTextField(
           body.photographerXiaohongshuUrl,
           TEXT_LIMITS.url,
-          "小红书链接格式错误。",
-          `小红书链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
+          t.invalidXiaohongshuUrl,
+          t.xiaohongshuUrlTooLong(TEXT_LIMITS.url),
           { allowEmpty: true },
         );
 
@@ -430,13 +516,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerDouyin !== undefined) {
       if (typeof body.photographerDouyin !== "string") {
-        errors.push("抖音账号格式错误。");
+        errors.push(t.invalidDouyinAccount);
       } else {
         const result = validateTextField(
           body.photographerDouyin,
           TEXT_LIMITS.accountName,
-          "抖音账号格式错误。",
-          `抖音账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
+          t.invalidDouyinAccount,
+          t.douyinAccountTooLong(TEXT_LIMITS.accountName),
           { allowEmpty: true },
         );
 
@@ -450,13 +536,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerDouyinUrl !== undefined) {
       if (typeof body.photographerDouyinUrl !== "string") {
-        errors.push("抖音链接格式错误。");
+        errors.push(t.invalidDouyinUrl);
       } else {
         const result = validateTextField(
           body.photographerDouyinUrl,
           TEXT_LIMITS.url,
-          "抖音链接格式错误。",
-          `抖音链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
+          t.invalidDouyinUrl,
+          t.douyinUrlTooLong(TEXT_LIMITS.url),
           { allowEmpty: true },
         );
 
@@ -470,13 +556,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerInstagram !== undefined) {
       if (typeof body.photographerInstagram !== "string") {
-        errors.push("Instagram 账号格式错误。");
+        errors.push(t.invalidInstagramAccount);
       } else {
         const result = validateTextField(
           body.photographerInstagram,
           TEXT_LIMITS.accountName,
-          "Instagram 账号格式错误。",
-          `Instagram 账号不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
+          t.invalidInstagramAccount,
+          t.instagramAccountTooLong(TEXT_LIMITS.accountName),
           { allowEmpty: true },
         );
 
@@ -490,13 +576,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerInstagramUrl !== undefined) {
       if (typeof body.photographerInstagramUrl !== "string") {
-        errors.push("Instagram 链接格式错误。");
+        errors.push(t.invalidInstagramUrl);
       } else {
         const result = validateTextField(
           body.photographerInstagramUrl,
           TEXT_LIMITS.url,
-          "Instagram 链接格式错误。",
-          `Instagram 链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
+          t.invalidInstagramUrl,
+          t.instagramUrlTooLong(TEXT_LIMITS.url),
           { allowEmpty: true },
         );
 
@@ -510,13 +596,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerCustomAccount !== undefined) {
       if (typeof body.photographerCustomAccount !== "string") {
-        errors.push("自定义账号名称格式错误。");
+        errors.push(t.invalidCustomAccount);
       } else {
         const result = validateTextField(
           body.photographerCustomAccount,
           TEXT_LIMITS.accountName,
-          "自定义账号名称格式错误。",
-          `自定义账号名称不能超过 ${TEXT_LIMITS.accountName} 个字符。`,
+          t.invalidCustomAccount,
+          t.customAccountTooLong(TEXT_LIMITS.accountName),
           { allowEmpty: true },
         );
 
@@ -530,13 +616,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     if (body.photographerCustomAccountUrl !== undefined) {
       if (typeof body.photographerCustomAccountUrl !== "string") {
-        errors.push("自定义账号链接格式错误。");
+        errors.push(t.invalidCustomAccountUrl);
       } else {
         const result = validateTextField(
           body.photographerCustomAccountUrl,
           TEXT_LIMITS.url,
-          "自定义账号链接格式错误。",
-          `自定义账号链接不能超过 ${TEXT_LIMITS.url} 个字符。`,
+          t.invalidCustomAccountUrl,
+          t.customAccountUrlTooLong(TEXT_LIMITS.url),
           { allowEmpty: true },
         );
 
@@ -564,7 +650,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       return json(
         {
           ok: false,
-          error: result.error ?? "保存配置失败。",
+          error: result.error ?? t.saveSettingsFailed,
         },
         { status: 400 },
       );
@@ -572,13 +658,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
 
     return json({
       ok: true,
-      message: "站点配置已更新。",
+      message: t.settingsUpdated,
     });
   } catch {
     return json(
       {
         ok: false,
-        error: "请求格式错误。",
+        error: getLocaleMessages("zh-CN").invalidRequestBody,
       },
       { status: 400 },
     );

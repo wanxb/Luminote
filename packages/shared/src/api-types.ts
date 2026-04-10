@@ -22,6 +22,7 @@ export type WatermarkPosition =
   | "bottom-right";
 
 export type HomeLayout = "masonry" | "editorial" | "spotlight";
+export type SiteLocale = "zh-CN" | "zh-TW" | "en";
 
 export type PhotoExif = {
   aperture?: string;
@@ -51,6 +52,7 @@ export type PhotosResponse = {
 };
 
 export type SiteResponse = {
+  locale: SiteLocale;
   siteTitle: string;
   siteDescription: string;
   homeLayout: HomeLayout;
@@ -58,9 +60,15 @@ export type SiteResponse = {
   watermarkText: string;
   watermarkPosition: WatermarkPosition;
   uploadOriginalEnabled: boolean;
+  maxTotalPhotos: number;
   maxTagPoolSize: number;
   maxUploadFiles: number;
   maxTagsPerPhoto: number;
+  photoMetadataEnabled: boolean;
+  showDateInfo: boolean;
+  showCameraInfo: boolean;
+  showLocationInfo: boolean;
+  showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
   photographerBio: string;
@@ -80,6 +88,7 @@ export type SiteTagsResponse = {
 };
 
 export type SiteConfigResponse = {
+  locale: SiteLocale;
   siteTitle: string;
   siteDescription?: string;
   homeLayout: HomeLayout;
@@ -87,9 +96,15 @@ export type SiteConfigResponse = {
   watermarkText: string;
   watermarkPosition: WatermarkPosition;
   uploadOriginalEnabled: boolean;
+  maxTotalPhotos: number;
   maxTagPoolSize: number;
   maxUploadFiles: number;
   maxTagsPerPhoto: number;
+  photoMetadataEnabled: boolean;
+  showDateInfo: boolean;
+  showCameraInfo: boolean;
+  showLocationInfo: boolean;
+  showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
   photographerBio: string;

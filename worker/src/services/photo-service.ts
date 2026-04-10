@@ -1,4 +1,6 @@
 import type { Env } from "../index";
+import { getLocaleMessages } from "../utils/i18n";
+import { getSiteConfig } from "./site-config-service";
 import {
   deletePhotoObjects,
   hasPhotoObjects,
@@ -655,6 +657,7 @@ export async function createPhotos(
 
   await ensurePhotoVisibilityColumn(env);
   await ensurePhotoSourceHashColumn(env);
+  const t = getLocaleMessages((await getSiteConfig(env)).locale);
 
   const existingHashes = await findExistingSourceHashes(
     env,
@@ -670,7 +673,7 @@ export async function createPhotos(
     if (normalizedHash && seenHashes.has(normalizedHash)) {
       failed.push({
         fileName: input.fileName,
-        error: "图片内容重复，已跳过。",
+        error: t.duplicatePhotoSkipped,
       });
       continue;
     }
@@ -784,6 +787,8 @@ export async function createPhotos(
 }
 
 export async function deletePhotoById(env: Env, id: string) {
+  const t = getLocaleMessages((await getSiteConfig(env)).locale);
+
   if (!env.DB) {
     const bucketOnlyPhotoExists = await hasPhotoObjects(env, id);
 
@@ -792,7 +797,7 @@ export async function deletePhotoById(env: Env, id: string) {
         ok: false,
         deleted: false,
         persisted: false,
-        error: "照片不存在或已被删除。",
+        error: t.photoMissingOrDeleted,
       };
     }
 
@@ -828,7 +833,7 @@ export async function deletePhotoById(env: Env, id: string) {
       ok: false,
       deleted: false,
       persisted: true,
-      error: "照片不存在或已被删除。",
+      error: t.photoMissingOrDeleted,
     };
   }
 
@@ -847,11 +852,13 @@ export async function updatePhotoById(
   id: string,
   payload: { description?: string; tags?: string[]; isHidden?: boolean },
 ) {
+  const t = getLocaleMessages((await getSiteConfig(env)).locale);
+
   if (!env.DB) {
     return {
       ok: false,
       persisted: false,
-      error: "当前环境未绑定 D1，无法执行更新。",
+      error: t.d1UpdateMissing,
     };
   }
 
@@ -867,7 +874,7 @@ export async function updatePhotoById(
     return {
       ok: false,
       persisted: true,
-      error: "照片不存在。",
+      error: t.photoNotFound,
     };
   }
 
@@ -907,3 +914,16 @@ export async function updatePhotoById(
     persisted: true,
   };
 }
+
+export async function getPhotoCount(env: Env) {
+  if (!env.DB) {
+    return 0;
+  }
+
+  const result = await env.DB
+    .prepare("SELECT COUNT(*) as count FROM photos")
+    .first<{ count: number }>();
+
+  return result?.count ?? 0;
+}
+

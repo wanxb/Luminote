@@ -11,6 +11,7 @@ import {
 } from "@/components/site/site-shared";
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotos } from "@/lib/api/client";
+import { getSiteMessages } from "@/lib/site-i18n";
 import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
 
 type EditorialHomeProps = {
@@ -30,11 +31,12 @@ export function EditorialHome({
   initialHasMore,
   allTags,
 }: EditorialHomeProps) {
+  const copy = getSiteMessages(site.locale);
   const displayName = site.photographerName || site.siteTitle || "Luminote";
   const displayBio =
     site.photographerBio ||
     site.siteDescription ||
-    "Photographic notes, selected and arranged for quick viewing.";
+    copy.profileFallbackBio;
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tagCounts, setTagCounts] = useState<Map<string, number>>(() => countPhotoTags(initialPhotos));
   const displayTags = useMemo(() => buildDisplayTags(tagCounts, allTags), [allTags, tagCounts]);
@@ -101,6 +103,7 @@ export function EditorialHome({
             displayTags={displayTags}
             selectedTag={selectedTag}
             onSelectTag={setSelectedTag}
+            locale={site.locale}
           />
 
           <div>

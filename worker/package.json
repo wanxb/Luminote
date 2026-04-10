@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev --persist-to .wrangler/state/local-speed",
-    "deploy": "wrangler deploy",
+    "dev": "wrangler --config wrangler.local.toml dev --persist-to .wrangler/state/local-speed",
+    "deploy": "wrangler --config wrangler.production.toml deploy",
     "sync:local": "node scripts/sync-remote-to-local.mjs"
   },
   "devDependencies": {

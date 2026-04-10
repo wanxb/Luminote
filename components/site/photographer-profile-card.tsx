@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { getSiteMessages } from "@/lib/site-i18n";
 import type { SiteResponse } from "@/lib/api/types";
 
 type PhotographerProfileCardProps = {
@@ -26,6 +27,7 @@ type FilterMenuProps = {
   selectedTags: string[];
   onSelectTags?: (tags: string[]) => void;
   tone: "dark" | "light";
+  locale: SiteResponse["locale"];
 };
 
 function normalizeLink(href: string) {
@@ -163,20 +165,21 @@ function FilterIcon({ tone = "dark" }: { tone?: "dark" | "light" }) {
 }
 
 function renderIconLinks(site: SiteResponse) {
+  const copy = getSiteMessages(site.locale);
   return (
     <>
       {site.photographerEmail ? (
-        <IconLink label="邮箱" href={`mailto:${site.photographerEmail}`} title={site.photographerEmail}>
+        <IconLink label={copy.email} href={`mailto:${site.photographerEmail}`} title={site.photographerEmail}>
           <MailIcon />
         </IconLink>
       ) : null}
       {site.photographerXiaohongshu && site.photographerXiaohongshuUrl ? (
-        <IconLink label="小红书" href={site.photographerXiaohongshuUrl} title={site.photographerXiaohongshu}>
+        <IconLink label={copy.xiaohongshu} href={site.photographerXiaohongshuUrl} title={site.photographerXiaohongshu}>
           <XiaohongshuIcon />
         </IconLink>
       ) : null}
       {site.photographerDouyin && site.photographerDouyinUrl ? (
-        <IconLink label="抖音" href={site.photographerDouyinUrl} title={site.photographerDouyin}>
+        <IconLink label={copy.douyin} href={site.photographerDouyinUrl} title={site.photographerDouyin}>
           <DouyinIcon />
         </IconLink>
       ) : null}
@@ -186,7 +189,7 @@ function renderIconLinks(site: SiteResponse) {
         </IconLink>
       ) : null}
       {site.photographerCustomAccount && site.photographerCustomAccountUrl ? (
-        <IconLink label="自定义账号" href={site.photographerCustomAccountUrl} title={site.photographerCustomAccount}>
+        <IconLink label={copy.customAccount} href={site.photographerCustomAccountUrl} title={site.photographerCustomAccount}>
           <LinkIcon />
         </IconLink>
       ) : null}
@@ -195,12 +198,13 @@ function renderIconLinks(site: SiteResponse) {
 }
 
 function renderLightIconLinks(site: SiteResponse) {
+  const copy = getSiteMessages(site.locale);
   return (
     <>
       {site.photographerEmail ? (
         <a
           href={`mailto:${site.photographerEmail}`}
-          aria-label="邮箱"
+          aria-label={copy.email}
           title={site.photographerEmail}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-ember"
         >
@@ -212,7 +216,7 @@ function renderLightIconLinks(site: SiteResponse) {
           href={normalizeLink(site.photographerXiaohongshuUrl)}
           target="_blank"
           rel="noreferrer"
-          aria-label="小红书"
+          aria-label={copy.xiaohongshu}
           title={site.photographerXiaohongshu}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white"
         >
@@ -224,7 +228,7 @@ function renderLightIconLinks(site: SiteResponse) {
           href={normalizeLink(site.photographerDouyinUrl)}
           target="_blank"
           rel="noreferrer"
-          aria-label="抖音"
+          aria-label={copy.douyin}
           title={site.photographerDouyin}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-ember"
         >
@@ -252,7 +256,7 @@ function renderLightIconLinks(site: SiteResponse) {
           href={normalizeLink(site.photographerCustomAccountUrl)}
           target="_blank"
           rel="noreferrer"
-          aria-label="自定义账号"
+          aria-label={copy.customAccount}
           title={site.photographerCustomAccount}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/70 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-ember"
         >
@@ -263,7 +267,8 @@ function renderLightIconLinks(site: SiteResponse) {
   );
 }
 
-function FilterMenu({ filterTags, selectedTags, onSelectTags, tone }: FilterMenuProps) {
+function FilterMenu({ filterTags, selectedTags, onSelectTags, tone, locale }: FilterMenuProps) {
+  const copy = getSiteMessages(locale);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -366,7 +371,7 @@ function FilterMenu({ filterTags, selectedTags, onSelectTags, tone }: FilterMenu
       <button
         ref={triggerRef}
         type="button"
-        aria-label="筛选标签"
+        aria-label={copy.filterTags}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
         className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full transition duration-200 ${triggerClassName}`}
@@ -403,7 +408,7 @@ function FilterMenu({ filterTags, selectedTags, onSelectTags, tone }: FilterMenu
                     onClick={() => onSelectTags?.([])}
                     className={`rounded-full border px-3.5 py-2 text-[13px] leading-none transition duration-200 ${selectedTags.length === 0 ? activePillClassName : pillBaseClassName}`}
                   >
-                    全部
+                    {copy.all}
                   </button>
                   {filterTags.map((tag) => (
                     <button
@@ -434,6 +439,7 @@ export function PhotographerProfileCard({
   description,
   emptyMessage = null
 }: PhotographerProfileCardProps) {
+  const copy = getSiteMessages(site.locale);
   const hasProfile = Boolean(
     site.siteTitle ||
       site.siteDescription ||
@@ -452,7 +458,7 @@ export function PhotographerProfileCard({
   }
 
   const displayName = site.photographerName || site.siteTitle;
-  const bio = site.photographerBio || description || site.siteDescription || "用影像记录日常、城市和光线落下来的那几秒。";
+  const bio = site.photographerBio || description || site.siteDescription || copy.profileFallbackBio;
 
   if (variant === "masonry") {
     return (
@@ -485,7 +491,7 @@ export function PhotographerProfileCard({
           <div className="mt-5 flex flex-wrap items-center gap-1.5">
             {renderIconLinks(site)}
             {filterTags.length > 0 ? (
-              <FilterMenu filterTags={filterTags} selectedTags={selectedTags} onSelectTags={onSelectTags} tone="dark" />
+              <FilterMenu filterTags={filterTags} selectedTags={selectedTags} onSelectTags={onSelectTags} tone="dark" locale={site.locale} />
             ) : null}
           </div>
         </div>
@@ -520,7 +526,7 @@ export function PhotographerProfileCard({
       <div className="relative mt-5 flex flex-wrap items-center gap-1.5 text-ink">
         {renderLightIconLinks(site)}
         {filterTags.length > 0 ? (
-          <FilterMenu filterTags={filterTags} selectedTags={selectedTags} onSelectTags={onSelectTags} tone="light" />
+          <FilterMenu filterTags={filterTags} selectedTags={selectedTags} onSelectTags={onSelectTags} tone="light" locale={site.locale} />
         ) : null}
       </div>
       </div>

@@ -4,6 +4,8 @@ import type { ChangeEventHandler, FormEventHandler, RefObject } from "react";
 import type { TagPool } from "@/lib/api/admin-client";
 import { TEXT_LIMITS } from "@/lib/text-limits";
 import { uniqueTags, type UploadQueueItem } from "@/components/admin/admin-upload-utils";
+import { getAdminMessages } from "@/lib/admin-i18n";
+import type { SiteLocale } from "@/lib/api/types";
 
 type PreviewTarget = {
   src: string;
@@ -11,6 +13,7 @@ type PreviewTarget = {
 };
 
 type AdminUploadPanelProps = {
+  locale: SiteLocale;
   uploadQueue: UploadQueueItem[];
   maxUploadFiles: number;
   onSubmit: FormEventHandler<HTMLFormElement>;
@@ -44,6 +47,7 @@ type AdminUploadPanelProps = {
 };
 
 export function AdminUploadPanel({
+  locale,
   uploadQueue,
   maxUploadFiles,
   onSubmit,
@@ -75,10 +79,11 @@ export function AdminUploadPanel({
   uploadStage,
   isLoadingConfig,
 }: AdminUploadPanelProps) {
+  const copy = getAdminMessages(locale);
   return (
     <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
       <div className="flex items-baseline gap-2">
-        <h2 className="font-display text-2xl text-ink">Upload Photos</h2>
+        <h2 className="font-display text-2xl text-ink">{copy.uploadPhotosTitle}</h2>
         <span className="text-sm text-ink/60">
           {uploadQueue.length}/{maxUploadFiles}
         </span>
@@ -87,7 +92,7 @@ export function AdminUploadPanel({
       <form className="mt-6 space-y-7" onSubmit={onSubmit}>
         <div className="space-y-4">
           {isLoadingTags ? (
-            <p className="text-sm text-ink/70">Loading tags...</p>
+            <p className="text-sm text-ink/70">{copy.loadingTags}</p>
           ) : (
             <div className="flex flex-wrap items-center gap-2.5">
               {visibleTags.map((tag) => (
@@ -124,7 +129,7 @@ export function AdminUploadPanel({
                     value={newTagName}
                     onChange={(event) => onNewTagNameChange(event.target.value)}
                     maxLength={TEXT_LIMITS.tagName}
-                    placeholder="New tag"
+                    placeholder={copy.newTagPlaceholder}
                     className="w-28 rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm outline-none transition focus:border-ember"
                     disabled={isCreatingTag}
                   />
@@ -134,7 +139,7 @@ export function AdminUploadPanel({
                     disabled={isCreatingTag || !newTagName.trim() || predefinedTagCount >= maxTagPoolSize}
                     className="rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] px-3 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)] disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    Add
+                    {copy.addTagButton}
                   </button>
                 </div>
               ) : null}
@@ -142,9 +147,9 @@ export function AdminUploadPanel({
               <button
                 type="button"
                 onClick={() => void onToggleTagManagement()}
-                title={isManagingTags ? "Finish editing tags" : "Manage tags"}
+                title={isManagingTags ? copy.finishEditingTags : copy.manageTags}
                 className="flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-[rgba(255,255,255,0.42)] text-sm text-ink transition hover:bg-[rgba(245,240,228,0.24)]"
-                aria-label="Manage tags"
+                aria-label={copy.manageTags}
               >
                 {isManagingTags ? "✓" : "+"}
               </button>
@@ -166,9 +171,9 @@ export function AdminUploadPanel({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            title="Add photos"
+            title={copy.addPhotosButton}
             className="flex h-12 w-12 items-center justify-center rounded-2xl border border-black/10 bg-[rgba(245,240,228,0.38)] text-2xl text-ink transition hover:bg-[rgba(245,240,228,0.26)]"
-            aria-label="Add photos"
+            aria-label={copy.addPhotosButton}
           >
             +
           </button>
@@ -207,7 +212,7 @@ export function AdminUploadPanel({
                           onClick={() => onRemoveQueuedFile(item.id)}
                           className="ml-auto shrink-0 rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-ink transition hover:bg-[rgba(255,255,255,0.42)]"
                         >
-                          Remove
+                          {copy.removeButton}
                         </button>
                       </div>
 
@@ -275,7 +280,7 @@ export function AdminUploadPanel({
                       : "text-ink/60"
                 }
               >
-                {uploadStage || "Waiting to upload"}
+                {uploadStage || copy.waitingToUpload}
               </span>
               <span>{uploadProgress}%</span>
             </div>
@@ -287,7 +292,7 @@ export function AdminUploadPanel({
           disabled={isUploading || isLoadingConfig}
           className="rounded-full bg-ink px-6 py-3 text-sm uppercase tracking-[0.2em] text-paper transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isUploading ? "Uploading" : isLoadingConfig ? "Loading config" : "Upload"}
+          {isUploading ? copy.uploading : isLoadingConfig ? copy.loadingConfig : copy.uploadButton}
         </button>
       </form>
     </section>

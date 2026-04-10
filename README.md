@@ -68,6 +68,12 @@ cd worker
 npm install
 ```
 
+Create local-only Worker secrets:
+
+```bash
+copy .dev.vars.example .dev.vars
+```
+
 #### 2. Configure the front-end
 
 Set the local API base in `.env.local`:
@@ -83,7 +89,7 @@ From [worker/schema.sql](worker/schema.sql):
 
 ```bash
 cd worker
-npx wrangler d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
+npx wrangler --config wrangler.local.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
 ```
 
 This creates the local schema and seeds the default tag pool.
@@ -115,6 +121,8 @@ The Worker local state is persisted in:
 ```text
 worker/.wrangler/state/local-speed
 ```
+
+`cd worker && npm run dev` uses `worker/wrangler.local.toml`, so local D1/R2 bindings stay entirely on `luminote-dev`.
 
 ### Option B: Node self-hosted local development
 
@@ -187,7 +195,7 @@ Node API:  http://127.0.0.1:8788
 
 The front-end reads `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL`.
 
-Cloudflare local defaults live in [worker/wrangler.toml](worker/wrangler.toml). For secrets or local overrides, prefer `worker/.dev.vars`.
+Cloudflare local defaults live in [worker/wrangler.local.toml](worker/wrangler.local.toml). For secrets or local overrides, prefer `worker/.dev.vars`.
 
 Node self-hosted defaults live in [apps/api-node/.env.example](apps/api-node/.env.example).
 
@@ -287,13 +295,13 @@ Suggested names:
 
 #### 2. Update Worker bindings
 
-In [worker/wrangler.toml](worker/wrangler.toml), set the real D1 and R2 bindings. Keep secrets such as admin credentials out of the file and store them as Wrangler or Cloudflare secrets.
+Copy [worker/wrangler.production.toml.example](worker/wrangler.production.toml.example) to `worker/wrangler.production.toml` on your machine, then set the real D1 and R2 bindings there. Keep secrets such as admin credentials out of the file and store them as Wrangler or Cloudflare secrets.
 
 #### 3. Apply the production schema
 
 ```bash
 cd worker
-npx wrangler d1 execute luminote-prod --remote --file schema.sql
+npx wrangler --config wrangler.production.toml d1 execute your-d1-database-name --remote --file schema.sql
 ```
 
 #### 4. Configure Worker secrets
@@ -310,8 +318,8 @@ Example:
 
 ```bash
 cd worker
-npx wrangler secret put ADMIN_PASSWORD
-npx wrangler secret put ADMIN_SESSION_TOKEN
+npx wrangler --config wrangler.production.toml secret put ADMIN_PASSWORD
+npx wrangler --config wrangler.production.toml secret put ADMIN_SESSION_TOKEN
 ```
 
 #### 5. Deploy the Worker first
@@ -321,14 +329,11 @@ cd worker
 npm run deploy
 ```
 
-Then point the front-end to the deployed Worker:
-
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
-API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
-```
+Then create `.env.production.local` from `.env.production.local.example` locally and point it to your deployed Worker.
 
 #### 6. Deploy the front-end
+
+Copy `wrangler.production.jsonc.example` to `wrangler.production.jsonc` locally before running the root deploy scripts.
 
 Recommended Pages settings:
 

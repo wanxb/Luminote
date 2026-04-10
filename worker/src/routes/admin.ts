@@ -2,6 +2,7 @@ import type { Env } from "../index";
 import {
   createPhotos,
   deletePhotoById,
+  getPhotoCount,
   listPhotos,
   updatePhotoById,
 } from "../services/photo-service";
@@ -19,6 +20,7 @@ import {
   createTag as createTagService,
   deleteTag as deleteTagService,
 } from "../services/tag-service";
+import { getLocaleMessages } from "../utils/i18n";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
 import { handleSite } from "./site";
@@ -77,6 +79,11 @@ function unauthorized(message = "Unauthorized") {
     },
     { status: 401 },
   );
+}
+
+async function getRequestMessages(env: Env) {
+  const siteConfig = await getSiteConfig(env);
+  return getLocaleMessages(siteConfig.locale);
 }
 
 function getSessionToken(request: Request) {
@@ -295,9 +302,10 @@ export async function handleAdmin(
   if (url.pathname === "/api/admin/login" && request.method === "POST") {
     const body = (await request.json()) as { password?: string };
     const adminPassword = await getAdminPassword(env);
+    const t = await getRequestMessages(env);
 
     if (!body.password || body.password !== adminPassword) {
-      return unauthorized("管理员密码错误。");
+      return unauthorized(t.adminPasswordIncorrect);
     }
 
     const response = json({
@@ -318,10 +326,11 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/photos" && request.method === "POST") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const siteConfig = await getSiteConfig(env);
+    const t = getLocaleMessages(siteConfig.locale);
     const formData = await request.formData();
     const legacyFiles = formData
       .getAll("files[]")
@@ -379,7 +388,7 @@ export async function handleAdmin(
           ok: false,
           uploaded: [],
           failed: [],
-          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。`,
+          error: t.photoDescriptionTooLong(TEXT_LIMITS.photoDescription),
         },
         { status: 400 },
       );
@@ -391,7 +400,7 @@ export async function handleAdmin(
           ok: false,
           uploaded: [],
           failed: [],
-          error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
+          error: t.tagTooLong(TEXT_LIMITS.tagName),
         },
         { status: 400 },
       );
@@ -413,7 +422,10 @@ export async function handleAdmin(
           ok: false,
           uploaded: [],
           failed: [],
-          error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符，单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
+          error: t.photoDescriptionOrTagTooLong(
+            TEXT_LIMITS.photoDescription,
+            TEXT_LIMITS.tagName,
+          ),
         },
         { status: 400 },
       );
@@ -425,7 +437,7 @@ export async function handleAdmin(
           ok: false,
           uploaded: [],
           failed: [],
-          error: "未接收到任何图片文件。",
+          error: t.noImageFilesReceived,
         },
         { status: 400 },
       );
@@ -437,7 +449,21 @@ export async function handleAdmin(
           ok: false,
           uploaded: [],
           failed: [],
-          error: `单次最多上传 ${siteConfig.maxUploadFiles} 张照片。`,
+          error: t.batchUploadLimit(siteConfig.maxUploadFiles),
+        },
+        { status: 400 },
+      );
+    }
+
+    const currentPhotoCount = await getPhotoCount(env);
+
+    if (currentPhotoCount + normalizedFileNames.length > siteConfig.maxTotalPhotos) {
+      return json(
+        {
+          ok: false,
+          uploaded: [],
+          failed: [],
+          error: t.totalPhotoLimit(siteConfig.maxTotalPhotos),
         },
         { status: 400 },
       );
@@ -476,7 +502,7 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/photos" && request.method === "GET") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const tag = url.searchParams.get("tag");
@@ -506,10 +532,11 @@ export async function handleAdmin(
         unfilteredTotal: unfilteredResult?.total ?? result.total,
       });
     } catch {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "加载现有照片失败。",
+          error: t.existingPhotosLoadFailed,
         },
         { status: 500 },
       );
@@ -521,27 +548,29 @@ export async function handleAdmin(
     request.method === "DELETE"
   ) {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const id = url.pathname.split("/").filter(Boolean)[3];
 
     if (!id) {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "缺少照片 ID。",
+          error: t.missingPhotoId,
         },
         { status: 400 },
       );
     }
 
     const result = await deletePhotoById(env, id);
+    const t = await getRequestMessages(env);
 
     return json(result, {
       status: result.ok
         ? 200
-        : result.error === "照片不存在或已被删除。"
+        : result.error === t.photoMissingOrDeleted
           ? 404
           : 400,
     });
@@ -552,22 +581,24 @@ export async function handleAdmin(
     request.method === "PATCH"
   ) {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const id = url.pathname.split("/").filter(Boolean)[3];
 
     if (!id) {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "缺少照片 ID。",
+          error: t.missingPhotoId,
         },
         { status: 400 },
       );
     }
 
     try {
+      const t = await getRequestMessages(env);
       const body = (await request.json()) as {
         description?: string;
         tags?: string[];
@@ -576,10 +607,7 @@ export async function handleAdmin(
 
       if (body.description !== undefined) {
         if (typeof body.description !== "string") {
-          return json(
-            { ok: false, error: "照片备注格式错误。" },
-            { status: 400 },
-          );
+          return json({ ok: false, error: t.photoNoteInvalid }, { status: 400 });
         }
 
         if (
@@ -591,7 +619,7 @@ export async function handleAdmin(
           return json(
             {
               ok: false,
-              error: `照片备注不能超过 ${TEXT_LIMITS.photoDescription} 个字符。`,
+              error: t.photoDescriptionTooLong(TEXT_LIMITS.photoDescription),
             },
             { status: 400 },
           );
@@ -600,7 +628,7 @@ export async function handleAdmin(
 
       if (body.tags !== undefined) {
         if (!Array.isArray(body.tags)) {
-          return json({ ok: false, error: "标签格式错误。" }, { status: 400 });
+          return json({ ok: false, error: t.tagsInvalid }, { status: 400 });
         }
 
         const normalizedTags = body.tags
@@ -610,7 +638,7 @@ export async function handleAdmin(
           return json(
             {
               ok: false,
-              error: `单个标签不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
+              error: t.tagTooLong(TEXT_LIMITS.tagName),
             },
             { status: 400 },
           );
@@ -623,10 +651,11 @@ export async function handleAdmin(
         status: result.ok ? 200 : 400,
       });
     } catch {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "更新照片失败。",
+          error: t.updatePhotoFailed,
         },
         { status: 500 },
       );
@@ -635,7 +664,7 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/site" && request.method === "PATCH") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     return handleSite(request, env);
@@ -643,9 +672,10 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/site/avatar" && request.method === "POST") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
+    const t = await getRequestMessages(env);
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -653,7 +683,7 @@ export async function handleAdmin(
       return json(
         {
           ok: false,
-          error: "请先选择头像图片。",
+          error: t.chooseAvatarFirst,
         },
         { status: 400 },
       );
@@ -663,7 +693,7 @@ export async function handleAdmin(
       return json(
         {
           ok: false,
-          error: "头像必须是图片文件。",
+          error: t.avatarMustBeImage,
         },
         { status: 400 },
       );
@@ -679,7 +709,7 @@ export async function handleAdmin(
       return json(
         {
           ok: false,
-          error: "头像上传失败，当前环境未绑定对象存储。",
+          error: t.avatarUploadStorageMissing,
         },
         { status: 400 },
       );
@@ -695,7 +725,7 @@ export async function handleAdmin(
       return json(
         {
           ok: false,
-          error: updateResult.error ?? "头像保存失败。",
+          error: updateResult.error ?? t.avatarSaveFailed,
         },
         { status: 400 },
       );
@@ -713,7 +743,7 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/tags" && request.method === "GET") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const tags = await getTagPool(env);
@@ -725,17 +755,18 @@ export async function handleAdmin(
 
   if (url.pathname === "/api/admin/tags" && request.method === "POST") {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     try {
+      const t = await getRequestMessages(env);
       const body = (await request.json()) as { name: string };
 
       if (!body.name || body.name.trim().length === 0) {
         return json(
           {
             ok: false,
-            error: "标签名称不能为空。",
+            error: t.tagNameRequired,
           },
           { status: 400 },
         );
@@ -745,7 +776,7 @@ export async function handleAdmin(
         return json(
           {
             ok: false,
-            error: `标签名称不能超过 ${TEXT_LIMITS.tagName} 个字符。`,
+            error: t.tagNameTooLong(TEXT_LIMITS.tagName),
           },
           { status: 400 },
         );
@@ -758,7 +789,7 @@ export async function handleAdmin(
         return json(
           {
             ok: false,
-            error: `标签总数最多 ${siteConfig.maxTagPoolSize} 个。`,
+            error: t.tagPoolLimit(siteConfig.maxTagPoolSize),
           },
           { status: 400 },
         );
@@ -771,10 +802,11 @@ export async function handleAdmin(
       );
       return json({ ok: true, tag });
     } catch {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "创建标签失败。",
+          error: t.createTagFailed,
         },
         { status: 500 },
       );
@@ -786,16 +818,17 @@ export async function handleAdmin(
     request.method === "DELETE"
   ) {
     if (!isAuthenticated(request, env)) {
-      return unauthorized("请先完成管理员登录。");
+      return unauthorized((await getRequestMessages(env)).adminLoginRequired);
     }
 
     const id = url.pathname.split("/").filter(Boolean)[3];
 
     if (!id) {
+      const t = await getRequestMessages(env);
       return json(
         {
           ok: false,
-          error: "缺少标签 ID。",
+          error: t.missingTagId,
         },
         { status: 400 },
       );

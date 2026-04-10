@@ -51,6 +51,12 @@ cd worker
 npm install
 ```
 
+创建仅本地使用的 Worker secrets：
+
+```bash
+copy .dev.vars.example .dev.vars
+```
+
 ### 2. 配置前端环境变量
 
 在 `.env.local` 中设置本地 API 地址：
@@ -66,7 +72,7 @@ API_BASE_URL=http://127.0.0.1:8787
 
 ```bash
 cd worker
-npx wrangler d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
+npx wrangler --config wrangler.local.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
 ```
 
 这一步会创建本地 schema，并写入默认标签池。
@@ -103,7 +109,7 @@ worker/.wrangler/state/local-speed
 
 前端会读取 `NEXT_PUBLIC_API_BASE_URL` 和 `API_BASE_URL`。
 
-Worker 的本地默认值在 [worker/wrangler.toml](worker/wrangler.toml) 中。敏感信息或本地覆盖值建议写入 `worker/.dev.vars`，不要直接提交到 git。
+Worker 的本地默认值在 [worker/wrangler.local.toml](worker/wrangler.local.toml) 中。敏感信息或本地覆盖值建议写入 `worker/.dev.vars`，不要直接提交到 git。
 
 示例：
 
@@ -172,13 +178,13 @@ Worker 目录：
 
 ### 2. 更新 Worker 绑定
 
-在 [worker/wrangler.toml](worker/wrangler.toml) 中配置真实的 D1 和 R2 绑定。管理员密码等敏感信息不要写进文件，改用 Wrangler 或 Cloudflare secrets。
+先基于 [worker/wrangler.production.toml.example](worker/wrangler.production.toml.example) 在本机创建 `worker/wrangler.production.toml`，再在这份本地文件中配置真实的 D1 和 R2 绑定。管理员密码等敏感信息不要写进文件，改用 Wrangler 或 Cloudflare secrets。
 
 ### 3. 执行生产 schema
 
 ```bash
 cd worker
-npx wrangler d1 execute luminote-prod --remote --file schema.sql
+npx wrangler --config wrangler.production.toml d1 execute your-d1-database-name --remote --file schema.sql
 ```
 
 ### 4. 配置 Worker secrets
@@ -195,8 +201,8 @@ npx wrangler d1 execute luminote-prod --remote --file schema.sql
 
 ```bash
 cd worker
-npx wrangler secret put ADMIN_PASSWORD
-npx wrangler secret put ADMIN_SESSION_TOKEN
+npx wrangler --config wrangler.production.toml secret put ADMIN_PASSWORD
+npx wrangler --config wrangler.production.toml secret put ADMIN_SESSION_TOKEN
 ```
 
 ### 5. 先部署 Worker
@@ -206,14 +212,11 @@ cd worker
 npm run deploy
 ```
 
-然后把前端环境变量指向线上 Worker：
-
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
-API_BASE_URL=https://luminote-api.your-subdomain.workers.dev
-```
+然后在本机基于 `.env.production.local.example` 创建 `.env.production.local`，再填入真实线上 Worker 地址。
 
 ### 6. 部署前端
+
+在执行根目录部署脚本前，先在本机将 `wrangler.production.jsonc.example` 复制为 `wrangler.production.jsonc`。
 
 推荐的 Pages 设置：
 

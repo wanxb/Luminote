@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import type { PhotoSummary, SiteResponse } from "@/lib/api/types";
+import { getSiteMessages } from "@/lib/site-i18n";
 
 export type ProfileLink = {
   label: string;
@@ -117,19 +118,20 @@ function LinkIcon() {
 }
 
 export function buildProfileLinks(site: SiteResponse): ProfileLink[] {
+  const copy = getSiteMessages(site.locale);
   return [
-    site.photographerEmail ? { label: "邮箱", href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
+    site.photographerEmail ? { label: copy.email, href: `mailto:${site.photographerEmail}`, icon: <MailIcon /> } : null,
     site.photographerInstagram && site.photographerInstagramUrl
       ? { label: "Instagram", href: normalizeLink(site.photographerInstagramUrl), icon: <InstagramIcon /> }
       : null,
     site.photographerXiaohongshu && site.photographerXiaohongshuUrl
-      ? { label: "小红书", href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }
+      ? { label: copy.xiaohongshu, href: normalizeLink(site.photographerXiaohongshuUrl), icon: <XiaohongshuIcon /> }
       : null,
     site.photographerDouyin && site.photographerDouyinUrl
-      ? { label: "抖音", href: normalizeLink(site.photographerDouyinUrl), icon: <DouyinIcon /> }
+      ? { label: copy.douyin, href: normalizeLink(site.photographerDouyinUrl), icon: <DouyinIcon /> }
       : null,
     site.photographerCustomAccount && site.photographerCustomAccountUrl
-      ? { label: "自定义链接", href: normalizeLink(site.photographerCustomAccountUrl), icon: <LinkIcon /> }
+      ? { label: copy.customLink, href: normalizeLink(site.photographerCustomAccountUrl), icon: <LinkIcon /> }
       : null,
   ].filter(Boolean) as ProfileLink[];
 }

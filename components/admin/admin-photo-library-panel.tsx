@@ -2,7 +2,8 @@
 
 import type { KeyboardEvent } from "react";
 import type { TagPool } from "@/lib/api/admin-client";
-import type { PhotoSummary } from "@/lib/api/types";
+import type { PhotoSummary, SiteLocale } from "@/lib/api/types";
+import { getAdminMessages } from "@/lib/admin-i18n";
 import { uniqueTags } from "@/components/admin/admin-upload-utils";
 
 type PreviewTarget = {
@@ -11,6 +12,7 @@ type PreviewTarget = {
 };
 
 type AdminPhotoLibraryPanelProps = {
+  locale: SiteLocale;
   appliedPhotoTagFilter: string;
   photosTotal: number;
   photosUnfilteredTotal: number;
@@ -55,6 +57,7 @@ type AdminPhotoLibraryPanelProps = {
 };
 
 export function AdminPhotoLibraryPanel({
+  locale,
   appliedPhotoTagFilter,
   photosTotal,
   photosUnfilteredTotal,
@@ -97,12 +100,13 @@ export function AdminPhotoLibraryPanel({
   onPreviousPhotosPage,
   onNextPhotosPage,
 }: AdminPhotoLibraryPanelProps) {
+  const copy = getAdminMessages(locale);
   return (
     <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="font-display text-2xl text-ink">
-            Photo Library {appliedPhotoTagFilter ? `(${photosTotal} / ${photosUnfilteredTotal})` : `(${photosUnfilteredTotal})`}
+            {copy.photoLibraryTitle} {appliedPhotoTagFilter ? `(${photosTotal} / ${photosUnfilteredTotal})` : `(${photosUnfilteredTotal})`}
           </h2>
         </div>
 
@@ -113,7 +117,7 @@ export function AdminPhotoLibraryPanel({
               value={photoTagFilterInput}
               onChange={(event) => onPhotoTagFilterInputChange(event.target.value)}
               onKeyDown={onPhotoTagFilterKeyDown}
-              placeholder="Filter by tag"
+              placeholder={copy.filterByTag}
               className="min-w-0 flex-1 rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink outline-none transition focus:border-black/20"
             />
             <div className="flex gap-2">
@@ -123,7 +127,7 @@ export function AdminPhotoLibraryPanel({
                 disabled={isLoadingPhotos}
                 className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Search
+                {copy.searchButton}
               </button>
               <button
                 type="button"
@@ -131,7 +135,7 @@ export function AdminPhotoLibraryPanel({
                 disabled={isLoadingPhotos || (!appliedPhotoTagFilter && !photoTagFilterInput)}
                 className="rounded-full border border-black/10 bg-[rgba(245,240,228,0.45)] px-4 py-2 text-sm text-ink transition hover:bg-[rgba(245,240,228,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Clear
+                {copy.clearButton}
               </button>
             </div>
           </div>
@@ -174,7 +178,7 @@ export function AdminPhotoLibraryPanel({
               onClick={onToggleSelectAllPhotos}
               className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white"
             >
-              {allPhotosSelected ? "Clear page" : "Select page"}
+              {allPhotosSelected ? copy.clearPageButton : copy.selectPageButton}
             </button>
           </div>
 
@@ -185,7 +189,7 @@ export function AdminPhotoLibraryPanel({
               disabled={selectedVisiblePhotoCount === 0 || hasSelectedBusyPhotos}
               className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Hide selected
+              {copy.hideSelectedButton}
             </button>
             <button
               type="button"
@@ -193,7 +197,7 @@ export function AdminPhotoLibraryPanel({
               disabled={selectedHiddenPhotoCount === 0 || hasSelectedBusyPhotos}
               className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Unhide selected
+              {copy.unhideSelectedButton}
             </button>
             <button
               type="button"
@@ -206,10 +210,10 @@ export function AdminPhotoLibraryPanel({
               }`}
             >
               {isBatchDeleting
-                ? "Deleting"
+                ? copy.deletingButton
                 : isConfirmingBatchDelete
-                  ? `Confirm delete ${selectedPhotoIds.length}`
-                  : "Delete selected"}
+                  ? `${copy.deleteSelectedButton} ${selectedPhotoIds.length}`
+                  : copy.deleteSelectedButton}
             </button>
           </div>
         </div>
@@ -310,10 +314,10 @@ export function AdminPhotoLibraryPanel({
                         className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isUpdating && editingPhotoId !== photo.id
-                          ? "Working"
+                          ? copy.working
                           : photo.isHidden
-                            ? "Unhide"
-                            : "Hide"}
+                            ? copy.unhideButton
+                            : copy.hideSelectedButton}
                       </button>
                       <button
                         type="button"
@@ -321,7 +325,7 @@ export function AdminPhotoLibraryPanel({
                         disabled={isBusy}
                         className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist"
                       >
-                        {isUpdating ? "Saving" : isEditing ? "Done" : "Tags"}
+                        {isUpdating ? copy.savingButton : isEditing ? copy.doneButton : "Tags"}
                       </button>
                       <button
                         type="button"
@@ -333,7 +337,7 @@ export function AdminPhotoLibraryPanel({
                             : "border border-red-200 text-red-600 hover:bg-red-50"
                         }`}
                       >
-                        {isDeleting ? "Deleting" : isConfirmingDelete ? "Confirm delete" : "Delete"}
+                        {isDeleting ? copy.deletingButton : isConfirmingDelete ? copy.deletingConfirmButton : copy.deleteSelectedButton}
                       </button>
                     </div>
                   </div>
