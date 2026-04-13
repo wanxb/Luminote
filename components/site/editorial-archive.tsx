@@ -223,6 +223,8 @@ export function EditorialArchive({
         photoMetadataEnabled={site.photoMetadataEnabled}
         showDateInfo={site.showDateInfo}
         showCameraInfo={site.showCameraInfo}
+        showImageInfo={site.showImageInfo}
+        showAdvancedCameraInfo={site.showAdvancedCameraInfo}
         showLocationInfo={site.showLocationInfo}
         showDetailedExifInfo={site.showDetailedExifInfo}
         activeIndex={selectedIndex}

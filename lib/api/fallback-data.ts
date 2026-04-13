@@ -17,6 +17,8 @@ export const fallbackSite: SiteResponse = {
   photoMetadataEnabled: true,
   showDateInfo: true,
   showCameraInfo: true,
+  showImageInfo: true,
+  showAdvancedCameraInfo: true,
   showLocationInfo: true,
   showDetailedExifInfo: true,
   photographerAvatarUrl: "",

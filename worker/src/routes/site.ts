@@ -73,6 +73,8 @@ export async function handleSite(
         photoMetadataEnabled: config.photoMetadataEnabled,
         showDateInfo: config.showDateInfo,
         showCameraInfo: config.showCameraInfo,
+        showImageInfo: config.showImageInfo,
+        showAdvancedCameraInfo: config.showAdvancedCameraInfo,
         showLocationInfo: config.showLocationInfo,
         showDetailedExifInfo: config.showDetailedExifInfo,
         photographerAvatarUrl: resolvePublicAssetUrl(
@@ -129,6 +131,8 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       photoMetadataEnabled?: boolean;
       showDateInfo?: boolean;
       showCameraInfo?: boolean;
+      showImageInfo?: boolean;
+      showAdvancedCameraInfo?: boolean;
       showLocationInfo?: boolean;
       showDetailedExifInfo?: boolean;
       photographerAvatarUrl?: string;
@@ -166,6 +170,8 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       photoMetadataEnabled?: boolean;
       showDateInfo?: boolean;
       showCameraInfo?: boolean;
+      showImageInfo?: boolean;
+      showAdvancedCameraInfo?: boolean;
       showLocationInfo?: boolean;
       showDetailedExifInfo?: boolean;
       photographerAvatarUrl?: string;
@@ -375,6 +381,22 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         errors.push(t.invalidShowCameraInfo);
       } else {
         updates.showCameraInfo = body.showCameraInfo;
+      }
+    }
+
+    if (body.showImageInfo !== undefined) {
+      if (typeof body.showImageInfo !== "boolean") {
+        errors.push(t.invalidShowImageInfo);
+      } else {
+        updates.showImageInfo = body.showImageInfo;
+      }
+    }
+
+    if (body.showAdvancedCameraInfo !== undefined) {
+      if (typeof body.showAdvancedCameraInfo !== "boolean") {
+        errors.push(t.invalidShowAdvancedCameraInfo);
+      } else {
+        updates.showAdvancedCameraInfo = body.showAdvancedCameraInfo;
       }
     }
 

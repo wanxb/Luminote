@@ -66,8 +66,10 @@ export function createSqlitePublicContentRepository(config) {
       const values = [];
 
       if (tag) {
-        conditions.push("tags_json LIKE ?");
-        values.push(`%${tag}%`);
+        conditions.push(
+          "EXISTS (SELECT 1 FROM json_each(COALESCE(tags_json, '[]')) WHERE value = ?)",
+        );
+        values.push(tag);
       }
 
       const whereClause = `WHERE ${conditions.join(" AND ")}`;

@@ -514,12 +514,16 @@ export async function handleAdmin(
         includeHidden: true,
         page,
         pageSize,
+        fallbackToBucket: false,
+        hydrateBucketToDb: true,
       });
       const unfilteredResult = tag
         ? await listPhotos(env, new URL(request.url).origin, null, {
             includeHidden: true,
             page: 1,
             pageSize: 1,
+            fallbackToBucket: false,
+            hydrateBucketToDb: true,
           })
         : null;
 

@@ -41,17 +41,36 @@ type Messages = {
   enabled: string;
   disabled: string;
   location: string;
+  locationInfo: string;
   tags: string;
   photoParams: string;
+  imageInfo: string;
+  advancedCameraInfo: string;
   noExif: string;
   fullParams: string;
   takenAt: string;
   device: string;
   lens: string;
+  fileSize: string;
+  fileType: string;
+  dimensions: string;
+  orientation: string;
+  colorSpace: string;
   aperture: string;
   shutter: string;
   iso: string;
   focalLength: string;
+  focalLengthIn35mm: string;
+  exposureCompensation: string;
+  exposureProgram: string;
+  meteringMode: string;
+  whiteBalance: string;
+  flash: string;
+  exposureMode: string;
+  sceneCaptureType: string;
+  sensingMethod: string;
+  altitude: string;
+  coordinates: string;
 };
 
 const messages: Record<SiteLocale, Messages> = {
@@ -96,17 +115,36 @@ const messages: Record<SiteLocale, Messages> = {
     enabled: "已启用",
     disabled: "未启用",
     location: "位置",
+    locationInfo: "位置信息",
     tags: "标签",
     photoParams: "拍摄参数",
+    imageInfo: "图像信息",
+    advancedCameraInfo: "进阶拍摄参数",
     noExif: "这张照片暂时没有可展示的 EXIF 信息。",
     fullParams: "完整参数",
     takenAt: "拍摄时间",
     device: "机身",
     lens: "镜头",
+    fileSize: "文件大小",
+    fileType: "文件格式",
+    dimensions: "分辨率",
+    orientation: "方向",
+    colorSpace: "色彩空间",
     aperture: "光圈",
     shutter: "快门",
     iso: "ISO",
     focalLength: "焦距",
+    focalLengthIn35mm: "35mm 等效",
+    exposureCompensation: "曝光补偿",
+    exposureProgram: "曝光程序",
+    meteringMode: "测光模式",
+    whiteBalance: "白平衡",
+    flash: "闪光灯",
+    exposureMode: "曝光模式",
+    sceneCaptureType: "场景类型",
+    sensingMethod: "感光方式",
+    altitude: "海拔",
+    coordinates: "坐标",
   },
   "zh-TW": {
     all: "全部",
@@ -149,17 +187,36 @@ const messages: Record<SiteLocale, Messages> = {
     enabled: "已啟用",
     disabled: "未啟用",
     location: "位置",
+    locationInfo: "位置資訊",
     tags: "標籤",
     photoParams: "拍攝參數",
+    imageInfo: "圖像資訊",
+    advancedCameraInfo: "進階拍攝參數",
     noExif: "這張照片暫時沒有可顯示的 EXIF 資訊。",
     fullParams: "完整參數",
     takenAt: "拍攝時間",
     device: "機身",
     lens: "鏡頭",
+    fileSize: "檔案大小",
+    fileType: "檔案格式",
+    dimensions: "解析度",
+    orientation: "方向",
+    colorSpace: "色彩空間",
     aperture: "光圈",
     shutter: "快門",
     iso: "ISO",
     focalLength: "焦距",
+    focalLengthIn35mm: "35mm 等效",
+    exposureCompensation: "曝光補償",
+    exposureProgram: "曝光程式",
+    meteringMode: "測光模式",
+    whiteBalance: "白平衡",
+    flash: "閃光燈",
+    exposureMode: "曝光模式",
+    sceneCaptureType: "場景類型",
+    sensingMethod: "感光方式",
+    altitude: "海拔",
+    coordinates: "座標",
   },
   en: {
     all: "All",
@@ -202,17 +259,36 @@ const messages: Record<SiteLocale, Messages> = {
     enabled: "Enabled",
     disabled: "Disabled",
     location: "Location",
+    locationInfo: "Location Info",
     tags: "Tags",
     photoParams: "Photo Params",
+    imageInfo: "Image Info",
+    advancedCameraInfo: "Advanced Camera Info",
     noExif: "No EXIF information is available for this photo right now.",
     fullParams: "Full Params",
     takenAt: "Taken At",
     device: "Camera Body",
     lens: "Lens",
+    fileSize: "File Size",
+    fileType: "File Type",
+    dimensions: "Dimensions",
+    orientation: "Orientation",
+    colorSpace: "Color Space",
     aperture: "Aperture",
     shutter: "Shutter",
     iso: "ISO",
     focalLength: "Focal Length",
+    focalLengthIn35mm: "35mm Equivalent",
+    exposureCompensation: "Exposure Compensation",
+    exposureProgram: "Exposure Program",
+    meteringMode: "Metering Mode",
+    whiteBalance: "White Balance",
+    flash: "Flash",
+    exposureMode: "Exposure Mode",
+    sceneCaptureType: "Scene Type",
+    sensingMethod: "Sensing Method",
+    altitude: "Altitude",
+    coordinates: "Coordinates",
   },
 };
 

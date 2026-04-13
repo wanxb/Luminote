@@ -72,10 +72,10 @@ export function SoftSelect<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className={`group flex w-full items-center justify-between gap-2.5 rounded-[16px] border border-[rgba(186,152,120,0.18)] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,241,232,0.98))] px-3 py-2 text-left text-[13px] text-[#5b4634] shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_6px_16px_rgba(123,99,71,0.04)] outline-none transition duration-200 hover:border-[rgba(199,143,99,0.28)] hover:bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(250,244,236,0.98))] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_8px_16px_rgba(123,99,71,0.05)] focus-visible:border-[#d39a6d] focus-visible:ring-2 focus-visible:ring-[#f0dec9]/80 ${buttonClassName}`}
+        className={`group flex min-h-[38px] w-full items-center justify-between gap-2 rounded-[10px] border border-[rgba(186,152,120,0.18)] bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,241,232,0.98))] px-2.5 py-1.5 text-left text-[13px] text-[#5b4634] shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_4px_12px_rgba(123,99,71,0.04)] outline-none transition duration-200 hover:border-[rgba(199,143,99,0.28)] hover:bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(250,244,236,0.98))] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_6px_14px_rgba(123,99,71,0.05)] focus-visible:border-[#d39a6d] focus-visible:ring-2 focus-visible:ring-[#f0dec9]/80 ${buttonClassName}`}
       >
         <span className="truncate font-medium text-[#5a4330]">{selected?.label}</span>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[rgba(199,143,99,0.12)] bg-[rgba(255,250,245,0.96)] shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition group-hover:border-[rgba(199,143,99,0.22)] group-hover:bg-[rgba(255,246,236,0.98)]">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[rgba(199,143,99,0.12)] bg-[rgba(255,250,245,0.96)] shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition group-hover:border-[rgba(199,143,99,0.22)] group-hover:bg-[rgba(255,246,236,0.98)]">
           <SelectCaret open={open} />
         </span>
       </button>

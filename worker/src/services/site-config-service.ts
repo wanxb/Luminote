@@ -13,6 +13,8 @@ export const DEFAULT_WATERMARK_POSITION = "bottom-right";
 export const DEFAULT_PHOTO_METADATA_ENABLED = true;
 export const DEFAULT_SHOW_DATE_INFO = true;
 export const DEFAULT_SHOW_CAMERA_INFO = true;
+export const DEFAULT_SHOW_IMAGE_INFO = true;
+export const DEFAULT_SHOW_ADVANCED_CAMERA_INFO = true;
 export const DEFAULT_SHOW_LOCATION_INFO = true;
 export const DEFAULT_SHOW_DETAILED_EXIF_INFO = true;
 export const DEFAULT_PHOTOGRAPHER_AVATAR_URL = "";
@@ -45,6 +47,8 @@ type SiteConfigRow = {
   photo_metadata_enabled: number;
   show_date_info: number;
   show_camera_info: number;
+  show_image_info: number;
+  show_advanced_camera_info: number;
   show_location_info: number;
   show_detailed_exif_info: number;
   photographer_avatar_url: string;
@@ -78,6 +82,8 @@ export type SiteConfig = {
   photoMetadataEnabled: boolean;
   showDateInfo: boolean;
   showCameraInfo: boolean;
+  showImageInfo: boolean;
+  showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
@@ -113,6 +119,8 @@ type LegacySiteConfigRow = {
   photo_metadata_enabled?: number;
   show_date_info?: number;
   show_camera_info?: number;
+  show_image_info?: number;
+  show_advanced_camera_info?: number;
   show_location_info?: number;
   show_detailed_exif_info?: number;
 };
@@ -139,6 +147,8 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     photoMetadataEnabled: DEFAULT_PHOTO_METADATA_ENABLED,
     showDateInfo: DEFAULT_SHOW_DATE_INFO,
     showCameraInfo: DEFAULT_SHOW_CAMERA_INFO,
+    showImageInfo: DEFAULT_SHOW_IMAGE_INFO,
+    showAdvancedCameraInfo: DEFAULT_SHOW_ADVANCED_CAMERA_INFO,
     showLocationInfo: DEFAULT_SHOW_LOCATION_INFO,
     showDetailedExifInfo: DEFAULT_SHOW_DETAILED_EXIF_INFO,
     photographerAvatarUrl: DEFAULT_PHOTOGRAPHER_AVATAR_URL,
@@ -185,6 +195,8 @@ async function ensureSiteConfig(env: Env) {
           photo_metadata_enabled INTEGER NOT NULL DEFAULT 1,
           show_date_info INTEGER NOT NULL DEFAULT 1,
           show_camera_info INTEGER NOT NULL DEFAULT 1,
+          show_image_info INTEGER NOT NULL DEFAULT 1,
+          show_advanced_camera_info INTEGER NOT NULL DEFAULT 1,
           show_location_info INTEGER NOT NULL DEFAULT 1,
           show_detailed_exif_info INTEGER NOT NULL DEFAULT 1,
           photographer_avatar_url TEXT NOT NULL DEFAULT '',
@@ -213,6 +225,8 @@ async function ensureSiteConfig(env: Env) {
         "ALTER TABLE site_config ADD COLUMN photo_metadata_enabled INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_date_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_camera_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_image_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_advanced_camera_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_location_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_detailed_exif_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
@@ -256,6 +270,8 @@ async function ensureSiteConfig(env: Env) {
           photo_metadata_enabled,
           show_date_info,
           show_camera_info,
+          show_image_info,
+          show_advanced_camera_info,
           show_location_info,
           show_detailed_exif_info,
           photographer_avatar_url,
@@ -271,7 +287,7 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           1,
@@ -291,6 +307,8 @@ async function ensureSiteConfig(env: Env) {
           defaults.photoMetadataEnabled ? 1 : 0,
           defaults.showDateInfo ? 1 : 0,
           defaults.showCameraInfo ? 1 : 0,
+          defaults.showImageInfo ? 1 : 0,
+          defaults.showAdvancedCameraInfo ? 1 : 0,
           defaults.showLocationInfo ? 1 : 0,
           defaults.showDetailedExifInfo ? 1 : 0,
           defaults.photographerAvatarUrl,
@@ -379,6 +397,14 @@ function mapSiteConfigRowToConfig(
       row.show_camera_info !== undefined
         ? Boolean(row.show_camera_info)
         : defaults.showCameraInfo,
+    showImageInfo:
+      row.show_image_info !== undefined
+        ? Boolean(row.show_image_info)
+        : defaults.showImageInfo,
+    showAdvancedCameraInfo:
+      row.show_advanced_camera_info !== undefined
+        ? Boolean(row.show_advanced_camera_info)
+        : defaults.showAdvancedCameraInfo,
     showLocationInfo:
       row.show_location_info !== undefined
         ? Boolean(row.show_location_info)
@@ -439,6 +465,8 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         photo_metadata_enabled,
         show_date_info,
         show_camera_info,
+        show_image_info,
+        show_advanced_camera_info,
         show_location_info,
         show_detailed_exif_info,
         photographer_avatar_url,
@@ -598,6 +626,16 @@ export async function updateSiteConfig(
   if (updates.showCameraInfo !== undefined) {
     statements.push("show_camera_info = ?");
     values.push(updates.showCameraInfo ? 1 : 0);
+  }
+
+  if (updates.showImageInfo !== undefined) {
+    statements.push("show_image_info = ?");
+    values.push(updates.showImageInfo ? 1 : 0);
+  }
+
+  if (updates.showAdvancedCameraInfo !== undefined) {
+    statements.push("show_advanced_camera_info = ?");
+    values.push(updates.showAdvancedCameraInfo ? 1 : 0);
   }
 
   if (updates.showLocationInfo !== undefined) {

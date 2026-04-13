@@ -39,12 +39,29 @@ type ExifPayload = {
   lens?: string;
   location?: string;
   exif?: {
+    fileSize?: string;
+    mimeType?: string;
+    width?: number;
+    height?: number;
+    dimensions?: string;
+    orientation?: string;
+    colorSpace?: string;
     aperture?: string;
     shutter?: string;
     iso?: number;
     focalLength?: string;
+    focalLengthIn35mm?: string;
+    exposureCompensation?: string;
+    exposureProgram?: string;
+    meteringMode?: string;
+    whiteBalance?: string;
+    flash?: string;
+    exposureMode?: string;
+    sceneCaptureType?: string;
+    sensingMethod?: string;
     latitude?: number;
     longitude?: number;
+    altitude?: string;
     params?: Record<string, string>;
   };
 };
@@ -82,6 +99,8 @@ type ListPhotosOptions = {
   includeHidden?: boolean;
   page?: number;
   pageSize?: number;
+  fallbackToBucket?: boolean;
+  hydrateBucketToDb?: boolean;
 };
 
 export type ListPhotosResult = {
@@ -213,15 +232,32 @@ function buildVisibleExif(
   const visibleExif: NonNullable<ExifPayload["exif"]> = {};
 
   if (options.showCameraInfo) {
+    visibleExif.fileSize = rawExif.fileSize;
+    visibleExif.mimeType = rawExif.mimeType;
+    visibleExif.width = rawExif.width;
+    visibleExif.height = rawExif.height;
+    visibleExif.dimensions = rawExif.dimensions;
+    visibleExif.orientation = rawExif.orientation;
+    visibleExif.colorSpace = rawExif.colorSpace;
     visibleExif.aperture = rawExif.aperture;
     visibleExif.shutter = rawExif.shutter;
     visibleExif.iso = rawExif.iso;
     visibleExif.focalLength = rawExif.focalLength;
+    visibleExif.focalLengthIn35mm = rawExif.focalLengthIn35mm;
+    visibleExif.exposureCompensation = rawExif.exposureCompensation;
+    visibleExif.exposureProgram = rawExif.exposureProgram;
+    visibleExif.meteringMode = rawExif.meteringMode;
+    visibleExif.whiteBalance = rawExif.whiteBalance;
+    visibleExif.flash = rawExif.flash;
+    visibleExif.exposureMode = rawExif.exposureMode;
+    visibleExif.sceneCaptureType = rawExif.sceneCaptureType;
+    visibleExif.sensingMethod = rawExif.sensingMethod;
   }
 
   if (options.showLocationInfo) {
     visibleExif.latitude = rawExif.latitude;
     visibleExif.longitude = rawExif.longitude;
+    visibleExif.altitude = rawExif.altitude;
   }
 
   visibleExif.params = filterExifParams(rawExif.params, options);
@@ -427,6 +463,81 @@ async function findExistingSourceHashes(env: Env, hashes: string[]) {
   );
 }
 
+async function hydrateBucketPhotosToDb(env: Env, origin: string) {
+  if (!env.DB) {
+    return 0;
+  }
+
+  const bucketItems = await collectBucketPhotoItems(env, origin);
+
+  if (bucketItems.length === 0) {
+    return 0;
+  }
+
+  const existingResult = await env.DB.prepare(`SELECT id FROM photos`).all<{ id: string }>();
+  const existingIds = new Set((existingResult.results ?? []).map((row) => row.id));
+  const missingItems = bucketItems.filter((item) => !existingIds.has(item.id));
+
+  if (missingItems.length === 0) {
+    return 0;
+  }
+
+  const now = new Date().toISOString();
+  const statements = missingItems.map((item) =>
+    env.DB!.prepare(
+      `INSERT OR IGNORE INTO photos (
+        id,
+        original_file_name,
+        title,
+        description,
+        original_url,
+        thumb_url,
+        display_url,
+        watermarked_display_url,
+        taken_at,
+        device,
+        lens,
+        location,
+        source_hash,
+        exif_json,
+        tags_json,
+        is_hidden,
+        show_camera_info,
+        show_date_info,
+        show_location_info,
+        watermark_enabled,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      item.id,
+      `${item.id}.jpg`,
+      "",
+      item.description ?? "",
+      item.displayUrl,
+      item.thumbUrl,
+      item.displayUrl,
+      item.watermarkedDisplayUrl ?? null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      JSON.stringify(item.tags ?? []),
+      item.isHidden ? 1 : 0,
+      1,
+      1,
+      1,
+      item.watermarkEnabled ? 1 : 0,
+      now,
+    ),
+  );
+
+  await env.DB.batch(statements);
+
+  return missingItems.length;
+}
+
 export async function listPhotos(
   env: Env,
   origin: string,
@@ -436,6 +547,7 @@ export async function listPhotos(
   const page = normalizePage(options?.page);
   const pageSize = normalizePageSize(options?.pageSize);
   const offset = (page - 1) * pageSize;
+  const shouldFallbackToBucket = options?.fallbackToBucket ?? true;
 
   if (!env.DB) {
     if (tag) {
@@ -464,9 +576,11 @@ export async function listPhotos(
   }
 
   if (tag) {
-    conditions.push("tags_json LIKE ?");
-    values.push(`%${tag}%`);
-    countValues.push(`%${tag}%`);
+    conditions.push(
+      "EXISTS (SELECT 1 FROM json_each(COALESCE(tags_json, '[]')) WHERE value = ?)",
+    );
+    values.push(tag);
+    countValues.push(tag);
   }
 
   if (conditions.length > 0) {
@@ -482,6 +596,14 @@ export async function listPhotos(
   query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
 
   const fallbackToBucket = async () => {
+    if (!shouldFallbackToBucket) {
+      return {
+        items: [] as ListPhotosResult["items"],
+        hasMore: false,
+        total: 0,
+      };
+    }
+
     if (tag) {
       return {
         items: [] as ListPhotosResult["items"],
@@ -503,9 +625,13 @@ export async function listPhotos(
     }
   };
 
-  try {
-    let statement = env.DB.prepare(query);
-    let countStatement = env.DB.prepare(countQuery);
+    try {
+      if (options?.hydrateBucketToDb && !tag && page === 1) {
+        await hydrateBucketPhotosToDb(env, origin);
+      }
+
+      let statement = env.DB.prepare(query);
+      let countStatement = env.DB.prepare(countQuery);
 
     values.push(pageSize + 1, offset);
 
@@ -521,15 +647,11 @@ export async function listPhotos(
       statement.all<PersistedPhotoRow>(),
       countStatement.first<{ count: number }>(),
     ]);
-    const rows = result.results ?? [];
-    const total = countResult?.count ?? 0;
+      const rows = result.results ?? [];
+      const total = countResult?.count ?? 0;
 
-    if (rows.length === 0 && !tag && page === 1) {
-      return fallbackToBucket();
-    }
-
-    const items = rows.slice(0, pageSize).map((row) => ({
-      id: row.id,
+      const items = rows.slice(0, pageSize).map((row) => ({
+        id: row.id,
       thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
       displayUrl:
         row.display_url || buildMockAssetUrl(origin, "display", row.id),

@@ -20,6 +20,8 @@ type LightboxShellProps = {
   photoMetadataEnabled?: boolean;
   showDateInfo?: boolean;
   showCameraInfo?: boolean;
+  showImageInfo?: boolean;
+  showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
   showDetailedExifInfo?: boolean;
   activeIndex: number | null;
@@ -44,11 +46,134 @@ function isPhotoDetail(photo: PhotoDetail | PhotoSummary | null): photo is Photo
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[76px_minmax(0,1fr)] items-start gap-3">
-      <dt className="text-paper/42">{label}</dt>
-      <dd className="break-words text-right font-medium text-paper/88">{value}</dd>
+    <div className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-3">
+      <dt className="pt-0.5 text-[12px] text-paper/68">{label}</dt>
+      <dd className="break-words text-right text-[11.5px] font-medium leading-5 text-paper/90">{value}</dd>
     </div>
   );
+}
+
+function MetaSection({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ label: string; value: string }>;
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="border-t border-white/[0.06] pt-4 first:border-t-0 first:pt-0">
+      <p className="mb-3 text-[12px] font-medium text-paper/94">{title}</p>
+      <dl className="space-y-3.5">
+        {items.map((item) => (
+          <MetaRow key={`${title}:${item.label}:${item.value}`} label={item.label} value={item.value} />
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function localizeExifValue(locale: SiteLocale, value: string) {
+  const tokens: Record<string, Record<SiteLocale, string>> = {
+    normal: { "zh-CN": "正常", "zh-TW": "正常", en: "Normal" },
+    "mirrored-horizontal": {
+      "zh-CN": "水平镜像",
+      "zh-TW": "水平鏡像",
+      en: "Mirrored Horizontal",
+    },
+    "mirrored-vertical": {
+      "zh-CN": "垂直镜像",
+      "zh-TW": "垂直鏡像",
+      en: "Mirrored Vertical",
+    },
+    "rotated-90": { "zh-CN": "顺时针 90°", "zh-TW": "順時針 90°", en: "Rotated 90°" },
+    "rotated-180": { "zh-CN": "旋转 180°", "zh-TW": "旋轉 180°", en: "Rotated 180°" },
+    "rotated-270": { "zh-CN": "逆时针 90°", "zh-TW": "逆時針 90°", en: "Rotated 270°" },
+    "mirrored-horizontal-rotated-270": {
+      "zh-CN": "水平镜像并逆时针 90°",
+      "zh-TW": "水平鏡像並逆時針 90°",
+      en: "Mirrored Horizontal + Rotated 270°",
+    },
+    "mirrored-horizontal-rotated-90": {
+      "zh-CN": "水平镜像并顺时针 90°",
+      "zh-TW": "水平鏡像並順時針 90°",
+      en: "Mirrored Horizontal + Rotated 90°",
+    },
+    manual: { "zh-CN": "手动", "zh-TW": "手動", en: "Manual" },
+    program: { "zh-CN": "程序自动", "zh-TW": "程式自動", en: "Program AE" },
+    "aperture-priority": {
+      "zh-CN": "光圈优先",
+      "zh-TW": "光圈先決",
+      en: "Aperture Priority",
+    },
+    "shutter-priority": {
+      "zh-CN": "快门优先",
+      "zh-TW": "快門先決",
+      en: "Shutter Priority",
+    },
+    creative: { "zh-CN": "创意", "zh-TW": "創意", en: "Creative" },
+    action: { "zh-CN": "动作", "zh-TW": "動作", en: "Action" },
+    portrait: { "zh-CN": "人像", "zh-TW": "人像", en: "Portrait" },
+    landscape: { "zh-CN": "风景", "zh-TW": "風景", en: "Landscape" },
+    average: { "zh-CN": "平均测光", "zh-TW": "平均測光", en: "Average" },
+    "center-weighted": {
+      "zh-CN": "中央重点",
+      "zh-TW": "中央重點",
+      en: "Center-weighted",
+    },
+    spot: { "zh-CN": "点测光", "zh-TW": "點測光", en: "Spot" },
+    "multi-spot": { "zh-CN": "多点测光", "zh-TW": "多點測光", en: "Multi-spot" },
+    "multi-segment": {
+      "zh-CN": "评价测光",
+      "zh-TW": "評價測光",
+      en: "Multi-segment",
+    },
+    partial: { "zh-CN": "局部测光", "zh-TW": "局部測光", en: "Partial" },
+    auto: { "zh-CN": "自动", "zh-TW": "自動", en: "Auto" },
+    "not-fired": { "zh-CN": "未触发", "zh-TW": "未觸發", en: "Not fired" },
+    fired: { "zh-CN": "已触发", "zh-TW": "已觸發", en: "Fired" },
+    "fired-return-detected": {
+      "zh-CN": "已触发，回闪检测",
+      "zh-TW": "已觸發，回閃檢測",
+      en: "Fired, return detected",
+    },
+    "auto-bracket": { "zh-CN": "自动包围", "zh-TW": "自動包圍", en: "Auto bracket" },
+    standard: { "zh-CN": "标准", "zh-TW": "標準", en: "Standard" },
+    "night-scene": { "zh-CN": "夜景", "zh-TW": "夜景", en: "Night scene" },
+    "not-defined": { "zh-CN": "未定义", "zh-TW": "未定義", en: "Not defined" },
+    "one-chip-color-area": {
+      "zh-CN": "单芯片彩色区域传感器",
+      "zh-TW": "單晶片彩色區域感測器",
+      en: "One-chip color area",
+    },
+    "two-chip-color-area": {
+      "zh-CN": "双芯片彩色区域传感器",
+      "zh-TW": "雙晶片彩色區域感測器",
+      en: "Two-chip color area",
+    },
+    "three-chip-color-area": {
+      "zh-CN": "三芯片彩色区域传感器",
+      "zh-TW": "三晶片彩色區域感測器",
+      en: "Three-chip color area",
+    },
+    "color-sequential-area": {
+      "zh-CN": "序列彩色区域传感器",
+      "zh-TW": "序列彩色區域感測器",
+      en: "Color sequential area",
+    },
+    trilinear: { "zh-CN": "三线传感器", "zh-TW": "三線感測器", en: "Trilinear" },
+    "color-sequential-linear": {
+      "zh-CN": "序列彩色线性传感器",
+      "zh-TW": "序列彩色線性感測器",
+      en: "Color sequential linear",
+    },
+    uncalibrated: { "zh-CN": "未校准", "zh-TW": "未校準", en: "Uncalibrated" },
+  };
+
+  return tokens[value]?.[locale] ?? value;
 }
 
 function WatermarkOverlay({ text, position }: { text: string; position: WatermarkPosition }) {
@@ -83,6 +208,8 @@ export function LightboxShell({
   photoMetadataEnabled = true,
   showDateInfo = true,
   showCameraInfo = true,
+  showImageInfo = true,
+  showAdvancedCameraInfo = true,
   showLocationInfo = true,
   showDetailedExifInfo = true,
   activeIndex,
@@ -112,30 +239,64 @@ export function LightboxShell({
   } | null>(null);
 
   const detail = isPhotoDetail(photo) ? photo : null;
-  const metaItems: Array<{ label: string; value: string }> = [];
+  const captureItems: Array<{ label: string; value: string }> = [];
+  const imageItems: Array<{ label: string; value: string }> = [];
+  const advancedItems: Array<{ label: string; value: string }> = [];
+  const locationItems: Array<{ label: string; value: string }> = [];
+  const basicItems: Array<{ label: string; value: string }> = [];
 
   if (detail && photoMetadataEnabled) {
     if (showDateInfo && detail.takenAt) {
       try {
         const localeTag = locale === "zh-TW" ? "zh-TW" : locale === "en" ? "en-US" : "zh-CN";
-        metaItems.push({
+        captureItems.push({
           label: copy.takenAt,
           value: new Date(detail.takenAt).toLocaleString(localeTag),
         });
       } catch {
-        // Fallback if locale is not supported
-        metaItems.push({
+        captureItems.push({
           label: copy.takenAt,
           value: new Date(detail.takenAt).toLocaleString(),
         });
       }
     }
-    if (showCameraInfo && detail.device) metaItems.push({ label: copy.device, value: detail.device });
-    if (showCameraInfo && detail.lens) metaItems.push({ label: copy.lens, value: detail.lens });
-    if (showCameraInfo && detail.exif?.aperture) metaItems.push({ label: copy.aperture, value: detail.exif.aperture });
-    if (showCameraInfo && detail.exif?.shutter) metaItems.push({ label: copy.shutter, value: detail.exif.shutter });
-    if (showCameraInfo && detail.exif?.iso) metaItems.push({ label: copy.iso, value: String(detail.exif.iso) });
-    if (showCameraInfo && detail.exif?.focalLength) metaItems.push({ label: copy.focalLength, value: detail.exif.focalLength });
+    if (showCameraInfo && detail.device) basicItems.push({ label: copy.device, value: detail.device });
+    if (showCameraInfo && detail.lens) basicItems.push({ label: copy.lens, value: detail.lens });
+    if (showImageInfo && detail.exif?.fileSize) imageItems.push({ label: copy.fileSize, value: detail.exif.fileSize });
+    if (showImageInfo && detail.exif?.mimeType) imageItems.push({ label: copy.fileType, value: detail.exif.mimeType });
+    if (showImageInfo && detail.exif?.dimensions) imageItems.push({ label: copy.dimensions, value: detail.exif.dimensions });
+    if (showImageInfo && detail.exif?.orientation) imageItems.push({ label: copy.orientation, value: localizeExifValue(locale, detail.exif.orientation) });
+    if (showImageInfo && detail.exif?.colorSpace) imageItems.push({ label: copy.colorSpace, value: localizeExifValue(locale, detail.exif.colorSpace) });
+    if (showCameraInfo && detail.exif?.aperture) captureItems.push({ label: copy.aperture, value: detail.exif.aperture });
+    if (showCameraInfo && detail.exif?.shutter) captureItems.push({ label: copy.shutter, value: detail.exif.shutter });
+    if (showCameraInfo && detail.exif?.iso) captureItems.push({ label: copy.iso, value: String(detail.exif.iso) });
+    if (showCameraInfo && detail.exif?.focalLength) captureItems.push({ label: copy.focalLength, value: detail.exif.focalLength });
+    if (showAdvancedCameraInfo && detail.exif?.focalLengthIn35mm) advancedItems.push({ label: copy.focalLengthIn35mm, value: detail.exif.focalLengthIn35mm });
+    if (showAdvancedCameraInfo && detail.exif?.exposureCompensation) advancedItems.push({ label: copy.exposureCompensation, value: detail.exif.exposureCompensation });
+    if (showAdvancedCameraInfo && detail.exif?.exposureProgram) advancedItems.push({ label: copy.exposureProgram, value: localizeExifValue(locale, detail.exif.exposureProgram) });
+    if (showAdvancedCameraInfo && detail.exif?.meteringMode) advancedItems.push({ label: copy.meteringMode, value: localizeExifValue(locale, detail.exif.meteringMode) });
+    if (showAdvancedCameraInfo && detail.exif?.whiteBalance) advancedItems.push({ label: copy.whiteBalance, value: localizeExifValue(locale, detail.exif.whiteBalance) });
+    if (showAdvancedCameraInfo && detail.exif?.flash) advancedItems.push({ label: copy.flash, value: localizeExifValue(locale, detail.exif.flash) });
+    if (showAdvancedCameraInfo && detail.exif?.exposureMode) advancedItems.push({ label: copy.exposureMode, value: localizeExifValue(locale, detail.exif.exposureMode) });
+    if (showAdvancedCameraInfo && detail.exif?.sceneCaptureType) advancedItems.push({ label: copy.sceneCaptureType, value: localizeExifValue(locale, detail.exif.sceneCaptureType) });
+    if (showAdvancedCameraInfo && detail.exif?.sensingMethod) advancedItems.push({ label: copy.sensingMethod, value: localizeExifValue(locale, detail.exif.sensingMethod) });
+    if (showLocationInfo && detail.location) locationItems.push({ label: copy.location, value: detail.location });
+    if (showLocationInfo && detail.exif?.altitude) locationItems.push({ label: copy.altitude, value: detail.exif.altitude });
+    if (showLocationInfo && detail.exif?.latitude !== undefined && detail.exif?.longitude !== undefined) locationItems.push({ label: copy.coordinates, value: `${detail.exif.latitude.toFixed(5)}, ${detail.exif.longitude.toFixed(5)}` });
+  }
+
+  if (photo) {
+    const headerItems: Array<{ label: string; value: string }> = [];
+
+    if (photo.description?.trim()) {
+      headerItems.push({ label: copy.note, value: photo.description.trim() });
+    }
+
+    basicItems.unshift(...headerItems);
+  }
+
+  if (detail?.tags.length) {
+    basicItems.push({ label: copy.tags, value: detail.tags.join(", ") });
   }
 
   const extendedExifItems =
@@ -161,11 +322,12 @@ export function LightboxShell({
   }
 
   function handleImageClick(event: MouseEvent<HTMLImageElement>) {
-    if (!hasMultiple) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const midpoint = rect.left + rect.width / 2;
-    if (event.clientX < midpoint) onPrevious();
-    else onNext();
+    event.stopPropagation();
+  }
+
+  function handleImageDoubleClick(event: MouseEvent<HTMLImageElement>) {
+    event.stopPropagation();
+    onToggleImmersive();
   }
 
   useEffect(() => {
@@ -190,35 +352,35 @@ export function LightboxShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(10,10,10,0.92)] backdrop-blur-[24px]"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(8,8,8,0.94)] backdrop-blur-[36px]"
       role="dialog"
       aria-modal="true"
       aria-label={copy.lightboxAria}
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_296px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
+        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_272px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`} onDoubleClick={onToggleImmersive}>
+        <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`}>
           <div className="absolute inset-0">
             <Image
               src={photo.displayUrl}
               alt=""
               fill
               aria-hidden="true"
-              className="scale-[1.28] object-cover blur-[120px] saturate-[0.8] brightness-[0.2] opacity-[0.44]"
+              className="scale-[1.34] object-cover blur-[180px] saturate-[0.68] brightness-[0.14] opacity-[0.26]"
               sizes="100vw"
               priority
             />
           </div>
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,10,0.48)_0%,rgba(8,8,8,0.68)_50%,rgba(6,6,6,0.82)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0%,rgba(12,12,12,0.12)_28%,rgba(5,5,5,0.72)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.62)_0%,rgba(6,6,6,0.8)_50%,rgba(4,4,4,0.9)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.025)_0%,rgba(10,10,10,0.2)_26%,rgba(4,4,4,0.82)_100%)]" />
 
           {hasMultiple ? (
             <>
-              <button type="button" aria-label={copy.previousPhoto} onClick={onPrevious} className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "hidden" : "hidden lg:flex lg:items-center lg:justify-center"}`}>‹</button>
-              <button type="button" aria-label={copy.nextPhoto} onClick={onNext} className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "hidden" : "hidden lg:flex lg:items-center lg:justify-center"}`}>›</button>
+              <button type="button" aria-label={copy.previousPhoto} onClick={onPrevious} className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "flex" : "hidden lg:flex"}`}>‹</button>
+              <button type="button" aria-label={copy.nextPhoto} onClick={onNext} className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "flex" : "hidden lg:flex"}`}>›</button>
             </>
           ) : null}
 
@@ -228,7 +390,7 @@ export function LightboxShell({
 
           <div className={`relative z-[1] flex h-full min-h-0 justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
             <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
-              <img ref={displayImageRef} src={photo.displayUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
+              <img ref={displayImageRef} src={photo.displayUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
               {watermarkEnabled && watermarkText && watermarkFrame ? (
                 <div className="pointer-events-none absolute z-[2]" style={{ top: watermarkFrame.top, left: watermarkFrame.left, width: watermarkFrame.width, height: watermarkFrame.height }}>
                   <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
@@ -239,36 +401,39 @@ export function LightboxShell({
         </section>
 
         {!isImmersive ? (
-          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(21,21,21,0.88)_0%,rgba(14,14,14,0.92)_56%,rgba(9,9,9,0.96)_100%)] p-4 backdrop-blur-[28px] sm:p-5 lg:col-start-2 lg:row-span-2">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm font-semibold tracking-[0.08em] text-paper">IMG {photo.id.replace("photo_", "")}</span>
+          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(12,12,12,0.98)_0%,rgba(8,8,8,1)_100%)] px-5 py-6 lg:col-start-2 lg:row-span-2">
+            <div className="border-b border-white/[0.06] pb-4">
+              <div className="min-w-0">
+                <h2 className="mt-2.5 break-all text-[14px] font-semibold leading-7 tracking-[0.08em] text-paper">
+                  IMG
+                  <br />
+                  {photo.id.replace("photo_", "")}
+                </h2>
+                <p className="mt-1.5 break-all text-[11.5px] leading-5 text-paper/58">
+                  {photo.id}.jpg
+                </p>
+              </div>
             </div>
 
-            <div className="mt-4 flex-1 space-y-5 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76">
-              {isLoading ? <p className="rounded-2xl border border-white/6 bg-white/[0.045] px-4 py-3 text-paper/70">{copy.loadingPhotoDetails}</p> : null}
-              {error ? <p className="rounded-2xl border border-[#c96b51]/18 bg-[#c96b51]/12 px-4 py-3 text-[#ffd7cc]">{error}</p> : null}
+            <div className="mt-4 flex-1 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76">
+              {isLoading ? <p className="py-3.5 text-[11.5px] text-paper/68">{copy.loadingPhotoDetails}</p> : null}
+              {error ? <p className="py-3.5 text-[11.5px] text-[#ffd7cc]">{error}</p> : null}
 
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.basicInfo}</p>
-                <dl className="space-y-2.5">
-                  <MetaRow label={copy.fileName} value={`${photo.id}.jpg`} />
-                  <MetaRow label={copy.note} value={photo.description ?? copy.noNote} />
-                  <MetaRow label={copy.watermark} value={watermarkEnabled ? copy.enabled : copy.disabled} />
-                  {photoMetadataEnabled && showLocationInfo && detail?.location ? <MetaRow label={copy.location} value={detail.location} /> : null}
-                  {detail?.tags.length ? <MetaRow label={copy.tags} value={detail.tags.join(", ")} /> : null}
-                </dl>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.photoParams}</p>
-                {metaItems.length ? <dl className="space-y-2.5">{metaItems.map((item) => <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />)}</dl> : <p className="text-paper/55">{copy.noExif}</p>}
-              </div>
+              <MetaSection title={copy.basicInfo} items={basicItems} />
+              <MetaSection title={copy.photoParams} items={captureItems} />
+              <MetaSection title={copy.imageInfo} items={imageItems} />
+              <MetaSection title={copy.advancedCameraInfo} items={advancedItems} />
+              <MetaSection title={copy.locationInfo} items={locationItems} />
 
               {extendedExifItems.length ? (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-paper/42">{copy.fullParams}</p>
-                  <dl className="space-y-2.5">{extendedExifItems.map((item) => <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />)}</dl>
-                </div>
+                <section className="border-t border-white/[0.06] pt-4">
+                  <p className="mb-3 text-[12px] font-medium text-paper/94">{copy.fullParams}</p>
+                  <dl className="space-y-3.5">
+                    {extendedExifItems.map((item) => (
+                      <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
+                    ))}
+                  </dl>
+                </section>
               ) : null}
             </div>
           </aside>

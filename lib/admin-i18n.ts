@@ -14,6 +14,7 @@ type AdminMessages = {
   siteDescription: string;
   siteTitlePlaceholder: string;
   siteDescriptionPlaceholder: string;
+  watermarkSection: string;
   watermarkEnabled: string;
   watermarkEnabledDescription: string;
   storeOriginalFiles: string;
@@ -39,6 +40,10 @@ type AdminMessages = {
   dateInfoDescription: string;
   cameraInfo: string;
   cameraInfoDescription: string;
+  imageInfo: string;
+  imageInfoDescription: string;
+  advancedCameraInfo: string;
+  advancedCameraInfoDescription: string;
   locationInfo: string;
   locationInfoDescription: string;
   detailedExif: string;
@@ -175,12 +180,13 @@ const messages: Record<SiteLocale, AdminMessages> = {
     siteSettings: "站点设置",
     loadingSettings: "正在加载设置...",
     language: "语言",
-    homeLayout: "首页布局",
+    homeLayout: "前端主题样式",
     siteTitle: "站点标题",
     siteDescription: "站点简介",
     siteTitlePlaceholder: "Luminote",
     siteDescriptionPlaceholder: "描述你的站点氛围、主题或浏览体验。",
-    watermarkEnabled: "默认启用水印",
+    watermarkSection: "水印",
+    watermarkEnabled: "启用水印",
     watermarkEnabledDescription: "上传后默认对展示图应用水印，除非单独关闭。",
     storeOriginalFiles: "保存原图",
     storeOriginalFilesDescription:
@@ -206,6 +212,11 @@ const messages: Record<SiteLocale, AdminMessages> = {
     dateInfoDescription: "显示拍摄日期和时间。",
     cameraInfo: "相机参数",
     cameraInfoDescription: "显示机身、镜头、光圈、快门、ISO 和焦距。",
+    imageInfo: "图像信息",
+    imageInfoDescription: "显示文件格式、文件大小、分辨率、方向和色彩空间。",
+    advancedCameraInfo: "进阶拍摄参数",
+    advancedCameraInfoDescription:
+      "显示曝光补偿、曝光程序、测光模式、白平衡、闪光灯等扩展参数。",
     locationInfo: "位置信息",
     locationInfoDescription: "显示位置字段和 GPS 相关信息。",
     detailedExif: "完整 EXIF",
@@ -223,7 +234,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     douyin: "抖音",
     instagram: "Instagram",
     accountNamePlaceholder: "账号名称",
-    profileUrlPlaceholder: "资料链接",
+    profileUrlPlaceholder: "主页链接",
     emailPlaceholder: "name@example.com",
     instagramPlaceholder: "@luminote.photo",
     adminPassword: "管理员密码",
@@ -340,12 +351,13 @@ const messages: Record<SiteLocale, AdminMessages> = {
     siteSettings: "站點設定",
     loadingSettings: "正在載入設定...",
     language: "語言",
-    homeLayout: "首頁版型",
+    homeLayout: "前端主題樣式",
     siteTitle: "站點標題",
     siteDescription: "站點簡介",
     siteTitlePlaceholder: "Luminote",
     siteDescriptionPlaceholder: "描述你的站點氛圍、主題或瀏覽體驗。",
-    watermarkEnabled: "預設啟用浮水印",
+    watermarkSection: "浮水印",
+    watermarkEnabled: "啟用浮水印",
     watermarkEnabledDescription: "除非另外關閉，否則預設會對展示圖套用浮水印。",
     storeOriginalFiles: "保留原圖",
     storeOriginalFilesDescription:
@@ -371,6 +383,11 @@ const messages: Record<SiteLocale, AdminMessages> = {
     dateInfoDescription: "顯示拍攝日期與時間。",
     cameraInfo: "相機參數",
     cameraInfoDescription: "顯示機身、鏡頭、光圈、快門、ISO 與焦距。",
+    imageInfo: "圖像資訊",
+    imageInfoDescription: "顯示檔案格式、檔案大小、解析度、方向與色彩空間。",
+    advancedCameraInfo: "進階拍攝參數",
+    advancedCameraInfoDescription:
+      "顯示曝光補償、曝光程式、測光模式、白平衡、閃光燈等延伸參數。",
     locationInfo: "位置資訊",
     locationInfoDescription: "顯示位置欄位與 GPS 相關資訊。",
     detailedExif: "完整 EXIF",
@@ -388,7 +405,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     douyin: "抖音",
     instagram: "Instagram",
     accountNamePlaceholder: "帳號名稱",
-    profileUrlPlaceholder: "資料連結",
+    profileUrlPlaceholder: "主頁連結",
     emailPlaceholder: "name@example.com",
     instagramPlaceholder: "@luminote.photo",
     adminPassword: "管理員密碼",
@@ -505,13 +522,14 @@ const messages: Record<SiteLocale, AdminMessages> = {
     siteSettings: "Site Settings",
     loadingSettings: "Loading settings...",
     language: "Language",
-    homeLayout: "Home Layout",
+    homeLayout: "Front-end Theme Style",
     siteTitle: "Site Title",
     siteDescription: "Site Description",
     siteTitlePlaceholder: "Luminote",
     siteDescriptionPlaceholder:
       "Describe the mood, theme, or viewing experience of your site.",
-    watermarkEnabled: "Watermark Enabled by Default",
+    watermarkSection: "Watermark",
+    watermarkEnabled: "Enable Watermark",
     watermarkEnabledDescription:
       "Apply watermarks to gallery display assets unless disabled.",
     storeOriginalFiles: "Store Original Files",
@@ -542,6 +560,12 @@ const messages: Record<SiteLocale, AdminMessages> = {
     cameraInfo: "Camera Info",
     cameraInfoDescription:
       "Show camera body, lens, aperture, shutter, ISO, and focal length.",
+    imageInfo: "Image Info",
+    imageInfoDescription:
+      "Show file type, file size, dimensions, orientation, and color space.",
+    advancedCameraInfo: "Advanced Camera Info",
+    advancedCameraInfoDescription:
+      "Show exposure compensation, program, metering mode, white balance, flash, and related details.",
     locationInfo: "Location Info",
     locationInfoDescription: "Show location fields and GPS-related metadata.",
     detailedExif: "Detailed EXIF",
@@ -562,7 +586,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     douyin: "Douyin",
     instagram: "Instagram",
     accountNamePlaceholder: "Account name",
-    profileUrlPlaceholder: "Profile URL",
+    profileUrlPlaceholder: "Homepage URL",
     emailPlaceholder: "name@example.com",
     instagramPlaceholder: "@luminote.photo",
     adminPassword: "Admin Password",

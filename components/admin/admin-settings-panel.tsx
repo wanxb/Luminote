@@ -66,6 +66,10 @@ type AdminSettingsPanelProps = {
   onShowDateInfoChange: (value: boolean) => void;
   showCameraInfo: boolean;
   onShowCameraInfoChange: (value: boolean) => void;
+  showImageInfo: boolean;
+  onShowImageInfoChange: (value: boolean) => void;
+  showAdvancedCameraInfo: boolean;
+  onShowAdvancedCameraInfoChange: (value: boolean) => void;
   showLocationInfo: boolean;
   onShowLocationInfoChange: (value: boolean) => void;
   showDetailedExifInfo: boolean;
@@ -125,31 +129,37 @@ function ToggleRow({
   disabled?: boolean;
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
-      <span className={`text-[13px] ${disabled ? "text-ink/35" : "text-ink/80"}`}>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) {
+          onChange(!checked);
+        }
+      }}
+      className={`appearance-none flex w-full items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5 text-left transition ${
+        disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:border-[rgba(199,143,99,0.22)]"
+      }`}
+    >
+      <span className={`whitespace-nowrap text-[13px] ${disabled ? "text-ink/35" : "text-ink/80"}`}>
         {title}
       </span>
       <span className="relative shrink-0">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-          disabled={disabled}
-          className="peer sr-only"
-        />
         <span
-          className={`block h-4.5 w-8 rounded-full transition ${
+          className={`block h-[18px] w-8 rounded-full transition ${
             checked ? "bg-[#d7aa7f]" : "bg-[rgba(152,120,90,0.18)]"
           } ${disabled ? "opacity-50" : ""}`}
         >
           <span
-            className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition ${
-              checked ? "left-4" : "left-0.5"
+            className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition ${
+              checked ? "left-[16px]" : "left-[2px]"
             }`}
           />
         </span>
       </span>
-    </label>
+    </button>
   );
 }
 
@@ -195,7 +205,7 @@ function CompactField({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-1 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
+    <div className="grid h-full content-start gap-1 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
       <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#8e7762]">
         {label}
       </span>
@@ -222,17 +232,17 @@ function SocialRow({
   urlPlaceholder: string;
 }) {
   return (
-    <div className="grid gap-1 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5">
-      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink/45">
+    <div className="grid h-full content-start gap-1 rounded-[12px] border border-[rgba(92,68,48,0.08)] bg-[rgba(255,255,255,0.72)] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8e7762]">
         {title}
       </span>
-      <div className="grid gap-1">
+      <div className="grid gap-1 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <input
           type="text"
           value={accountValue}
           onChange={(event) => onAccountChange(event.target.value)}
           maxLength={TEXT_LIMITS.accountName}
-          className="w-full rounded-[10px] border border-black/10 bg-mist px-2.5 py-1.5 text-sm outline-none transition focus:border-ember"
+          className="w-full rounded-[10px] border border-[rgba(152,120,90,0.16)] bg-[rgba(240,234,224,0.8)] px-2.5 py-1.5 text-[13px] text-ink outline-none transition placeholder:text-ink/35 focus:border-ember focus:bg-[rgba(255,250,244,0.96)]"
           placeholder={accountPlaceholder}
         />
         <input
@@ -240,7 +250,7 @@ function SocialRow({
           value={urlValue}
           onChange={(event) => onUrlChange(event.target.value)}
           maxLength={TEXT_LIMITS.url}
-          className="w-full rounded-[10px] border border-black/10 bg-mist px-2.5 py-1.5 text-sm outline-none transition focus:border-ember"
+          className="w-full rounded-[10px] border border-[rgba(152,120,90,0.16)] bg-[rgba(240,234,224,0.8)] px-2.5 py-1.5 text-[13px] text-ink outline-none transition placeholder:text-ink/35 focus:border-ember focus:bg-[rgba(255,250,244,0.96)]"
           placeholder={urlPlaceholder}
         />
       </div>
@@ -284,6 +294,10 @@ export function AdminSettingsPanel({
   onShowDateInfoChange,
   showCameraInfo,
   onShowCameraInfoChange,
+  showImageInfo,
+  onShowImageInfoChange,
+  showAdvancedCameraInfo,
+  onShowAdvancedCameraInfoChange,
   showLocationInfo,
   onShowLocationInfoChange,
   showDetailedExifInfo,
@@ -325,8 +339,12 @@ export function AdminSettingsPanel({
   const copy = getAdminMessages(locale);
   const cardClass =
     "rounded-[16px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2.5";
+  const compactCardClass =
+    "h-full rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5";
   const fieldClass =
     "w-full rounded-[10px] border border-[rgba(152,120,90,0.18)] bg-[linear-gradient(180deg,rgba(245,240,232,0.85),rgba(239,232,221,0.92))] px-2.5 py-1.5 text-[13px] text-ink outline-none transition placeholder:text-ink/35 focus:border-[#c78f63] focus:bg-[rgba(255,250,244,0.96)] focus:ring-2 focus:ring-[#ecd5bb]/60";
+  const activeHomeLayout =
+    homeLayoutOptions.find((option) => option.value === homeLayout) ?? homeLayoutOptions[0];
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[22px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-3 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
@@ -334,7 +352,7 @@ export function AdminSettingsPanel({
         <p className="text-sm text-ink/70">{copy.loadingSettings}</p>
       ) : (
         <form className="flex h-full min-h-0 flex-col gap-2" onSubmit={onSubmit}>
-          <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="grid min-h-0 flex-1 items-stretch gap-2 xl:grid-cols-[minmax(0,1fr)_260px]">
             <div className="grid min-h-0 gap-2" style={{ gridTemplateRows: "auto auto minmax(0,1fr)" }}>
               <div className="grid gap-2 lg:grid-cols-2">
                 <section className="h-full rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2">
@@ -345,7 +363,7 @@ export function AdminSettingsPanel({
                         value={locale}
                         onChange={onLocaleChange}
                         options={localeOptions as Array<SelectOption<SiteLocale>>}
-                        buttonClassName="rounded-[10px] py-0.5"
+                        buttonClassName="rounded-[10px]"
                       />
                     </CompactField>
                     <CompactField label={copy.siteTitle}>
@@ -382,11 +400,14 @@ export function AdminSettingsPanel({
               </div>
 
               <section className="rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2">
-                <BlockTitle title="Watermark" />
-                <div className="mt-1 grid gap-1 lg:grid-cols-[170px_minmax(0,1fr)_180px] lg:items-end">
-                    <div className="rounded-[10px] border border-black/6 bg-white/88 px-2 py-1">
+                <BlockTitle title={copy.watermarkSection} />
+                <div className="mt-1 grid gap-1 lg:grid-cols-[220px_minmax(0,1fr)_190px] lg:items-stretch">
+                    <div className={`${compactCardClass} grid content-start gap-1`}>
+                      <span className="select-none text-[10px] font-medium uppercase tracking-[0.16em] text-transparent">
+                        toggle
+                      </span>
                       <ToggleRow
-                        title={copy.watermarkEnabled.replace("默认", "").replace("榛樿", "")}
+                        title={copy.watermarkEnabled}
                         checked={watermarkEnabledByDefault}
                         onChange={onWatermarkEnabledByDefaultChange}
                       />
@@ -406,16 +427,16 @@ export function AdminSettingsPanel({
                       value={watermarkPosition}
                       onChange={onWatermarkPositionChange}
                       options={watermarkPositionOptions as Array<SelectOption<WatermarkPosition>>}
-                      buttonClassName="rounded-[10px] py-1"
+                      buttonClassName="rounded-[10px]"
                     />
                   </CompactField>
                 </div>
               </section>
 
-              <section className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-1.5">
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border border-[rgba(92,68,48,0.08)] bg-[linear-gradient(180deg,rgba(248,243,236,0.56),rgba(243,237,228,0.3))] p-2">
                 <BlockTitle title={copy.photographerProfile} />
-                <div className="mt-1 grid gap-1 xl:grid-cols-[60px_136px_160px_minmax(0,1fr)]">
-                  <div className="rounded-[10px] border border-black/6 bg-white/88 p-1">
+                <div className="mt-1 grid gap-2 rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-[rgba(255,255,255,0.46)] p-2 xl:grid-cols-[96px_minmax(0,180px)_minmax(0,220px)_minmax(0,1fr)]">
+                  <div className="rounded-[14px] border border-[rgba(92,68,48,0.08)] bg-white/88 p-1.5">
                     <input
                       ref={avatarInputRef as RefObject<HTMLInputElement>}
                       type="file"
@@ -428,7 +449,7 @@ export function AdminSettingsPanel({
                       onClick={() => avatarInputRef.current?.click()}
                       className="block w-full"
                     >
-                      <div className="overflow-hidden rounded-[10px] border border-black/10 bg-mist">
+                      <div className="overflow-hidden rounded-[12px] border border-black/10 bg-mist">
                         <div className="relative aspect-square w-full">
                           {avatarPreviewUrl || photographerAvatarUrl ? (
                             <img
@@ -446,7 +467,7 @@ export function AdminSettingsPanel({
                     </button>
                   </div>
 
-                  <div className="xl:col-span-3 grid gap-1 xl:grid-cols-[136px_160px_minmax(0,1fr)] xl:items-start">
+                  <div className="xl:col-span-3 grid gap-2 xl:grid-cols-[minmax(0,220px)_minmax(0,240px)_minmax(0,1fr)] xl:items-start">
                     <CompactField label={copy.photographerName}>
                       <input
                         type="text"
@@ -474,14 +495,14 @@ export function AdminSettingsPanel({
                         value={photographerBio}
                         onChange={(event) => onPhotographerBioChange(event.target.value)}
                         maxLength={TEXT_LIMITS.photographerBio}
-                        className={`h-[4rem] resize-none leading-5 ${fieldClass}`}
+                        className={`h-[5.5rem] resize-none leading-5 ${fieldClass}`}
                         placeholder={copy.photographerBioPlaceholder}
                       />
                     </CompactField>
                   </div>
                 </div>
 
-                <div className="mt-1 grid gap-1 xl:grid-cols-2">
+                <div className="mt-2 grid min-h-0 flex-1 auto-rows-fr gap-1.5 md:grid-cols-2">
                   <SocialRow
                     title={copy.xiaohongshu}
                     accountValue={photographerXiaohongshu}
@@ -522,9 +543,29 @@ export function AdminSettingsPanel({
               </section>
             </div>
 
-            <div className="grid gap-2" style={{ gridTemplateRows: "auto auto minmax(0,1fr)" }}>
+            <div className="grid h-full min-h-0 gap-2" style={{ gridTemplateRows: "auto auto auto 1fr" }}>
               <section className={cardClass}>
-                <BlockTitle title="Parameters" />
+                <BlockTitle title={copy.homeLayout} />
+                <div className="mt-1.5 grid gap-1.5">
+                  <SoftSelect
+                    value={homeLayout}
+                    onChange={onHomeLayoutChange}
+                    options={homeLayoutOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })) as Array<SelectOption<HomeLayout>>}
+                    buttonClassName="rounded-[10px]"
+                  />
+                  {activeHomeLayout ? (
+                    <p className="px-1 text-[12px] leading-5 text-ink/55">
+                      {activeHomeLayout.description}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className={cardClass}>
+                <BlockTitle title={copy.photoMetadata} />
                 <div className="mt-1 grid gap-1">
                   <ToggleRow
                     title={
@@ -553,6 +594,18 @@ export function AdminSettingsPanel({
                       title={copy.cameraInfo}
                       checked={showCameraInfo}
                       onChange={onShowCameraInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={copy.imageInfo}
+                      checked={showImageInfo}
+                      onChange={onShowImageInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={copy.advancedCameraInfo}
+                      checked={showAdvancedCameraInfo}
+                      onChange={onShowAdvancedCameraInfoChange}
                       disabled={!photoMetadataEnabled}
                     />
                     <ToggleRow
@@ -593,7 +646,7 @@ export function AdminSettingsPanel({
                 </div>
               </section>
 
-              <section className={`${cardClass} self-end`}>
+              <section className={`${cardClass} flex h-full min-h-[108px] flex-col justify-end`}>
                 <div className="space-y-2">
                   {configSuccess ? <p className="text-sm text-emerald-700">{configSuccess}</p> : null}
                   {configError ? <p className="text-sm text-red-700">{configError}</p> : null}

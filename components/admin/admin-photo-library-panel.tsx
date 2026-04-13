@@ -185,19 +185,14 @@ export function AdminPhotoLibraryPanel({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => void onBatchPhotoHidden(true)}
-              disabled={selectedVisiblePhotoCount === 0 || hasSelectedBusyPhotos}
+              onClick={() => void onBatchPhotoHidden(selectedVisiblePhotoCount > 0)}
+              disabled={
+                (selectedVisiblePhotoCount === 0 && selectedHiddenPhotoCount === 0) ||
+                hasSelectedBusyPhotos
+              }
               className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {copy.hideSelectedButton}
-            </button>
-            <button
-              type="button"
-              onClick={() => void onBatchPhotoHidden(false)}
-              disabled={selectedHiddenPhotoCount === 0 || hasSelectedBusyPhotos}
-              className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {copy.unhideSelectedButton}
+              {selectedVisiblePhotoCount > 0 ? copy.hideSelectedButton : copy.unhideSelectedButton}
             </button>
             <button
               type="button"
@@ -323,7 +318,11 @@ export function AdminPhotoLibraryPanel({
                         type="button"
                         onClick={() => (isEditing ? void onSavePhotoTags(photo) : onBeginPhotoTagEdit(photo))}
                         disabled={isBusy}
-                        className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist"
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isEditing
+                            ? "border border-[#c78f63] bg-[#c78f63] text-white hover:bg-[#b77f53]"
+                            : "border border-black/10 text-ink hover:bg-mist"
+                        }`}
                       >
                         {isUpdating ? copy.savingButton : isEditing ? copy.doneButton : copy.tagsLabel}
                       </button>

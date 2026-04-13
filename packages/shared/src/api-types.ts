@@ -25,12 +25,29 @@ export type HomeLayout = "masonry" | "editorial" | "spotlight";
 export type SiteLocale = "zh-CN" | "zh-TW" | "en";
 
 export type PhotoExif = {
+  fileSize?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  dimensions?: string;
+  orientation?: string;
+  colorSpace?: string;
   aperture?: string;
   shutter?: string;
   iso?: number;
   focalLength?: string;
+  focalLengthIn35mm?: string;
+  exposureCompensation?: string;
+  exposureProgram?: string;
+  meteringMode?: string;
+  whiteBalance?: string;
+  flash?: string;
+  exposureMode?: string;
+  sceneCaptureType?: string;
+  sensingMethod?: string;
   latitude?: number;
   longitude?: number;
+  altitude?: string;
   params?: Record<string, string>;
 };
 
@@ -67,6 +84,8 @@ export type SiteResponse = {
   photoMetadataEnabled: boolean;
   showDateInfo: boolean;
   showCameraInfo: boolean;
+  showImageInfo: boolean;
+  showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
@@ -103,6 +122,8 @@ export type SiteConfigResponse = {
   photoMetadataEnabled: boolean;
   showDateInfo: boolean;
   showCameraInfo: boolean;
+  showImageInfo: boolean;
+  showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;

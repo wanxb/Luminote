@@ -109,8 +109,9 @@ export function createSqliteAdminContentRepository(config) {
       let whereClause = "";
 
       if (tag) {
-        whereClause = "WHERE tags_json LIKE ?";
-        values.push(`%${tag}%`);
+        whereClause =
+          "WHERE EXISTS (SELECT 1 FROM json_each(COALESCE(tags_json, '[]')) WHERE value = ?)";
+        values.push(tag);
       }
 
       const rows = db

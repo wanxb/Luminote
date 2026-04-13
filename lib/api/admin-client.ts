@@ -103,6 +103,8 @@ export type UpdateSitePayload = {
   photoMetadataEnabled?: boolean;
   showDateInfo?: boolean;
   showCameraInfo?: boolean;
+  showImageInfo?: boolean;
+  showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
   showDetailedExifInfo?: boolean;
   photographerAvatarUrl?: string;
@@ -511,6 +513,8 @@ export async function getSite(): Promise<SiteResponse> {
       photoMetadataEnabled: true,
       showDateInfo: true,
       showCameraInfo: true,
+      showImageInfo: true,
+      showAdvancedCameraInfo: true,
       showLocationInfo: true,
       showDetailedExifInfo: true,
       photographerAvatarUrl: "",
