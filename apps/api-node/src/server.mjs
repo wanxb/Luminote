@@ -85,7 +85,9 @@ const server = createServer(async (req, res) => {
       }
 
       const mockVariant =
-        variant === "thumb"
+        variant === "original"
+          ? "display"
+          : variant === "thumb"
           ? "thumb"
           : variant === "display-watermarked"
             ? "watermarked"

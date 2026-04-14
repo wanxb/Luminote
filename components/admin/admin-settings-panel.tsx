@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEventHandler, FormEventHandler, ReactNode, RefObject } from "react";
+import type { ChangeEventHandler, FormEventHandler, KeyboardEvent, ReactNode, RefObject } from "react";
 import {
   NumberStepperField,
   SoftSelect,
@@ -128,22 +128,36 @@ function ToggleRow({
   onChange: (value: boolean) => void;
   disabled?: boolean;
 }) {
+  const handleToggle = () => {
+    if (!disabled) {
+      onChange(!checked);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onChange(!checked);
+    }
+  };
+
   return (
-    <button
-      type="button"
+    <div
       role="switch"
       aria-checked={checked}
-      disabled={disabled}
-      onClick={() => {
-        if (!disabled) {
-          onChange(!checked);
-        }
-      }}
-      className={`appearance-none flex w-full items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5 text-left transition ${
+      aria-disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onClick={handleToggle}
+      onKeyDown={handleKeyDown}
+      className={`appearance-none flex min-w-0 w-full items-center justify-between gap-2 rounded-[10px] border border-black/6 bg-white/88 px-2.5 py-1.5 text-left transition ${
         disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:border-[rgba(199,143,99,0.22)]"
       }`}
     >
-      <span className={`whitespace-nowrap text-[13px] ${disabled ? "text-ink/35" : "text-ink/80"}`}>
+      <span className={`min-w-0 flex-1 text-[13px] ${disabled ? "text-ink/35" : "text-ink/80"}`}>
         {title}
       </span>
       <span className="relative shrink-0">
@@ -159,17 +173,20 @@ function ToggleRow({
           />
         </span>
       </span>
-    </button>
+    </div>
   );
 }
 
 function InfoHint({ text }: { text: string }) {
   return (
     <span className="group relative inline-flex items-center">
-      <span className="flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(152,120,90,0.24)] bg-[rgba(255,250,245,0.98)] text-[10px] font-semibold text-[#9c7655]">
+      <span
+        aria-label={text}
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(152,120,90,0.24)] bg-[rgba(255,250,245,0.98)] text-[10px] font-semibold text-[#9c7655]"
+      >
         ?
       </span>
-      <span className="pointer-events-none absolute left-1/2 top-[calc(100%+0.4rem)] z-30 hidden w-44 -translate-x-1/2 rounded-[10px] border border-[rgba(186,152,120,0.18)] bg-[rgba(255,252,247,0.98)] px-2.5 py-2 text-[11px] leading-4 text-[#6a5340] shadow-[0_12px_24px_rgba(91,70,45,0.12)] group-hover:block">
+      <span className="pointer-events-none absolute left-1/2 top-[calc(100%+0.4rem)] z-30 invisible w-44 -translate-x-1/2 rounded-[10px] border border-[rgba(186,152,120,0.18)] bg-[rgba(255,252,247,0.98)] px-2.5 py-2 text-[11px] leading-4 text-[#6a5340] opacity-0 shadow-[0_12px_24px_rgba(91,70,45,0.12)] transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         {text}
       </span>
     </span>
@@ -603,7 +620,12 @@ export function AdminSettingsPanel({
                       disabled={!photoMetadataEnabled}
                     />
                     <ToggleRow
-                      title={copy.advancedCameraInfo}
+                      title={
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          <span className="truncate">{copy.advancedCameraInfo}</span>
+                          <InfoHint text={copy.advancedCameraInfoDescription} />
+                        </span>
+                      }
                       checked={showAdvancedCameraInfo}
                       onChange={onShowAdvancedCameraInfoChange}
                       disabled={!photoMetadataEnabled}

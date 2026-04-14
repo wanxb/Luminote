@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { SiteTagFilterChips } from "@/components/site/site-tag-filter-chips";
 import type { ProfileLink } from "@/components/site/site-shared";
+import { openAdminLogin } from "@/lib/open-admin-login";
 import { getSiteMessages } from "@/lib/site-i18n";
 import type { SiteLocale } from "@/lib/api/types";
 
@@ -50,7 +51,10 @@ export function SiteProfileSidebar({
 
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.28em] text-black/36">{copy.photographer}</p>
-            <h1 className="mt-2 text-[2rem] font-semibold leading-[0.95] tracking-[-0.04em] text-[#202020]">
+            <h1
+              onDoubleClick={openAdminLogin}
+              className="mt-2 cursor-pointer text-[2rem] font-semibold leading-[0.95] tracking-[-0.04em] text-[#202020]"
+            >
               {displayName}
             </h1>
           </div>

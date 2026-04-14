@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getSiteMessages } from "@/lib/site-i18n";
+import { openAdminLogin } from "@/lib/open-admin-login";
 import type { SiteResponse } from "@/lib/api/types";
 
 type PhotographerProfileCardProps = {
@@ -480,7 +481,12 @@ export function PhotographerProfileCard({
               )}
 
               <div className="min-w-0 flex-1 pt-1">
-                <h2 className="text-[28px] font-semibold leading-none text-white [text-shadow:0_6px_18px_rgba(0,0,0,0.24)]">{displayName}</h2>
+                <h2
+                  onDoubleClick={openAdminLogin}
+                  className="cursor-pointer text-[28px] font-semibold leading-none text-white [text-shadow:0_6px_18px_rgba(0,0,0,0.24)]"
+                >
+                  {displayName}
+                </h2>
                 <p className="mt-3 max-w-[22rem] text-sm leading-6 text-white/62">{bio}</p>
               </div>
               {emptyMessage ? (
@@ -518,7 +524,9 @@ export function PhotographerProfileCard({
           )}
 
           <div>
-            <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">{displayName}</h2>
+            <h2 onDoubleClick={openAdminLogin} className="font-display cursor-pointer text-3xl leading-tight text-ink md:text-4xl">
+              {displayName}
+            </h2>
             <p className="mt-3 max-w-[24rem] text-sm leading-7 text-ink/72">{bio}</p>
           </div>
         </div>

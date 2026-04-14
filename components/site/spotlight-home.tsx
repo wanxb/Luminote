@@ -10,6 +10,7 @@ import {
 import { SummerShadowBackground } from "@/components/site/summer-shadow-background";
 import { getPhotoDetail, getPhotos } from "@/lib/api/client";
 import { getDefaultGalleryPhotoDetail, isDefaultGalleryPhotoId } from "@/lib/gallery-defaults";
+import { openAdminLogin } from "@/lib/open-admin-login";
 import { getSiteMessages } from "@/lib/site-i18n";
 import type { PhotoDetail, PhotoSummary, SiteResponse } from "@/lib/api/types";
 
@@ -471,7 +472,10 @@ export function SpotlightHome({
 
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-[0.28em] text-black/42">{copy.photographer}</p>
-                  <h1 className="mt-2 text-[2rem] font-semibold leading-[0.94] tracking-[-0.06em] text-black sm:text-[2.5rem]">
+                  <h1
+                    onDoubleClick={openAdminLogin}
+                    className="mt-2 cursor-pointer text-[2rem] font-semibold leading-[0.94] tracking-[-0.06em] text-black sm:text-[2.5rem]"
+                  >
                     {displayName}
                   </h1>
                 </div>
