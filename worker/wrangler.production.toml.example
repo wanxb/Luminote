@@ -2,6 +2,7 @@ name = "luminote-api"
 main = "src/index.ts"
 compatibility_date = "2026-04-02"
 workers_dev = true
+keep_vars = true
 
 routes = [
   { pattern = "luminote-api.bbing.xyz", custom_domain = true, zone_name = "bbing.xyz" }
