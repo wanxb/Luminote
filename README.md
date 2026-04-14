@@ -290,8 +290,10 @@ Suggested names:
 
 - D1: `luminote-prod`
 - R2: `luminote-assets`
-- Worker: `luminote-api`
-- Pages: `luminote-web`
+- Front-end Worker: `luminote`
+- API Worker: `luminote-api`
+- Front-end domain: `https://luminote.bbing.xyz/`
+- API domain: `https://luminote-api.bbing.xyz/`
 
 #### 2. Update Worker bindings
 

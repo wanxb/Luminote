@@ -1,11 +1,18 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "luminote-web",
+  "name": "luminote",
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "routes": [
+    {
+      "pattern": "luminote.bbing.xyz",
+      "custom_domain": true,
+      "zone_name": "bbing.xyz"
+    }
   ],
   "assets": {
     "directory": ".open-next/assets",
@@ -14,7 +21,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "luminote-web"
+      "service": "luminote"
     }
   ],
   "r2_buckets": [

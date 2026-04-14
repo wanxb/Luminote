@@ -173,8 +173,10 @@ Worker 目录：
 
 - D1：`luminote-prod`
 - R2：`luminote-assets`
-- Worker：`luminote-api`
-- Pages：`luminote-web`
+- 前端 Worker：`luminote`
+- API Worker：`luminote-api`
+- 前端域名：`https://luminote.bbing.xyz/`
+- API 域名：`https://luminote-api.bbing.xyz/`
 
 ### 2. 更新 Worker 绑定
 
