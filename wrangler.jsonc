@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "luminote",
+  "name": "luminote-web-local",
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
@@ -14,7 +14,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "luminote"
+      "service": "luminote-web-local"
     }
   ],
   "r2_buckets": [
