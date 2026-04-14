@@ -1,4 +1,5 @@
 import type { Env } from "../index";
+import { hashPassword, verifyPassword } from "../utils/password";
 
 export const DEFAULT_SITE_DESCRIPTION =
   "A lightweight home for photography that lets the work breathe.";
@@ -38,7 +39,8 @@ type SiteConfigRow = {
   watermark_enabled_by_default: number;
   watermark_text: string;
   watermark_position: string;
-  admin_password: string;
+  admin_password: string | null;
+  admin_password_hash: string | null;
   upload_original_enabled: number;
   max_total_photos: number;
   max_tag_pool_size: number;
@@ -73,7 +75,8 @@ export type SiteConfig = {
   watermarkEnabledByDefault: boolean;
   watermarkText: string;
   watermarkPosition: string;
-  adminPassword: string;
+  adminPassword?: string;
+  adminPasswordHash: string;
   uploadOriginalEnabled: boolean;
   maxTotalPhotos: number;
   maxTagPoolSize: number;
@@ -110,7 +113,8 @@ type LegacySiteConfigRow = {
   watermark_enabled_by_default: number;
   watermark_text: string;
   watermark_position?: string;
-  admin_password: string;
+  admin_password?: string | null;
+  admin_password_hash?: string | null;
   upload_original_enabled?: number;
   max_total_photos?: number;
   max_tag_pool_size?: number;
@@ -139,6 +143,7 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     watermarkText: env.WATERMARK_TEXT,
     watermarkPosition: DEFAULT_WATERMARK_POSITION,
     adminPassword: env.ADMIN_PASSWORD,
+    adminPasswordHash: env.ADMIN_PASSWORD_HASH?.trim() ?? "",
     uploadOriginalEnabled: DEFAULT_UPLOAD_ORIGINAL_ENABLED,
     maxTotalPhotos: DEFAULT_MAX_TOTAL_PHOTOS,
     maxTagPoolSize: DEFAULT_MAX_TAG_POOL_SIZE,
@@ -174,6 +179,11 @@ async function ensureSiteConfig(env: Env) {
   if (!ensureSiteConfigPromise) {
     ensureSiteConfigPromise = (async () => {
       const defaults = buildDefaultSiteConfig(env);
+      const defaultPasswordHash =
+        defaults.adminPasswordHash ||
+        (defaults.adminPassword
+          ? await hashPassword(defaults.adminPassword)
+          : "");
 
       await env
         .DB!.prepare(
@@ -186,7 +196,8 @@ async function ensureSiteConfig(env: Env) {
           watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
           watermark_text TEXT NOT NULL,
           watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
-          admin_password TEXT NOT NULL,
+          admin_password TEXT,
+          admin_password_hash TEXT,
           upload_original_enabled INTEGER NOT NULL DEFAULT 0,
           max_total_photos INTEGER NOT NULL DEFAULT 200,
           max_tag_pool_size INTEGER NOT NULL DEFAULT 20,
@@ -221,6 +232,7 @@ async function ensureSiteConfig(env: Env) {
         "ALTER TABLE site_config ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh-CN'",
         "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN watermark_position TEXT NOT NULL DEFAULT 'bottom-right'",
+        "ALTER TABLE site_config ADD COLUMN admin_password_hash TEXT",
         "ALTER TABLE site_config ADD COLUMN max_total_photos INTEGER NOT NULL DEFAULT 200",
         "ALTER TABLE site_config ADD COLUMN photo_metadata_enabled INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_date_info INTEGER NOT NULL DEFAULT 1",
@@ -262,6 +274,7 @@ async function ensureSiteConfig(env: Env) {
           watermark_text,
           watermark_position,
           admin_password,
+          admin_password_hash,
           upload_original_enabled,
           max_total_photos,
           max_tag_pool_size,
@@ -287,7 +300,7 @@ async function ensureSiteConfig(env: Env) {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           1,
@@ -298,7 +311,8 @@ async function ensureSiteConfig(env: Env) {
           defaults.watermarkEnabledByDefault ? 1 : 0,
           defaults.watermarkText,
           defaults.watermarkPosition,
-          defaults.adminPassword,
+          null,
+          defaultPasswordHash || null,
           defaults.uploadOriginalEnabled ? 1 : 0,
           defaults.maxTotalPhotos,
           defaults.maxTagPoolSize,
@@ -365,6 +379,7 @@ function mapSiteConfigRowToConfig(
     watermarkText: row.watermark_text ?? defaults.watermarkText,
     watermarkPosition: row.watermark_position ?? defaults.watermarkPosition,
     adminPassword: row.admin_password ?? defaults.adminPassword,
+    adminPasswordHash: row.admin_password_hash ?? defaults.adminPasswordHash,
     uploadOriginalEnabled:
       row.upload_original_enabled !== undefined
         ? Boolean(row.upload_original_enabled)
@@ -457,6 +472,7 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         watermark_text,
         watermark_position,
         admin_password,
+        admin_password_hash,
         upload_original_enabled,
         max_total_photos,
         max_tag_pool_size,
@@ -521,19 +537,37 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
   }
 }
 
-export async function getAdminPassword(env: Env) {
+export async function verifyAdminPassword(env: Env, password: string) {
   try {
     const config = await getSiteConfig(env);
-    return config.adminPassword;
+
+    if (config.adminPasswordHash) {
+      return verifyPassword(password, config.adminPasswordHash);
+    }
+
+    if (config.adminPassword && password === config.adminPassword) {
+      if (env.DB) {
+        await updateSiteConfig(env, { adminPassword: password });
+      }
+
+      return true;
+    }
   } catch {
-    return env.ADMIN_PASSWORD;
+    // Fall back to environment credentials below.
   }
+
+  if (env.ADMIN_PASSWORD_HASH?.trim()) {
+    return verifyPassword(password, env.ADMIN_PASSWORD_HASH.trim());
+  }
+
+  return password === env.ADMIN_PASSWORD;
 }
 
 export async function updateSiteConfig(
   env: Env,
   updates: Partial<Omit<SiteConfig, "adminPassword">> & {
-    adminPassword?: string;
+    adminPassword?: string | null;
+    adminPasswordHash?: string | null;
   },
 ) {
   if (!env.DB) {
@@ -584,8 +618,16 @@ export async function updateSiteConfig(
   }
 
   if (updates.adminPassword !== undefined) {
+    const nextHash =
+      updates.adminPassword === null ? null : await hashPassword(updates.adminPassword);
+
     statements.push("admin_password = ?");
-    values.push(updates.adminPassword);
+    values.push(null);
+    statements.push("admin_password_hash = ?");
+    values.push(nextHash);
+  } else if (updates.adminPasswordHash !== undefined) {
+    statements.push("admin_password_hash = ?");
+    values.push(updates.adminPasswordHash);
   }
 
   if (updates.uploadOriginalEnabled !== undefined) {

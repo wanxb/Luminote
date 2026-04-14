@@ -2,6 +2,7 @@ export type SiteLocale = "zh-CN" | "zh-TW" | "en";
 
 type LocaleMessages = {
   adminPasswordIncorrect: string;
+  tooManyRequests: string;
   adminLoginRequired: string;
   invalidLanguage: string;
   siteTitleRequired: string;
@@ -88,6 +89,7 @@ type LocaleMessages = {
 const messages: Record<SiteLocale, LocaleMessages> = {
   "zh-CN": {
     adminPasswordIncorrect: "管理员密码错误。",
+    tooManyRequests: "登录失败次数过多，请稍后再试。",
     adminLoginRequired: "请先完成管理员登录。",
     invalidLanguage: "语言格式错误。",
     siteTitleRequired: "站点标题不能为空。",
@@ -175,6 +177,7 @@ const messages: Record<SiteLocale, LocaleMessages> = {
   },
   "zh-TW": {
     adminPasswordIncorrect: "管理員密碼錯誤。",
+    tooManyRequests: "登入失敗次數過多，請稍後再試。",
     adminLoginRequired: "請先完成管理員登入。",
     invalidLanguage: "語言格式錯誤。",
     siteTitleRequired: "站點標題不能為空。",
@@ -262,6 +265,7 @@ const messages: Record<SiteLocale, LocaleMessages> = {
   },
   en: {
     adminPasswordIncorrect: "Incorrect admin password.",
+    tooManyRequests: "Too many failed login attempts. Please try again later.",
     adminLoginRequired: "Please sign in as an admin first.",
     invalidLanguage: "Invalid language format.",
     siteTitleRequired: "Site title is required.",

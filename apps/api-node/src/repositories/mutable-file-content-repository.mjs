@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { hashPassword } from "../auth/password.mjs";
 import {
   validatePhotoDescription,
   validatePhotoTags,
@@ -244,10 +245,15 @@ export function createMutableFileContentRepository({ filePath, baseUrl }) {
     async updateSite(updates) {
       const content = await loadContentFile(filePath);
       validateSitePatch(updates);
-      content.site = {
+      const nextSite = {
         ...content.site,
         ...updates,
       };
+      if (typeof updates.adminPassword === "string" && updates.adminPassword) {
+        nextSite.adminPasswordHash = hashPassword(updates.adminPassword);
+      }
+      delete nextSite.adminPassword;
+      content.site = nextSite;
       await saveContentFile(filePath, content);
       return content.site;
     },

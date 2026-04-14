@@ -1,14 +1,56 @@
+import {
+  clearFailedLoginAttempts,
+  getLoginRateLimit,
+  recordFailedLoginAttempt,
+} from "../auth/login-rate-limit.mjs";
 import { appendSessionCookie, clearSessionCookie, isAuthenticated } from "../auth/session.mjs";
+import { verifyPassword } from "../auth/password.mjs";
 import {
   validateUploadCount,
 } from "../domain/validation.mjs";
 import {
   resolveMutationStatus,
+  sendTooManyRequests,
   sendUnauthorized,
   sendValidationError,
 } from "../utils/http-response.mjs";
 import { readFormData } from "../utils/form-data.mjs";
 import { readJsonBody } from "../utils/request-body.mjs";
+
+async function verifyAdminCredentials(password, config, repository) {
+  let configuredHash = String(config.adminPasswordHash || "").trim();
+  let configuredPassword = String(config.adminPassword || "");
+
+  try {
+    const siteSettings = await repository.getSiteSettings();
+
+    if (typeof siteSettings?.adminPasswordHash === "string" && siteSettings.adminPasswordHash.trim()) {
+      configuredHash = siteSettings.adminPasswordHash.trim();
+    }
+
+    if (typeof siteSettings?.adminPassword === "string" && siteSettings.adminPassword) {
+      configuredPassword = siteSettings.adminPassword;
+    }
+  } catch {
+    // Some repository modes do not expose site settings for login.
+  }
+
+  if (configuredHash) {
+    return verifyPassword(password, configuredHash);
+  }
+
+  if (configuredPassword && password === configuredPassword) {
+    try {
+      await repository.updateSite({ adminPassword: password });
+    } catch {
+      // Fallback to legacy env-based auth without persistence.
+    }
+
+    return true;
+  }
+
+  return false;
+}
 
 export async function handleAdminRoute({
   req,
@@ -34,13 +76,36 @@ export async function handleAdminRoute({
   }
 
   if (url.pathname === "/api/admin/login" && req.method === "POST") {
+    const rateLimit = getLoginRateLimit(req);
+
+    if (rateLimit.blocked) {
+      sendTooManyRequests(
+        res,
+        "Too many failed login attempts. Please try again later.",
+        rateLimit.retryAfterSeconds,
+      );
+      return true;
+    }
+
     const body = await readJsonBody(req);
 
-    if (!body.password || body.password !== config.adminPassword) {
+    if (!body.password || !(await verifyAdminCredentials(body.password, config, repository))) {
+      const blocked = recordFailedLoginAttempt(req);
+
+      if (blocked.retryAfterSeconds > 0) {
+        sendTooManyRequests(
+          res,
+          "Too many failed login attempts. Please try again later.",
+          blocked.retryAfterSeconds,
+        );
+        return true;
+      }
+
       sendUnauthorized(res, "Invalid admin password.");
       return true;
     }
 
+    clearFailedLoginAttempts(req);
     appendSessionCookie(res, req, config);
     sendJson(res, 200, {
       ok: true,

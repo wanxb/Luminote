@@ -18,6 +18,7 @@ export function loadRuntimeConfig() {
     process.env.UPLOADS_DIR ||
     path.resolve(process.cwd(), "apps/api-node/data/uploads");
   const adminPassword = process.env.ADMIN_PASSWORD || "changeme";
+  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH || "";
   const adminSessionToken =
     process.env.ADMIN_SESSION_TOKEN || "local-node-admin-session-token";
   const sessionCookieName =
@@ -37,6 +38,7 @@ export function loadRuntimeConfig() {
     storageMode,
     uploadsDir,
     adminPassword,
+    adminPasswordHash,
     adminSessionToken,
     sessionCookieName,
     corsAllowedOrigins,
