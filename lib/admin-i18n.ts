@@ -214,7 +214,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     cameraInfoDescription: "显示机身、镜头、光圈、快门、ISO 和焦距。",
     imageInfo: "图像信息",
     imageInfoDescription: "显示文件格式、文件大小、分辨率、方向和色彩空间。",
-    advancedCameraInfo: "进阶拍摄参数",
+    advancedCameraInfo: "进阶参数",
     advancedCameraInfoDescription:
       "显示曝光补偿、曝光程序、测光模式、白平衡、闪光灯等扩展参数。",
     locationInfo: "位置信息",
@@ -385,7 +385,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     cameraInfoDescription: "顯示機身、鏡頭、光圈、快門、ISO 與焦距。",
     imageInfo: "圖像資訊",
     imageInfoDescription: "顯示檔案格式、檔案大小、解析度、方向與色彩空間。",
-    advancedCameraInfo: "進階拍攝參數",
+    advancedCameraInfo: "進階參數",
     advancedCameraInfoDescription:
       "顯示曝光補償、曝光程式、測光模式、白平衡、閃光燈等延伸參數。",
     locationInfo: "位置資訊",
@@ -563,7 +563,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     imageInfo: "Image Info",
     imageInfoDescription:
       "Show file type, file size, dimensions, orientation, and color space.",
-    advancedCameraInfo: "Advanced Camera Info",
+    advancedCameraInfo: "Advanced Info",
     advancedCameraInfoDescription:
       "Show exposure compensation, program, metering mode, white balance, flash, and related details.",
     locationInfo: "Location Info",

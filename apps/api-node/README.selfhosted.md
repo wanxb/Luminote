@@ -93,6 +93,7 @@ npm run smoke:sqlite
 - a full `docker compose build api` still requires a running Docker daemon on the host machine
 - if you see `dockerDesktopLinuxEngine` pipe errors on Windows, start Docker Desktop first and then rerun the build
 
-Acceptance summary:
+Additional docs:
 
-- [../../docs/selfhosted-acceptance.md](../../docs/selfhosted-acceptance.md)
+- [../../docs/technical-architecture.md](../../docs/technical-architecture.md)
+- [../../docs/deployment-guide.md](../../docs/deployment-guide.md)

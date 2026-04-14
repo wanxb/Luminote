@@ -60,6 +60,8 @@ export function createSqliteAdminContentRepository(config) {
       db.prepare(`
         INSERT INTO photos (
           id,
+          original_file_name,
+          original_url,
           thumb_url,
           display_url,
           watermarked_display_url,
@@ -74,9 +76,11 @@ export function createSqliteAdminContentRepository(config) {
           location,
           exif_json,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
+        input.fileName || "",
+        `/assets/display/${id}`,
         `/assets/thumb/${id}`,
         `/assets/display/${id}`,
         input.watermarkEnabled ? `/assets/display-watermarked/${id}` : null,
@@ -100,6 +104,20 @@ export function createSqliteAdminContentRepository(config) {
         tags,
         persisted: true,
       };
+    },
+
+    async attachOriginalAsset(id, originalAsset) {
+      const db = await getSqliteDb(config);
+      db.prepare(`
+        UPDATE photos
+        SET original_file_name = COALESCE(?, original_file_name),
+            original_url = COALESCE(?, original_url)
+        WHERE id = ?
+      `).run(
+        originalAsset.originalFileName || null,
+        originalAsset.originalUrl || null,
+        id,
+      );
     },
 
     async listAdminPhotos({ tag, page, pageSize }) {

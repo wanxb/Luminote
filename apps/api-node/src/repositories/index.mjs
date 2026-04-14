@@ -47,6 +47,9 @@ export function createAdminContentRepository(config) {
     async updatePhoto() {
       throw new Error("Admin write operations require CONTENT_SOURCE=file");
     },
+    async attachOriginalAsset() {
+      throw new Error("Admin write operations require CONTENT_SOURCE=file");
+    },
     async deletePhoto() {
       throw new Error("Admin write operations require CONTENT_SOURCE=file");
     },

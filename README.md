@@ -1,163 +1,133 @@
 # Luminote
 
-English | [简体中文](./README.zh-CN.md)
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-Luminote is a lightweight photography portfolio built with Next.js. The project now supports both the original Cloudflare deployment path and a self-hosted Node.js deployment path while keeping the same public gallery and admin workflows.
+Luminote is a lightweight photography portfolio and admin system built on Next.js. It supports two backend runtime shapes: a Cloudflare Worker deployment and a self-hosted Node.js deployment.
 
-## What It Includes
+## Overview
 
-- Public gallery with masonry, editorial, and spotlight home layouts
-- Lightbox viewing with metadata and EXIF-derived details
-- Admin upload flow with batch upload, retries, and tag selection
-- Tag pool support instead of hardcoded front-end constants
-- Cloudflare and self-hosted deployment paths in the same repository
-
-## Deployment Modes
-
-- `Cloudflare`: Next.js front-end + Cloudflare Worker API + D1 + R2
-- `Self-hosted`: Next.js front-end + Node API + local filesystem assets + file or SQLite persistence
-
-Self-hosted notes:
-
-- [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md)
-- [docs/selfhosted-acceptance.md](docs/selfhosted-acceptance.md)
+- Public photography site with multiple homepage and gallery layouts
+- Admin dashboard with login, site settings, tag management, photo upload, and editing
+- Partial image metadata extraction from EXIF
+- Shared domain services and API contracts to reduce drift between runtimes
+- Both cloud and self-hosted deployment modes in the same repository
 
 ## Stack
 
-- Front-end: Next.js 15, React 18, TypeScript, Tailwind CSS
-- API: Cloudflare Workers or Node.js
-- Storage: Cloudflare D1/R2 or local filesystem/SQLite
-- EXIF parsing: exifr
+- Frontend: Next.js 15, React 18, TypeScript, Tailwind CSS
+- Shared packages: `packages/core`, `packages/shared`
+- Cloud API: Cloudflare Workers, D1, R2
+- Self-hosted API: Node.js, local filesystem, SQLite or JSON file persistence
+- Image metadata: `exifr`
+
+## Runtime Modes
+
+### Cloudflare Mode
+
+- The web frontend runs on Next.js / OpenNext on Cloudflare
+- The API lives in `worker/`
+- Metadata is stored in D1
+- Image assets are stored in R2
+
+### Self-hosted Mode
+
+- The web frontend still uses the root Next.js app
+- The API runs from `apps/api-node/`
+- Image files are stored on the local filesystem
+- Metadata can use either JSON files or SQLite
 
 ## Project Structure
 
 ```text
-app/              Next.js App Router pages
-components/       gallery, layouts, lightbox, and admin UI
-lib/              front-end helpers, API clients, upload utilities
-packages/         shared contracts and runtime-agnostic core services
-worker/           Worker API, schema, routes, services
-apps/api-node/    self-hosted Node API runtime
-docs/             migration and deployment notes
+app/                 Next.js App Router pages
+components/          Public site and admin UI components
+lib/                 Frontend helpers, API clients, upload utilities
+packages/core/       Runtime-agnostic domain services
+packages/shared/     Shared API types and text limits
+worker/              Cloudflare Worker API, routes, services, schema
+apps/api-node/       Self-hosted Node.js API runtime
+docs/                Architecture and deployment documents
+public/              Static assets
 ```
 
-## Local Development
+## Quick Start
 
-Choose one of the two local API modes below.
-
-### Option A: Cloudflare local development
-
-#### Requirements
+### Requirements
 
 - Node.js 20+
 - npm
-- Cloudflare account if you want real D1 or R2-backed deployment
+- A Cloudflare account, only required for Cloudflare deployment
+- Docker Desktop or a compatible runtime, only required for Docker Compose self-hosting
 
-#### 1. Install dependencies
+### Install Dependencies
 
-At the repo root:
+At the repository root:
 
 ```bash
 npm install
 ```
 
-In the Worker project:
+For the Cloudflare API runtime:
 
 ```bash
 cd worker
 npm install
 ```
 
-Create local-only Worker secrets:
-
-```bash
-copy .dev.vars.example .dev.vars
-```
-
-#### 2. Configure the front-end
-
-Set the local API base in `.env.local`:
-
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
-API_BASE_URL=http://127.0.0.1:8787
-```
-
-#### 3. Initialize the local database
-
-From [worker/schema.sql](worker/schema.sql):
-
-```bash
-cd worker
-npx wrangler --config wrangler.local.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
-```
-
-This creates the local schema and seeds the default tag pool.
-
-#### 4. Start the services
-
-Front-end:
-
-```bash
-npm run dev
-```
-
-Worker:
-
-```bash
-cd worker
-npm run dev
-```
-
-Local URLs:
-
-```text
-Front-end: http://localhost:3000
-Worker:    http://127.0.0.1:8787
-```
-
-The Worker local state is persisted in:
-
-```text
-worker/.wrangler/state/local-speed
-```
-
-`cd worker && npm run dev` uses `worker/wrangler.toml`, so local D1/R2 bindings stay entirely on `luminote-dev`.
-
-### Option B: Node self-hosted local development
-
-#### Requirements
-
-- Node.js 20+
-- npm
-
-#### 1. Install dependencies
-
-At the repo root:
-
-```bash
-npm install
-```
-
-In the Node API project:
+For the self-hosted Node API:
 
 ```bash
 cd apps/api-node
 npm install
 ```
 
-#### 2. Configure the front-end
+## Local Development
 
-Set the local API base in `.env.local`:
+### Local Cloudflare Development
+
+1. Configure `.env.local` in the repo root:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
+API_BASE_URL=http://127.0.0.1:8787
+```
+
+2. Prepare local Worker secrets in `worker/`:
+
+```bash
+copy .dev.vars.example .dev.vars
+```
+
+3. Initialize the local D1 database:
+
+```bash
+cd worker
+npx wrangler --config wrangler.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
+```
+
+4. Start the web app and Worker:
+
+```bash
+npm run dev
+```
+
+```bash
+cd worker
+npm run dev
+```
+
+### Local Self-hosted Development
+
+1. Configure `.env.local` in the repo root:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8788
 API_BASE_URL=http://127.0.0.1:8788
 ```
 
-#### 3. Start the Node API
+2. Start the Node API in one of the following modes.
 
-File-backed mode:
+File mode:
 
 ```bash
 cd apps/api-node
@@ -178,77 +148,48 @@ set STORAGE_MODE=local
 npm run start
 ```
 
-Then start the front-end from the repo root:
+3. Start the frontend from the repo root:
 
 ```bash
 npm run dev
 ```
 
-Local URLs:
-
-```text
-Front-end: http://localhost:3000
-Node API:  http://127.0.0.1:8788
-```
-
-## Local Configuration Notes
-
-The front-end reads `NEXT_PUBLIC_API_BASE_URL` and `API_BASE_URL`.
-
-Cloudflare local defaults live in [worker/wrangler.local.toml](worker/wrangler.local.toml). For secrets or local overrides, prefer `worker/.dev.vars`.
-
-Node self-hosted defaults live in [apps/api-node/.env.example](apps/api-node/.env.example).
-
-Example:
-
-```dotenv
-ADMIN_PASSWORD=your-local-password
-ADMIN_SESSION_TOKEN=your-local-session-token
-WATERMARK_TEXT=Your Name
-```
-
-## Data Model Notes
-
-- Cloudflare mode stores photo metadata in D1 and image variants in R2
-- Self-hosted mode stores assets on the local filesystem and metadata in either JSON or SQLite
-- Default site tags are seeded by [worker/schema.sql](worker/schema.sql) and mirrored in [public-content.json](apps/api-node/data/public-content.json)
-- The public site reads tags from `GET /api/site/tags`
-
-Expected asset layout:
-
-```text
-originals/{photoId}.{ext}
-thumbs/{photoId}.webp
-display/{photoId}.jpg
-display-watermarked/{photoId}.jpg
-avatars/{fileName}
-```
-
 ## Common Commands
 
-Root project:
+Root:
 
 - `npm run dev`
 - `npm run build`
 - `npm run start`
 - `npm run lint`
+- `npm run preview`
+- `npm run deploy`
 
-Worker project:
+`worker/`:
 
 - `npm run dev`
 - `npm run deploy`
 - `npm run sync:local`
 
-Node API project:
+`apps/api-node/`:
 
 - `npm run dev`
 - `npm run start`
+- `npm run smoke`
+- `npm run smoke:file`
+- `npm run smoke:sqlite`
 
-## Deployment
+## Documentation
 
-Luminote currently supports two production-oriented deployment shapes.
+- [docs/technical-architecture.md](docs/technical-architecture.md): Technical architecture
+- [docs/deployment-guide.md](docs/deployment-guide.md): Deployment guide
+- [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md): Additional Node self-hosted notes
 
-### Self-hosted deployment
+## Recommended Usage
+
+- Choose the Cloudflare mode when you want the production path closest to the cloud-native stack
+- Choose the self-hosted Node mode when you want to run on your own server or LAN
+- Choose Node API + SQLite first if you want the simplest local integration path
 
 The current self-hosted path supports:
 
@@ -266,7 +207,7 @@ docker compose up --build
 Detailed self-hosted notes:
 
 - [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md)
-- [docs/selfhosted-acceptance.md](docs/selfhosted-acceptance.md)
+- [docs/deployment-guide.md](docs/deployment-guide.md)
 
 ### Cloudflare deployment
 

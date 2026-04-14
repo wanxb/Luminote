@@ -31,6 +31,8 @@ function createSchema(db) {
 
     CREATE TABLE IF NOT EXISTS photos (
       id TEXT PRIMARY KEY,
+      original_file_name TEXT NOT NULL DEFAULT '',
+      original_url TEXT NOT NULL DEFAULT '',
       thumb_url TEXT NOT NULL,
       display_url TEXT NOT NULL,
       watermarked_display_url TEXT,
@@ -51,6 +53,15 @@ function createSchema(db) {
     ON photos(source_hash)
     WHERE source_hash IS NOT NULL;
   `);
+}
+
+function ensurePhotoColumn(db, columnName, definition) {
+  const columns = db.prepare("PRAGMA table_info(photos)").all();
+  const hasColumn = columns.some((column) => column.name === columnName);
+
+  if (!hasColumn) {
+    db.exec(`ALTER TABLE photos ADD COLUMN ${columnName} ${definition}`);
+  }
 }
 
 function seedDatabase(db, seed) {
@@ -127,6 +138,8 @@ export async function getSqliteDb(config) {
 
   const db = new Database(config.sqliteDbFile);
   createSchema(db);
+  ensurePhotoColumn(db, "original_file_name", "TEXT NOT NULL DEFAULT ''");
+  ensurePhotoColumn(db, "original_url", "TEXT NOT NULL DEFAULT ''");
   const seed = await loadSeedData(config.dataFile);
   seedDatabase(db, seed);
 

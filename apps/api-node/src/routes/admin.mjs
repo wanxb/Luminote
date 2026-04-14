@@ -116,11 +116,14 @@ export async function handleAdminRoute({
       }
     });
     const description = String(formData.get("description") || "");
+    const storeOriginalFiles = String(formData.get("storeOriginalFiles") || "false") === "true";
     const watermarkEnabled = String(formData.get("watermarkEnabled") || "false") === "true";
     const photoDraftsRaw = formData.get("photoDrafts");
     const photoDrafts =
       typeof photoDraftsRaw === "string" ? JSON.parse(photoDraftsRaw) : [];
     const siteSettings = await repository.getSiteSettings();
+    const shouldStoreOriginalFiles =
+      Boolean(siteSettings.uploadOriginalEnabled) && storeOriginalFiles;
 
     try {
       validateUploadCount(fileNames.length, siteSettings.maxUploadFiles || 20);
@@ -158,13 +161,20 @@ export async function handleAdminRoute({
           exif: exif.exif,
         });
 
-        await assetStorage.storePhotoAssets({
+        const storedAssets = await assetStorage.storePhotoAssets({
           id: created.id,
-          original: originalFiles[index],
+          original: shouldStoreOriginalFiles ? originalFiles[index] : undefined,
           thumbnail: thumbnails[index],
           display: displayFiles[index],
           watermarkedDisplay: watermarkedDisplayFiles[index] ?? undefined,
         });
+
+        if (storedAssets.originalUrl) {
+          await repository.attachOriginalAsset(created.id, {
+            originalFileName: fileName,
+            originalUrl: storedAssets.originalUrl,
+          });
+        }
 
         uploaded.push(created);
       } catch (error) {

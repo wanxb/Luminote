@@ -1,7 +1,8 @@
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const VARIANT_FILE_MAP = {
+  original: "",
   thumb: ".webp",
   display: ".jpg",
   "display-watermarked": ".jpg",
@@ -9,6 +10,7 @@ const VARIANT_FILE_MAP = {
 };
 
 const VARIANT_DIR_MAP = {
+  original: "originals",
   thumb: "thumbs",
   display: "display",
   "display-watermarked": "display-watermarked",
@@ -23,7 +25,23 @@ function getAssetPath(rootDir, variant, idOrFileName) {
     return path.join(rootDir, dir, idOrFileName);
   }
 
+  if (variant === "original") {
+    return path.join(rootDir, dir, idOrFileName);
+  }
+
   return path.join(rootDir, dir, `${idOrFileName}${ext}`);
+}
+
+async function findOriginalAssetPath(rootDir, id) {
+  const originalsDir = path.join(rootDir, VARIANT_DIR_MAP.original);
+
+  try {
+    const entries = await readdir(originalsDir);
+    const matchedName = entries.find((entry) => entry.startsWith(`${id}.`));
+    return matchedName ? path.join(originalsDir, matchedName) : null;
+  } catch {
+    return null;
+  }
 }
 
 function getContentType(filePath) {
@@ -74,25 +92,37 @@ export function createLocalAssetStorage(rootDir) {
         );
       }
 
+      let originalUrl = "";
+
       if (original) {
+        const extension = original.name.split(".").pop() || "jpg";
         const originalPath = path.join(
           rootDir,
           "originals",
-          `${id}.${original.name.split(".").pop() || "jpg"}`,
+          `${id}.${extension}`,
         );
         await mkdir(path.join(rootDir, "originals"), { recursive: true });
         await writeFile(originalPath, Buffer.from(await original.arrayBuffer()));
+        originalUrl = `/assets/original/${id}`;
       }
 
       return {
         persisted: true,
+        originalUrl,
       };
     },
 
     async getPhotoAsset(variant, id) {
-      const filePath = getAssetPath(rootDir, variant, id);
+      const filePath =
+        variant === "original"
+          ? await findOriginalAssetPath(rootDir, id)
+          : getAssetPath(rootDir, variant, id);
 
       try {
+        if (!filePath) {
+          return null;
+        }
+
         await access(filePath);
         const body = await readFile(filePath);
 
@@ -143,6 +173,8 @@ export function createLocalAssetStorage(rootDir) {
     },
 
     async deletePhotoAssets(id) {
+      const originalPath = await findOriginalAssetPath(rootDir, id);
+
       await Promise.all(
         ["thumb", "display", "display-watermarked"].map(async (variant) => {
           try {
@@ -152,6 +184,14 @@ export function createLocalAssetStorage(rootDir) {
           }
         }),
       );
+
+      if (originalPath) {
+        try {
+          await rm(originalPath, { force: true });
+        } catch {
+          // Ignore missing files.
+        }
+      }
     },
   };
 }

@@ -78,6 +78,8 @@ export function createMutableFileContentRepository({ filePath, baseUrl }) {
       );
       const photo = {
         id,
+        originalFileName: input.fileName || "",
+        originalUrl: `/assets/display/${id}`,
         thumbUrl: `/assets/thumb/${id}`,
         displayUrl: `/assets/display/${id}`,
         watermarkedDisplayUrl: input.watermarkEnabled
@@ -110,6 +112,28 @@ export function createMutableFileContentRepository({ filePath, baseUrl }) {
         tags,
         persisted: true,
       };
+    },
+
+    async attachOriginalAsset(id, originalAsset) {
+      const content = await loadContentFile(filePath);
+      const photo = content.photos.find((item) => item.id === id);
+      const detail = content.photoDetails[id];
+
+      if (!photo || !detail) {
+        return;
+      }
+
+      if (originalAsset.originalFileName) {
+        photo.originalFileName = originalAsset.originalFileName;
+        detail.originalFileName = originalAsset.originalFileName;
+      }
+
+      if (originalAsset.originalUrl) {
+        photo.originalUrl = originalAsset.originalUrl;
+        detail.originalUrl = originalAsset.originalUrl;
+      }
+
+      await saveContentFile(filePath, content);
     },
 
     async listAdminPhotos({ tag, page, pageSize }) {

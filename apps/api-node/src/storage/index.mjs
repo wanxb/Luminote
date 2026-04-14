@@ -7,7 +7,7 @@ export function createAssetStorage(config) {
 
   return {
     async storePhotoAssets() {
-      return { persisted: false };
+      return { persisted: false, originalUrl: "" };
     },
     async storeAvatarAsset() {
       return { persisted: false, fileName: "" };
