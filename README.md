@@ -122,7 +122,7 @@ The Worker local state is persisted in:
 worker/.wrangler/state/local-speed
 ```
 
-`cd worker && npm run dev` uses `worker/wrangler.local.toml`, so local D1/R2 bindings stay entirely on `luminote-dev`.
+`cd worker && npm run dev` uses `worker/wrangler.toml`, so local D1/R2 bindings stay entirely on `luminote-dev`.
 
 ### Option B: Node self-hosted local development
 
@@ -295,13 +295,13 @@ Suggested names:
 
 #### 2. Update Worker bindings
 
-Copy [worker/wrangler.production.toml.example](worker/wrangler.production.toml.example) to `worker/wrangler.production.toml` on your machine, then set the real D1 and R2 bindings there. Keep secrets such as admin credentials out of the file and store them as Wrangler or Cloudflare secrets.
+Use [worker/wrangler.production.toml.example](worker/wrangler.production.toml.example) as the reference for the `master` branch version of `worker/wrangler.toml`. Keep secrets such as admin credentials out of the file and store them as Wrangler or Cloudflare secrets.
 
 #### 3. Apply the production schema
 
 ```bash
 cd worker
-npx wrangler --config wrangler.production.toml d1 execute your-d1-database-name --remote --file schema.sql
+npx wrangler --config wrangler.toml d1 execute your-d1-database-name --remote --file schema.sql
 ```
 
 #### 4. Configure Worker secrets
@@ -318,8 +318,8 @@ Example:
 
 ```bash
 cd worker
-npx wrangler --config wrangler.production.toml secret put ADMIN_PASSWORD
-npx wrangler --config wrangler.production.toml secret put ADMIN_SESSION_TOKEN
+npx wrangler --config wrangler.toml secret put ADMIN_PASSWORD
+npx wrangler --config wrangler.toml secret put ADMIN_SESSION_TOKEN
 ```
 
 #### 5. Deploy the Worker first
@@ -333,12 +333,20 @@ Then create `.env.production.local` from `.env.production.local.example` locally
 
 #### 6. Deploy the front-end
 
-Copy `wrangler.production.jsonc.example` to `wrangler.production.jsonc` locally before running the root deploy scripts.
+Use `wrangler.production.jsonc.example` as the reference for the `master` branch version of `wrangler.jsonc` before running the root deploy scripts.
 
 Recommended Pages settings:
 
 - Framework preset: `Next.js`
 - Build command: `npm run build`
+
+### Git branch workflow
+
+- `dev` keeps local-development config in `wrangler.jsonc` and `worker/wrangler.toml`
+- `master` keeps production config in those same two files
+- `.gitattributes` marks both files as `merge=ours`, so whichever branch receives the merge keeps its own config
+- Root `wrangler.jsonc` is only for the front-end deployment path
+- `worker/wrangler.toml` is only for the API deployment path
 - Root directory: repo root
 
 ## Release Checklist

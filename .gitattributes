@@ -1,0 +1,2 @@
+wrangler.jsonc merge=ours
+worker/wrangler.toml merge=ours

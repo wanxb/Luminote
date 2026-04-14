@@ -14,7 +14,7 @@ const remoteDatabaseName = process.env.REMOTE_D1_DATABASE_NAME ?? "";
 const remoteBucketName = process.env.REMOTE_R2_BUCKET_NAME ?? "";
 const localDatabaseName = "luminote-dev";
 const localBucketName = "luminote-dev";
-const localConfigArgs = ["--config", "wrangler.local.toml"];
+const localConfigArgs = ["--config", "wrangler.toml"];
 
 if (!remoteDatabaseName || !remoteBucketName) {
   console.error("Missing REMOTE_D1_DATABASE_NAME or REMOTE_R2_BUCKET_NAME.");

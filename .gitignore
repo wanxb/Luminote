@@ -10,8 +10,6 @@ coverage
 .env.production
 .env.production.local
 worker/.dev.vars
-worker/wrangler.production.toml
-wrangler.production.jsonc
 # Copilot/AI agent skills (local only)
 .github/skills/
 
