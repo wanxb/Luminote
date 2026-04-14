@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
   "name": "luminote-web-local",
+  "keep_vars": true,
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
@@ -28,5 +29,10 @@
   },
   "observability": {
     "enabled": true
+  },
+  "secrets": {
+    "required": [
+      "ADMIN_SESSION_TOKEN"
+    ]
   }
 }
