@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "luminote",
+  "name": "luminote-web",
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
@@ -14,13 +14,13 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "luminote"
+      "service": "luminote-web"
     }
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "luminote-local-cache"
+      "bucket_name": "luminote-cache"
     }
   ],
   "images": {
