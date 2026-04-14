@@ -19,3 +19,4 @@ worker/.dev.vars
 .dev.vars*
 !.dev.vars.example
 !.env.example
+apps/api-node/data/luminote.sqlite
