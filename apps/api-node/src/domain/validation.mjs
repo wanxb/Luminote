@@ -115,6 +115,17 @@ export function validateSitePatch(patch) {
     throw new Error("Invalid watermark position.");
   }
 
+  if (
+    patch.adminPassword !== undefined &&
+    (!String(patch.adminPassword) ||
+      String(patch.adminPassword).length < 6 ||
+      !isWithinTextLimit(patch.adminPassword, TEXT_LIMITS.password))
+  ) {
+    throw new Error(
+      `Admin password must be 6-${TEXT_LIMITS.password} characters.`,
+    );
+  }
+
   for (const [key, limit] of [
     ["photographerName", TEXT_LIMITS.photographerName],
     ["photographerBio", TEXT_LIMITS.photographerBio],

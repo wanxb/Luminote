@@ -11,6 +11,7 @@ export interface Env {
   WATERMARK_ENABLED_BY_DEFAULT: string;
   WATERMARK_TEXT: string;
   ADMIN_PASSWORD: string;
+  ADMIN_PASSWORD_HASH?: string;
   ADMIN_SESSION_TOKEN: string;
   CORS_ALLOWED_ORIGINS?: string;
   ADMIN_COOKIE_SAME_SITE?: string;

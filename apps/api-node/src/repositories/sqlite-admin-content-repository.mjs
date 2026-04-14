@@ -1,4 +1,5 @@
 import { getSqliteDb } from "../db/sqlite.mjs";
+import { hashPassword } from "../auth/password.mjs";
 import {
   validatePhotoDescription,
   validatePhotoTags,
@@ -223,6 +224,10 @@ export function createSqliteAdminContentRepository(config) {
         ...JSON.parse(row.site_json),
         ...updates,
       };
+      if (typeof updates.adminPassword === "string" && updates.adminPassword) {
+        nextSite.adminPasswordHash = hashPassword(updates.adminPassword);
+      }
+      delete nextSite.adminPassword;
 
       db.prepare("UPDATE site_config SET site_json = ? WHERE id = 1").run(
         JSON.stringify(nextSite),

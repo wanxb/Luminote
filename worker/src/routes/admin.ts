@@ -7,9 +7,9 @@ import {
   updatePhotoById,
 } from "../services/photo-service";
 import {
-  getAdminPassword,
   getSiteConfig,
   updateSiteConfig,
+  verifyAdminPassword,
 } from "../services/site-config-service";
 import {
   deleteAvatarObject,
@@ -21,6 +21,11 @@ import {
   deleteTag as deleteTagService,
 } from "../services/tag-service";
 import { getLocaleMessages } from "../utils/i18n";
+import {
+  clearFailedLoginAttempts,
+  getLoginRateLimit,
+  recordFailedLoginAttempt,
+} from "../utils/login-rate-limit";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
 import { json } from "../utils/json";
 import { handleSite } from "./site";
@@ -78,6 +83,22 @@ function unauthorized(message = "Unauthorized") {
       error: message,
     },
     { status: 401 },
+  );
+}
+
+function tooManyRequests(message: string, retryAfterSeconds: number) {
+  return json(
+    {
+      ok: false,
+      error: message,
+      retryAfterSeconds,
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
   );
 }
 
@@ -300,13 +321,26 @@ export async function handleAdmin(
   }
 
   if (url.pathname === "/api/admin/login" && request.method === "POST") {
-    const body = (await request.json()) as { password?: string };
-    const adminPassword = await getAdminPassword(env);
+    const rateLimit = getLoginRateLimit(request);
     const t = await getRequestMessages(env);
 
-    if (!body.password || body.password !== adminPassword) {
+    if (rateLimit.blocked) {
+      return tooManyRequests(t.tooManyRequests ?? "Too many login attempts.", rateLimit.retryAfterSeconds);
+    }
+
+    const body = (await request.json()) as { password?: string };
+
+    if (!body.password || !(await verifyAdminPassword(env, body.password))) {
+      const blocked = recordFailedLoginAttempt(request);
+
+      if (blocked.retryAfterSeconds > 0) {
+        return tooManyRequests(t.tooManyRequests ?? "Too many login attempts.", blocked.retryAfterSeconds);
+      }
+
       return unauthorized(t.adminPasswordIncorrect);
     }
+
+    clearFailedLoginAttempts(request);
 
     const response = json({
       ok: true,
