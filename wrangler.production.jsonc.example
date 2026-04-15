@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "your-production-worker-name",
+  "name": "luminote",
   "workers_dev": true,
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
@@ -9,9 +9,9 @@
   ],
   "routes": [
     {
-      "pattern": "your-site.example.com",
+      "pattern": "luminote.bbing.xyz",
       "custom_domain": true,
-      "zone_name": "example.com"
+      "zone_name": "bbing.xyz"
     }
   ],
   "assets": {
@@ -21,13 +21,13 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "your-production-worker-name"
+      "service": "luminote"
     }
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "your-opennext-cache-bucket"
+      "bucket_name": "luminote-cache"
     }
   ],
   "images": {
