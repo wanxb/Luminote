@@ -1,4 +1,4 @@
 # Generate with:
 # npm run hash-password -- "your-local-password"
-ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$replace_salt_base64url$replace_hash_base64url
+ADMIN_PASSWORD_HASH=pbkdf2_sha256$100000$replace_salt_base64url$replace_hash_base64url
 ADMIN_SESSION_TOKEN=your-local-session-token
