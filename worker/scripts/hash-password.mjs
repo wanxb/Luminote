@@ -1,7 +1,7 @@
 import { pbkdf2Sync, randomBytes } from "node:crypto";
 
 const PBKDF2_ALGORITHM = "pbkdf2_sha256";
-const PBKDF2_ITERATIONS = 210_000;
+const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_KEY_LENGTH = 32;
 const PBKDF2_SALT_LENGTH = 16;
 

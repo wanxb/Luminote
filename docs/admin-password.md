@@ -6,20 +6,21 @@ and it is not only the final digest. Keep the full string exactly as generated.
 ## Format
 
 ```text
-pbkdf2_sha256$210000$<salt_base64url>$<hash_base64url>
+pbkdf2_sha256$100000$<salt_base64url>$<hash_base64url>
 ```
 
 The value has four `$`-separated parts:
 
 1. `pbkdf2_sha256`: algorithm marker.
-2. `210000`: PBKDF2 iteration count.
+2. `100000`: PBKDF2 iteration count. This is the maximum supported by
+   Cloudflare Workers PBKDF2.
 3. `<salt_base64url>`: random salt encoded with base64url.
 4. `<hash_base64url>`: derived password hash encoded with base64url.
 
 Example shape:
 
 ```dotenv
-ADMIN_PASSWORD_HASH=pbkdf2_sha256$210000$randomSaltHere$derivedHashHere
+ADMIN_PASSWORD_HASH=pbkdf2_sha256$100000$randomSaltHere$derivedHashHere
 ADMIN_SESSION_TOKEN=replace-with-a-long-random-session-token
 ```
 
