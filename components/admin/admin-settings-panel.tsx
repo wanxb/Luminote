@@ -463,6 +463,7 @@ export function AdminSettingsPanel({
                     />
                     <button
                       type="button"
+                      aria-label={copy.photographerAvatarUploadPrompt}
                       onClick={() => avatarInputRef.current?.click()}
                       className="block w-full"
                     >
@@ -475,8 +476,11 @@ export function AdminSettingsPanel({
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-3xl font-light text-ink/35">
-                              +
+                            <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-ink/40">
+                              <span className="text-3xl font-light leading-none">+</span>
+                              <span className="text-[11px] font-medium leading-none">
+                                {copy.photographerAvatarUploadPrompt}
+                              </span>
                             </div>
                           )}
                         </div>

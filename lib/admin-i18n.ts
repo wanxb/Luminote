@@ -51,6 +51,7 @@ type AdminMessages = {
   photographerProfile: string;
   photographerProfileDescription: string;
   photographerAvatar: string;
+  photographerAvatarUploadPrompt: string;
   photographerName: string;
   photographerNamePlaceholder: string;
   photographerBio: string;
@@ -224,6 +225,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     photographerProfile: "摄影师资料",
     photographerProfileDescription: "这些字段会显示在公开站点上。",
     photographerAvatar: "摄影师头像",
+    photographerAvatarUploadPrompt: "上传头像",
     photographerName: "名称",
     photographerNamePlaceholder: "你的名字",
     photographerBio: "简介",
@@ -395,6 +397,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     photographerProfile: "攝影師資料",
     photographerProfileDescription: "這些欄位會顯示在公開站點上。",
     photographerAvatar: "攝影師頭像",
+    photographerAvatarUploadPrompt: "上傳頭像",
     photographerName: "名稱",
     photographerNamePlaceholder: "你的名字",
     photographerBio: "簡介",
@@ -575,6 +578,7 @@ const messages: Record<SiteLocale, AdminMessages> = {
     photographerProfileDescription:
       "These fields are displayed on the public site.",
     photographerAvatar: "Photographer Avatar",
+    photographerAvatarUploadPrompt: "Upload avatar",
     photographerName: "Name",
     photographerNamePlaceholder: "Your name",
     photographerBio: "Bio",
