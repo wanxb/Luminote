@@ -1,3 +1,5 @@
+import { hashPassword, verifyPassword } from "../utils/password";
+
 export const DEFAULT_SITE_DESCRIPTION = "A lightweight home for photography that lets the work breathe.";
 export const DEFAULT_UPLOAD_ORIGINAL_ENABLED = false;
 export const DEFAULT_MAX_TAG_POOL_SIZE = 20;
@@ -25,7 +27,7 @@ function buildDefaultSiteConfig(env) {
         siteDescription: DEFAULT_SITE_DESCRIPTION,
         watermarkEnabledByDefault: env.WATERMARK_ENABLED_BY_DEFAULT === "true",
         watermarkText: env.WATERMARK_TEXT,
-        adminPassword: env.ADMIN_PASSWORD,
+        adminPasswordHash: env.ADMIN_PASSWORD_HASH?.trim() ?? "",
         uploadOriginalEnabled: DEFAULT_UPLOAD_ORIGINAL_ENABLED,
         maxTagPoolSize: DEFAULT_MAX_TAG_POOL_SIZE,
         maxUploadFiles: DEFAULT_MAX_UPLOAD_FILES,
@@ -51,6 +53,7 @@ async function ensureSiteConfig(env) {
     if (!ensureSiteConfigPromise) {
         ensureSiteConfigPromise = (async () => {
             const defaults = buildDefaultSiteConfig(env);
+            const defaultPasswordHash = defaults.adminPasswordHash || await resolveInitialPasswordHash(env);
             await env
                 .DB.prepare(`CREATE TABLE IF NOT EXISTS site_config (
           id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -58,7 +61,7 @@ async function ensureSiteConfig(env) {
           site_description TEXT NOT NULL,
           watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
           watermark_text TEXT NOT NULL,
-          admin_password TEXT NOT NULL,
+          admin_password_hash TEXT,
           upload_original_enabled INTEGER NOT NULL DEFAULT 0,
           max_tag_pool_size INTEGER NOT NULL DEFAULT 20,
           max_upload_files INTEGER NOT NULL DEFAULT 20,
@@ -80,6 +83,7 @@ async function ensureSiteConfig(env) {
                 .run();
             const alterStatements = [
                 "ALTER TABLE site_config ADD COLUMN photographer_avatar_url TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE site_config ADD COLUMN admin_password_hash TEXT",
                 "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
                 "ALTER TABLE site_config ADD COLUMN photographer_bio TEXT NOT NULL DEFAULT ''",
                 "ALTER TABLE site_config ADD COLUMN photographer_email TEXT NOT NULL DEFAULT ''",
@@ -107,7 +111,7 @@ async function ensureSiteConfig(env) {
           site_description,
           watermark_enabled_by_default,
           watermark_text,
-          admin_password,
+          admin_password_hash,
           upload_original_enabled,
           max_tag_pool_size,
           max_upload_files,
@@ -126,7 +130,7 @@ async function ensureSiteConfig(env) {
           photographer_custom_account_url,
           updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-                .bind(1, defaults.siteTitle, defaults.siteDescription, defaults.watermarkEnabledByDefault ? 1 : 0, defaults.watermarkText, defaults.adminPassword, defaults.uploadOriginalEnabled ? 1 : 0, defaults.maxTagPoolSize, defaults.maxUploadFiles, defaults.maxTagsPerPhoto, defaults.photographerAvatarUrl, defaults.photographerName, defaults.photographerBio, defaults.photographerEmail, defaults.photographerXiaohongshu, defaults.photographerXiaohongshuUrl, defaults.photographerDouyin, defaults.photographerDouyinUrl, defaults.photographerInstagram, defaults.photographerInstagramUrl, defaults.photographerCustomAccount, defaults.photographerCustomAccountUrl, new Date().toISOString())
+                .bind(1, defaults.siteTitle, defaults.siteDescription, defaults.watermarkEnabledByDefault ? 1 : 0, defaults.watermarkText, defaultPasswordHash || null, defaults.uploadOriginalEnabled ? 1 : 0, defaults.maxTagPoolSize, defaults.maxUploadFiles, defaults.maxTagsPerPhoto, defaults.photographerAvatarUrl, defaults.photographerName, defaults.photographerBio, defaults.photographerEmail, defaults.photographerXiaohongshu, defaults.photographerXiaohongshuUrl, defaults.photographerDouyin, defaults.photographerDouyinUrl, defaults.photographerInstagram, defaults.photographerInstagramUrl, defaults.photographerCustomAccount, defaults.photographerCustomAccountUrl, new Date().toISOString())
                 .run();
         })().catch((error) => {
             ensureSiteConfigPromise = null;
@@ -134,6 +138,13 @@ async function ensureSiteConfig(env) {
         });
     }
     await ensureSiteConfigPromise;
+}
+
+async function resolveInitialPasswordHash(env) {
+    if (env.ADMIN_PASSWORD_HASH?.trim()) {
+        return env.ADMIN_PASSWORD_HASH.trim();
+    }
+    return env.ADMIN_PASSWORD ? await hashPassword(env.ADMIN_PASSWORD) : "";
 }
 function isMissingColumnError(error) {
     return error instanceof Error && error.message.includes("no such column");
@@ -153,7 +164,7 @@ function mapSiteConfigRowToConfig(env, row) {
             ? Boolean(row.watermark_enabled_by_default)
             : defaults.watermarkEnabledByDefault,
         watermarkText: row.watermark_text ?? defaults.watermarkText,
-        adminPassword: row.admin_password ?? defaults.adminPassword,
+        adminPasswordHash: row.admin_password_hash ?? defaults.adminPasswordHash,
         uploadOriginalEnabled: row.upload_original_enabled !== undefined
             ? Boolean(row.upload_original_enabled)
             : defaults.uploadOriginalEnabled,
@@ -186,7 +197,7 @@ export async function getSiteConfig(env) {
         site_description,
         watermark_enabled_by_default,
         watermark_text,
-        admin_password,
+        admin_password_hash,
         upload_original_enabled,
         max_tag_pool_size,
         max_upload_files,
@@ -219,7 +230,7 @@ export async function getSiteConfig(env) {
         site_description,
         watermark_enabled_by_default,
         watermark_text,
-        admin_password,
+        admin_password_hash,
         upload_original_enabled,
         max_tag_pool_size,
         max_upload_files,
@@ -233,14 +244,20 @@ export async function getSiteConfig(env) {
         return defaults;
     }
 }
-export async function getAdminPassword(env) {
+export async function verifyAdminPassword(env, password) {
     try {
         const config = await getSiteConfig(env);
-        return config.adminPassword;
+        if (config.adminPasswordHash) {
+            return verifyPassword(password, config.adminPasswordHash);
+        }
     }
     catch {
-        return env.ADMIN_PASSWORD;
+        // Fall back to an explicitly configured hash below.
     }
+    if (env.ADMIN_PASSWORD_HASH?.trim()) {
+        return verifyPassword(password, env.ADMIN_PASSWORD_HASH.trim());
+    }
+    return false;
 }
 export async function updateSiteConfig(env, updates) {
     if (!env.DB) {
@@ -269,8 +286,8 @@ export async function updateSiteConfig(env, updates) {
         values.push(updates.watermarkText);
     }
     if (updates.adminPassword !== undefined) {
-        statements.push("admin_password = ?");
-        values.push(updates.adminPassword);
+        statements.push("admin_password_hash = ?");
+        values.push(updates.adminPassword === null ? null : await hashPassword(updates.adminPassword));
     }
     if (updates.uploadOriginalEnabled !== undefined) {
         statements.push("upload_original_enabled = ?");

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler --config wrangler.toml dev --persist-to .wrangler/state/local-speed",
     "deploy": "wrangler --config wrangler.toml deploy",
+    "hash-password": "node scripts/hash-password.mjs",
     "sync:local": "node scripts/sync-remote-to-local.mjs"
   },
   "devDependencies": {

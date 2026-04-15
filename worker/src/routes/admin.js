@@ -1,5 +1,5 @@
 import { createPhotos, deletePhotoById, listPhotos, updatePhotoById, } from "../services/photo-service";
-import { getAdminPassword, getSiteConfig, updateSiteConfig, } from "../services/site-config-service";
+import { getSiteConfig, updateSiteConfig, verifyAdminPassword, } from "../services/site-config-service";
 import { deleteAvatarObject, storePhotographerAvatar, } from "../services/storage-service";
 import { getTagPool, createTag as createTagService, deleteTag as deleteTagService, } from "../services/tag-service";
 import { TEXT_LIMITS, isWithinTextLimit } from "../utils/text-limits";
@@ -160,8 +160,7 @@ export async function handleAdmin(request, env) {
     }
     if (url.pathname === "/api/admin/login" && request.method === "POST") {
         const body = (await request.json());
-        const adminPassword = await getAdminPassword(env);
-        if (!body.password || body.password !== adminPassword) {
+        if (!body.password || !(await verifyAdminPassword(env, body.password))) {
             return unauthorized("管理员密码错误。");
         }
         const response = json({

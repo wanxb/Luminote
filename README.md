@@ -98,6 +98,11 @@ API_BASE_URL=http://127.0.0.1:8787
 copy .dev.vars.example .dev.vars
 ```
 
+Admin password hashes use the format documented in
+[docs/admin-password.md](docs/admin-password.md). Generate one with
+`cd worker && npm run hash-password -- "your-password"` and put the full
+`ADMIN_PASSWORD_HASH=pbkdf2_sha256$...` value in `.dev.vars`.
+
 3. Initialize the local D1 database:
 
 ```bash

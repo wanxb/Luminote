@@ -29,10 +29,5 @@
   },
   "observability": {
     "enabled": true
-  },
-  "secrets": {
-    "required": [
-      "ADMIN_SESSION_TOKEN"
-    ]
   }
 }

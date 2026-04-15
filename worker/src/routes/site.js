@@ -21,6 +21,62 @@ function validateTextField(value, maxLength, emptyMessage, tooLongMessage, optio
     }
     return { ok: true, value: trimmed };
 }
+const siteBooleanFields = new Set([
+    "watermarkEnabledByDefault",
+    "uploadOriginalEnabled",
+]);
+const siteNumberFields = new Set([
+    "maxTagPoolSize",
+    "maxUploadFiles",
+    "maxTagsPerPhoto",
+]);
+function coerceSiteUpdateValue(key, value) {
+    if (value instanceof File) {
+        return undefined;
+    }
+    if (siteBooleanFields.has(key)) {
+        return value === "true" ? true : value === "false" ? false : value;
+    }
+    if (siteNumberFields.has(key)) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : value;
+    }
+    return value;
+}
+function siteUpdateBodyFromEntries(entries) {
+    const body = {};
+    for (const [key, value] of entries) {
+        const coerced = coerceSiteUpdateValue(key, value);
+        if (coerced !== undefined) {
+            body[key] = coerced;
+        }
+    }
+    return body;
+}
+async function readSiteUpdateBody(request) {
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (contentType.includes("multipart/form-data")) {
+        return siteUpdateBodyFromEntries(await request.formData());
+    }
+    const rawBody = (await request.text()).trim();
+    if (!rawBody) {
+        return {};
+    }
+    if (contentType.includes("application/json") ||
+        rawBody.startsWith("{") ||
+        rawBody.startsWith("[")) {
+        const parsed = JSON.parse(rawBody);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new Error("Invalid JSON body");
+        }
+        return parsed;
+    }
+    if (contentType.includes("application/x-www-form-urlencoded") ||
+        rawBody.includes("=")) {
+        return siteUpdateBodyFromEntries(new URLSearchParams(rawBody));
+    }
+    throw new Error("Unsupported request body");
+}
 export async function handleSite(request, env) {
     if (request.method === "PATCH") {
         return handleSiteUpdate(request, env);
@@ -50,8 +106,17 @@ export async function handleSite(request, env) {
     });
 }
 async function handleSiteUpdate(request, env) {
+    let body;
     try {
-        const body = (await request.json());
+        body = await readSiteUpdateBody(request);
+    }
+    catch {
+        return json({
+            ok: false,
+            error: "请求格式错误。",
+        }, { status: 400 });
+    }
+    try {
         const updates = {};
         const errors = [];
         if (body.siteTitle !== undefined) {
@@ -337,10 +402,11 @@ async function handleSiteUpdate(request, env) {
             message: "站点配置已更新。",
         });
     }
-    catch {
+    catch (error) {
+        console.error("Failed to update site config", error);
         return json({
             ok: false,
-            error: "请求格式错误。",
+            error: "保存配置失败。",
         }, { status: 400 });
     }
 }
