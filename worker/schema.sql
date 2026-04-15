@@ -53,15 +53,16 @@ INSERT OR IGNORE INTO tag_pool (id, name, created_at) VALUES
 
 CREATE TABLE IF NOT EXISTS site_config (
   id INTEGER PRIMARY KEY CHECK (id = 1),
+  locale TEXT NOT NULL DEFAULT 'zh-CN',
   site_title TEXT NOT NULL,
   site_description TEXT NOT NULL,
   home_layout TEXT NOT NULL DEFAULT 'editorial',
   watermark_enabled_by_default INTEGER NOT NULL DEFAULT 1,
   watermark_text TEXT NOT NULL,
   watermark_position TEXT NOT NULL DEFAULT 'bottom-right',
-  admin_password TEXT,
   admin_password_hash TEXT,
   upload_original_enabled INTEGER NOT NULL DEFAULT 0,
+  max_total_photos INTEGER NOT NULL DEFAULT 200,
   max_tag_pool_size INTEGER NOT NULL DEFAULT 20,
   max_upload_files INTEGER NOT NULL DEFAULT 20,
   max_tags_per_photo INTEGER NOT NULL DEFAULT 5,

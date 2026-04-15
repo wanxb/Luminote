@@ -47,6 +47,130 @@ function validateTextField(
   return { ok: true as const, value: trimmed };
 }
 
+type SiteUpdateBody = {
+  locale?: string;
+  siteTitle?: string;
+  siteDescription?: string;
+  homeLayout?: string;
+  watermarkEnabledByDefault?: boolean;
+  watermarkText?: string;
+  watermarkPosition?: string;
+  adminPassword?: string;
+  uploadOriginalEnabled?: boolean;
+  maxTotalPhotos?: number;
+  maxTagPoolSize?: number;
+  maxUploadFiles?: number;
+  maxTagsPerPhoto?: number;
+  photoMetadataEnabled?: boolean;
+  showDateInfo?: boolean;
+  showCameraInfo?: boolean;
+  showImageInfo?: boolean;
+  showAdvancedCameraInfo?: boolean;
+  showLocationInfo?: boolean;
+  showDetailedExifInfo?: boolean;
+  photographerAvatarUrl?: string;
+  photographerName?: string;
+  photographerBio?: string;
+  photographerEmail?: string;
+  photographerXiaohongshu?: string;
+  photographerXiaohongshuUrl?: string;
+  photographerDouyin?: string;
+  photographerDouyinUrl?: string;
+  photographerInstagram?: string;
+  photographerInstagramUrl?: string;
+  photographerCustomAccount?: string;
+  photographerCustomAccountUrl?: string;
+};
+
+const siteBooleanFields = new Set([
+  "watermarkEnabledByDefault",
+  "uploadOriginalEnabled",
+  "photoMetadataEnabled",
+  "showDateInfo",
+  "showCameraInfo",
+  "showImageInfo",
+  "showAdvancedCameraInfo",
+  "showLocationInfo",
+  "showDetailedExifInfo",
+]);
+
+const siteNumberFields = new Set([
+  "maxTotalPhotos",
+  "maxTagPoolSize",
+  "maxUploadFiles",
+  "maxTagsPerPhoto",
+]);
+
+function coerceSiteUpdateValue(key: string, value: FormDataEntryValue | string) {
+  if (value instanceof File) {
+    return undefined;
+  }
+
+  if (siteBooleanFields.has(key)) {
+    return value === "true" ? true : value === "false" ? false : value;
+  }
+
+  if (siteNumberFields.has(key)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+
+  return value;
+}
+
+function siteUpdateBodyFromEntries(
+  entries: Iterable<[string, FormDataEntryValue | string]>,
+) {
+  const body: Record<string, unknown> = {};
+
+  for (const [key, value] of entries) {
+    const coerced = coerceSiteUpdateValue(key, value);
+
+    if (coerced !== undefined) {
+      body[key] = coerced;
+    }
+  }
+
+  return body as SiteUpdateBody;
+}
+
+async function readSiteUpdateBody(request: Request) {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    return siteUpdateBodyFromEntries(await request.formData());
+  }
+
+  const rawBody = (await request.text()).trim();
+
+  if (!rawBody) {
+    return {};
+  }
+
+  if (
+    contentType.includes("application/json") ||
+    rawBody.startsWith("{") ||
+    rawBody.startsWith("[")
+  ) {
+    const parsed = JSON.parse(rawBody) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Invalid JSON body");
+    }
+
+    return parsed as SiteUpdateBody;
+  }
+
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    rawBody.includes("=")
+  ) {
+    return siteUpdateBodyFromEntries(new URLSearchParams(rawBody));
+  }
+
+  throw new Error("Unsupported request body");
+}
+
 export async function handleSite(
   request: Request,
   env: Env,
@@ -112,42 +236,22 @@ export async function handleSite(
 }
 
 async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
+  let body: SiteUpdateBody;
+
+  try {
+    body = await readSiteUpdateBody(request);
+  } catch {
+    return json(
+      {
+        ok: false,
+        error: getLocaleMessages("zh-CN").invalidRequestBody,
+      },
+      { status: 400 },
+    );
+  }
+
   try {
     const currentConfig = await getSiteConfig(env);
-    const body = (await request.json()) as {
-      locale?: string;
-      siteTitle?: string;
-      siteDescription?: string;
-      homeLayout?: string;
-      watermarkEnabledByDefault?: boolean;
-      watermarkText?: string;
-      watermarkPosition?: string;
-      adminPassword?: string;
-      uploadOriginalEnabled?: boolean;
-      maxTotalPhotos?: number;
-      maxTagPoolSize?: number;
-      maxUploadFiles?: number;
-      maxTagsPerPhoto?: number;
-      photoMetadataEnabled?: boolean;
-      showDateInfo?: boolean;
-      showCameraInfo?: boolean;
-      showImageInfo?: boolean;
-      showAdvancedCameraInfo?: boolean;
-      showLocationInfo?: boolean;
-      showDetailedExifInfo?: boolean;
-      photographerAvatarUrl?: string;
-      photographerName?: string;
-      photographerBio?: string;
-      photographerEmail?: string;
-      photographerXiaohongshu?: string;
-      photographerXiaohongshuUrl?: string;
-      photographerDouyin?: string;
-      photographerDouyinUrl?: string;
-      photographerInstagram?: string;
-      photographerInstagramUrl?: string;
-      photographerCustomAccount?: string;
-      photographerCustomAccountUrl?: string;
-    };
     const locale = normalizeLocale(
       typeof body.locale === "string" ? body.locale : currentConfig.locale,
     );
@@ -682,11 +786,13 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       ok: true,
       message: t.settingsUpdated,
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to update site config", error);
+
     return json(
       {
         ok: false,
-        error: getLocaleMessages("zh-CN").invalidRequestBody,
+        error: getLocaleMessages("zh-CN").saveSettingsFailed,
       },
       { status: 400 },
     );
