@@ -18,7 +18,8 @@ function parsePath(pathname) {
     const id = parts[2];
     if ((variant !== "thumb" &&
         variant !== "display" &&
-        variant !== "display-watermarked") ||
+        variant !== "display-watermarked" &&
+        variant !== "original") ||
         !id) {
         return null;
     }
@@ -48,12 +49,7 @@ export async function handleAssets(request, env) {
     }
     const object = await getPhotoObject(env, parsed.variant, parsed.id);
     if (!object?.body) {
-        const fallbackVariant = parsed.variant === "thumb"
-            ? "thumb"
-            : parsed.variant === "display-watermarked"
-                ? "watermarked"
-                : "display";
-        return handleMockStorage(new Request(`${new URL(request.url).origin}/mock-storage/${fallbackVariant}/${parsed.id}`));
+        return new Response("Photo asset not found", { status: 404 });
     }
     const headers = new Headers();
     object.writeHttpMetadata(headers);

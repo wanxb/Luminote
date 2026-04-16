@@ -106,6 +106,29 @@ export function createLocalAssetStorage(rootDir) {
         originalUrl = `/assets/original/${id}`;
       }
 
+      try {
+        await Promise.all(
+          [
+            thumbnail ? access(getAssetPath(rootDir, "thumb", id)) : undefined,
+            display ? access(getAssetPath(rootDir, "display", id)) : undefined,
+            watermarkedDisplay
+              ? access(getAssetPath(rootDir, "display-watermarked", id))
+              : undefined,
+            original
+              ? findOriginalAssetPath(rootDir, id).then((filePath) =>
+                  filePath ? access(filePath) : Promise.reject(new Error("Missing original asset")),
+                )
+              : undefined,
+          ].filter(Boolean),
+        );
+      } catch {
+        await this.deletePhotoAssets(id);
+        return {
+          persisted: false,
+          originalUrl: "",
+        };
+      }
+
       return {
         persisted: true,
         originalUrl,

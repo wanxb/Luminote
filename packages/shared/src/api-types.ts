@@ -2,6 +2,7 @@ export type PhotoSummary = {
   id: string;
   thumbUrl: string;
   displayUrl: string;
+  originalUrl?: string;
   watermarkedDisplayUrl?: string;
   watermarkEnabled?: boolean;
   isHidden?: boolean;
@@ -48,6 +49,7 @@ export type PhotoExif = {
   latitude?: number;
   longitude?: number;
   altitude?: string;
+  histogram?: number[];
   params?: Record<string, string>;
 };
 
@@ -87,6 +89,7 @@ export type SiteResponse = {
   showImageInfo: boolean;
   showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
+  showHistogramInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
@@ -125,6 +128,7 @@ export type SiteConfigResponse = {
   showImageInfo: boolean;
   showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
+  showHistogramInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;

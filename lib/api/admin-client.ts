@@ -106,6 +106,7 @@ export type UpdateSitePayload = {
   showImageInfo?: boolean;
   showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
+  showHistogramInfo?: boolean;
   showDetailedExifInfo?: boolean;
   photographerAvatarUrl?: string;
   photographerName?: string;
@@ -516,6 +517,7 @@ export async function getSite(): Promise<SiteResponse> {
       showImageInfo: true,
       showAdvancedCameraInfo: true,
       showLocationInfo: true,
+      showHistogramInfo: true,
       showDetailedExifInfo: true,
       photographerAvatarUrl: "",
       photographerName: "",

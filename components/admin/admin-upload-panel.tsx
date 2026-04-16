@@ -9,6 +9,7 @@ import type { SiteLocale } from "@/lib/api/types";
 
 type PreviewTarget = {
   src: string;
+  srcs?: string[];
   name: string;
 };
 
@@ -247,7 +248,9 @@ export function AdminUploadPanel({
           </div>
         ) : null}
 
-        {uploadError ? <p className="text-sm text-red-700">{uploadError}</p> : null}
+        {uploadError && !(isUploading || uploadProgress > 0) ? (
+          <p className="text-sm text-red-700">{uploadError}</p>
+        ) : null}
         {isUploading || uploadProgress > 0 ? (
           <div
             className={`space-y-2 rounded-2xl border px-4 py-3 ${
@@ -280,7 +283,7 @@ export function AdminUploadPanel({
                       : "text-ink/60"
                 }
               >
-                {uploadStage || copy.waitingToUpload}
+                {uploadError || uploadStage || copy.waitingToUpload}
               </span>
               <span>{uploadProgress}%</span>
             </div>

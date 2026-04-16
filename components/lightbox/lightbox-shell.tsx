@@ -23,6 +23,7 @@ type LightboxShellProps = {
   showImageInfo?: boolean;
   showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
+  showHistogramInfo?: boolean;
   showDetailedExifInfo?: boolean;
   activeIndex: number | null;
   hasMorePhotos?: boolean;
@@ -46,9 +47,9 @@ function isPhotoDetail(photo: PhotoDetail | PhotoSummary | null): photo is Photo
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-3">
-      <dt className="pt-0.5 text-[12px] text-paper/68">{label}</dt>
-      <dd className="break-words text-right text-[11.5px] font-medium leading-5 text-paper/90">{value}</dd>
+    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-start gap-2">
+      <dt className="pt-px text-[11px] leading-[18px] text-paper/62">{label}</dt>
+      <dd className="break-words text-right text-[11px] font-medium leading-[18px] text-paper/88">{value}</dd>
     </div>
   );
 }
@@ -65,13 +66,57 @@ function MetaSection({
   }
 
   return (
-    <section className="border-t border-white/[0.06] pt-4 first:border-t-0 first:pt-0">
-      <p className="mb-3 text-[12px] font-medium text-paper/94">{title}</p>
-      <dl className="space-y-3.5">
+    <section className="border-t border-white/[0.06] pt-2.5 first:border-t-0 first:pt-0">
+      <p className="mb-2 text-[11.5px] font-medium text-paper/92">{title}</p>
+      <dl className="space-y-2">
         {items.map((item) => (
           <MetaRow key={`${title}:${item.label}:${item.value}`} label={item.label} value={item.value} />
         ))}
       </dl>
+    </section>
+  );
+}
+
+function HistogramSection({
+  title,
+  values,
+}: {
+  title: string;
+  values?: number[];
+}) {
+  const bars = values?.filter((value) => Number.isFinite(value));
+
+  if (!bars?.length) {
+    return null;
+  }
+
+  return (
+    <section className="border-t border-white/[0.06] pt-2.5">
+      <p className="mb-2 text-[11.5px] font-medium text-paper/92">{title}</p>
+      <div className="h-14 rounded-[8px] border border-white/[0.08] bg-white/[0.035] px-2 py-1.5">
+        <svg
+          viewBox={`0 0 ${bars.length} 100`}
+          preserveAspectRatio="none"
+          className="h-full w-full"
+          aria-hidden="true"
+        >
+          {bars.map((value, index) => {
+            const height = Math.max(2, Math.min(100, value * 100));
+
+            return (
+              <rect
+                key={`${index}:${value}`}
+                x={index}
+                y={100 - height}
+                width={0.82}
+                height={height}
+                rx={0.3}
+                fill="rgba(236, 226, 206, 0.78)"
+              />
+            );
+          })}
+        </svg>
+      </div>
     </section>
   );
 }
@@ -211,6 +256,7 @@ export function LightboxShell({
   showImageInfo = true,
   showAdvancedCameraInfo = true,
   showLocationInfo = true,
+  showHistogramInfo = true,
   showDetailedExifInfo = true,
   activeIndex,
   hasMorePhotos = false,
@@ -239,6 +285,7 @@ export function LightboxShell({
   } | null>(null);
 
   const detail = isPhotoDetail(photo) ? photo : null;
+  const largeImageUrl = photo?.originalUrl || photo?.displayUrl || "";
   const captureItems: Array<{ label: string; value: string }> = [];
   const imageItems: Array<{ label: string; value: string }> = [];
   const advancedItems: Array<{ label: string; value: string }> = [];
@@ -285,16 +332,6 @@ export function LightboxShell({
     if (showLocationInfo && detail.exif?.latitude !== undefined && detail.exif?.longitude !== undefined) locationItems.push({ label: copy.coordinates, value: `${detail.exif.latitude.toFixed(5)}, ${detail.exif.longitude.toFixed(5)}` });
   }
 
-  if (photo) {
-    const headerItems: Array<{ label: string; value: string }> = [];
-
-    if (photo.description?.trim()) {
-      headerItems.push({ label: copy.note, value: photo.description.trim() });
-    }
-
-    basicItems.unshift(...headerItems);
-  }
-
   if (detail?.tags.length) {
     basicItems.push({ label: copy.tags, value: detail.tags.join(", ") });
   }
@@ -335,7 +372,7 @@ export function LightboxShell({
     const onResize = () => updateWatermarkFrame();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [isOpen, isImmersive, photo?.displayUrl]);
+  }, [isOpen, isImmersive, largeImageUrl]);
 
   useEffect(() => {
     if (activeIndex === null || !hasMorePhotos || isLoadingMorePhotos || !onLoadMorePhotos) return;
@@ -350,6 +387,15 @@ export function LightboxShell({
 
   if (!isOpen || !photo) return null;
 
+  const navigationButtonBase =
+    "items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34";
+  const previousButtonClass = isImmersive
+    ? `fixed left-5 top-[calc((100dvh-72px)/2)] z-[60] flex h-12 w-12 -translate-y-1/2 ${navigationButtonBase}`
+    : `absolute left-5 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 lg:flex ${navigationButtonBase}`;
+  const nextButtonClass = isImmersive
+    ? `fixed right-5 top-[calc((100dvh-72px)/2)] z-[60] flex h-12 w-12 -translate-y-1/2 ${navigationButtonBase}`
+    : `absolute right-5 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 lg:flex ${navigationButtonBase}`;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(8,8,8,0.94)] backdrop-blur-[36px]"
@@ -359,7 +405,7 @@ export function LightboxShell({
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_272px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
+        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
         onClick={(event) => event.stopPropagation()}
       >
         <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`}>
@@ -379,8 +425,8 @@ export function LightboxShell({
 
           {hasMultiple ? (
             <>
-              <button type="button" aria-label={copy.previousPhoto} onClick={onPrevious} className={`absolute left-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "flex" : "hidden lg:flex"}`}>‹</button>
-              <button type="button" aria-label={copy.nextPhoto} onClick={onNext} className={`absolute right-5 top-1/2 z-10 h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/88 backdrop-blur-md transition hover:bg-black/34 ${isImmersive ? "flex" : "hidden lg:flex"}`}>›</button>
+              <button type="button" aria-label={copy.previousPhoto} onClick={onPrevious} className={previousButtonClass}>{"<"}</button>
+              <button type="button" aria-label={copy.nextPhoto} onClick={onNext} className={nextButtonClass}>{">"}</button>
             </>
           ) : null}
 
@@ -390,7 +436,7 @@ export function LightboxShell({
 
           <div className={`relative z-[1] flex h-full min-h-0 justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
             <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
-              <img ref={displayImageRef} src={photo.displayUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
+              <img ref={displayImageRef} src={largeImageUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
               {watermarkEnabled && watermarkText && watermarkFrame ? (
                 <div className="pointer-events-none absolute z-[2]" style={{ top: watermarkFrame.top, left: watermarkFrame.left, width: watermarkFrame.width, height: watermarkFrame.height }}>
                   <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
@@ -401,34 +447,35 @@ export function LightboxShell({
         </section>
 
         {!isImmersive ? (
-          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(12,12,12,0.98)_0%,rgba(8,8,8,1)_100%)] px-5 py-6 lg:col-start-2 lg:row-span-2">
-            <div className="border-b border-white/[0.06] pb-4">
-              <div className="min-w-0">
-                <h2 className="mt-2.5 break-all text-[14px] font-semibold leading-7 tracking-[0.08em] text-paper">
-                  IMG
-                  <br />
-                  {photo.id.replace("photo_", "")}
+          <aside className="flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(12,12,12,0.98)_0%,rgba(8,8,8,1)_100%)] px-4 py-4 lg:col-start-2 lg:row-span-2">
+            <div className="border-b border-white/[0.06] pb-1.5">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <h2 className="min-w-0 truncate text-[11px] font-semibold leading-4 tracking-[0.08em] text-paper">
+                  IMG {photo.id.replace("photo_", "")}
                 </h2>
-                <p className="mt-1.5 break-all text-[11.5px] leading-5 text-paper/58">
-                  {photo.id}.jpg
+                <p className="shrink-0 text-[9.5px] leading-4 text-paper/46">
+                  JPG
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 flex-1 overflow-y-auto pr-1 text-[12px] leading-5 text-paper/76">
+            <div className="mt-2 flex flex-1 flex-col justify-between gap-3 overflow-hidden text-paper/76">
               {isLoading ? <p className="py-3.5 text-[11.5px] text-paper/68">{copy.loadingPhotoDetails}</p> : null}
               {error ? <p className="py-3.5 text-[11.5px] text-[#ffd7cc]">{error}</p> : null}
 
               <MetaSection title={copy.basicInfo} items={basicItems} />
               <MetaSection title={copy.photoParams} items={captureItems} />
               <MetaSection title={copy.imageInfo} items={imageItems} />
+              {photoMetadataEnabled && showHistogramInfo ? (
+                <HistogramSection title={copy.histogram} values={detail?.exif?.histogram} />
+              ) : null}
               <MetaSection title={copy.advancedCameraInfo} items={advancedItems} />
               <MetaSection title={copy.locationInfo} items={locationItems} />
 
               {extendedExifItems.length ? (
-                <section className="border-t border-white/[0.06] pt-4">
-                  <p className="mb-3 text-[12px] font-medium text-paper/94">{copy.fullParams}</p>
-                  <dl className="space-y-3.5">
+                <section className="border-t border-white/[0.06] pt-2.5">
+                  <p className="mb-2 text-[11.5px] font-medium text-paper/92">{copy.fullParams}</p>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {extendedExifItems.map((item) => (
                       <MetaRow key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
                     ))}

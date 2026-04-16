@@ -20,6 +20,7 @@ export const fallbackSite: SiteResponse = {
   showImageInfo: true,
   showAdvancedCameraInfo: true,
   showLocationInfo: true,
+  showHistogramInfo: true,
   showDetailedExifInfo: true,
   photographerAvatarUrl: "",
   photographerName: "",

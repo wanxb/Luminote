@@ -13,7 +13,7 @@ export function loadRuntimeConfig() {
   const sqliteDbFile =
     process.env.SQLITE_DB_FILE ||
     path.resolve(process.cwd(), "apps/api-node/data/luminote.sqlite");
-  const storageMode = process.env.STORAGE_MODE || "mock";
+  const storageMode = process.env.STORAGE_MODE || "local";
   const uploadsDir =
     process.env.UPLOADS_DIR ||
     path.resolve(process.cwd(), "apps/api-node/data/uploads");

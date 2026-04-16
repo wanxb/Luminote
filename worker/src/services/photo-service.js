@@ -237,6 +237,12 @@ export async function createPhotos(env, origin, inputs) {
         display: inputs[index].displayFile,
         watermarkedDisplay: inputs[index].watermarkedDisplayFile,
     })));
+    const missingStorage = storageResults
+        .map((storage, index) => ({ storage, input: inputs[index] }))
+        .filter(({ storage }) => !storage.persisted || !storage.displayKey);
+    if (missingStorage.length > 0) {
+        throw new Error("图片存储失败，请检查开发环境对象存储绑定后重试。");
+    }
     const statements = created.map((photo, index) => {
         const input = inputs[index];
         const storage = storageResults[index];

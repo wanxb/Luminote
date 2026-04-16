@@ -67,6 +67,7 @@ type SiteUpdateBody = {
   showImageInfo?: boolean;
   showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
+  showHistogramInfo?: boolean;
   showDetailedExifInfo?: boolean;
   photographerAvatarUrl?: string;
   photographerName?: string;
@@ -91,6 +92,7 @@ const siteBooleanFields = new Set([
   "showImageInfo",
   "showAdvancedCameraInfo",
   "showLocationInfo",
+  "showHistogramInfo",
   "showDetailedExifInfo",
 ]);
 
@@ -200,6 +202,7 @@ export async function handleSite(
         showImageInfo: config.showImageInfo,
         showAdvancedCameraInfo: config.showAdvancedCameraInfo,
         showLocationInfo: config.showLocationInfo,
+        showHistogramInfo: config.showHistogramInfo,
         showDetailedExifInfo: config.showDetailedExifInfo,
         photographerAvatarUrl: resolvePublicAssetUrl(
           request,
@@ -277,6 +280,7 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
       showImageInfo?: boolean;
       showAdvancedCameraInfo?: boolean;
       showLocationInfo?: boolean;
+      showHistogramInfo?: boolean;
       showDetailedExifInfo?: boolean;
       photographerAvatarUrl?: string;
       photographerName?: string;
@@ -509,6 +513,14 @@ async function handleSiteUpdate(request: Request, env: Env): Promise<Response> {
         errors.push(t.invalidShowLocationInfo);
       } else {
         updates.showLocationInfo = body.showLocationInfo;
+      }
+    }
+
+    if (body.showHistogramInfo !== undefined) {
+      if (typeof body.showHistogramInfo !== "boolean") {
+        errors.push(t.invalidShowHistogramInfo);
+      } else {
+        updates.showHistogramInfo = body.showHistogramInfo;
       }
     }
 

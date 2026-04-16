@@ -46,6 +46,8 @@ type AdminMessages = {
   advancedCameraInfoDescription: string;
   locationInfo: string;
   locationInfoDescription: string;
+  histogramInfo: string;
+  histogramInfoDescription: string;
   detailedExif: string;
   detailedExifDescription: string;
   photographerProfile: string;
@@ -220,6 +222,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
       "显示曝光补偿、曝光程序、测光模式、白平衡、闪光灯等扩展参数。",
     locationInfo: "位置信息",
     locationInfoDescription: "显示位置字段和 GPS 相关信息。",
+    histogramInfo: "直方图",
+    histogramInfoDescription: "显示照片亮度分布直方图。",
     detailedExif: "完整 EXIF",
     detailedExifDescription: "显示常用字段以外的扩展参数列表。",
     photographerProfile: "摄影师资料",
@@ -392,6 +396,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
       "顯示曝光補償、曝光程式、測光模式、白平衡、閃光燈等延伸參數。",
     locationInfo: "位置資訊",
     locationInfoDescription: "顯示位置欄位與 GPS 相關資訊。",
+    histogramInfo: "直方圖",
+    histogramInfoDescription: "顯示照片亮度分布直方圖。",
     detailedExif: "完整 EXIF",
     detailedExifDescription: "顯示常用欄位以外的擴充參數列表。",
     photographerProfile: "攝影師資料",
@@ -571,6 +577,8 @@ const messages: Record<SiteLocale, AdminMessages> = {
       "Show exposure compensation, program, metering mode, white balance, flash, and related details.",
     locationInfo: "Location Info",
     locationInfoDescription: "Show location fields and GPS-related metadata.",
+    histogramInfo: "Histogram",
+    histogramInfoDescription: "Show the photo luminance histogram.",
     detailedExif: "Detailed EXIF",
     detailedExifDescription:
       "Show the extended parameter list beyond the common fields.",

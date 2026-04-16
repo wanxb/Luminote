@@ -35,8 +35,6 @@ type Messages = {
   loadingMoreLabel: string;
   basicInfo: string;
   fileName: string;
-  note: string;
-  noNote: string;
   watermark: string;
   enabled: string;
   disabled: string;
@@ -46,6 +44,7 @@ type Messages = {
   photoParams: string;
   imageInfo: string;
   advancedCameraInfo: string;
+  histogram: string;
   noExif: string;
   fullParams: string;
   takenAt: string;
@@ -109,8 +108,6 @@ const messages: Record<SiteLocale, Messages> = {
     loadingMoreLabel: "加载中",
     basicInfo: "基本信息",
     fileName: "文件名",
-    note: "备注",
-    noNote: "暂无备注",
     watermark: "水印",
     enabled: "已启用",
     disabled: "未启用",
@@ -120,6 +117,7 @@ const messages: Record<SiteLocale, Messages> = {
     photoParams: "拍摄参数",
     imageInfo: "图像信息",
     advancedCameraInfo: "进阶拍摄参数",
+    histogram: "直方图",
     noExif: "这张照片暂时没有可展示的 EXIF 信息。",
     fullParams: "完整参数",
     takenAt: "拍摄时间",
@@ -181,8 +179,6 @@ const messages: Record<SiteLocale, Messages> = {
     loadingMoreLabel: "載入中",
     basicInfo: "基本資訊",
     fileName: "檔名",
-    note: "備註",
-    noNote: "暫無備註",
     watermark: "浮水印",
     enabled: "已啟用",
     disabled: "未啟用",
@@ -192,6 +188,7 @@ const messages: Record<SiteLocale, Messages> = {
     photoParams: "拍攝參數",
     imageInfo: "圖像資訊",
     advancedCameraInfo: "進階拍攝參數",
+    histogram: "直方圖",
     noExif: "這張照片暫時沒有可顯示的 EXIF 資訊。",
     fullParams: "完整參數",
     takenAt: "拍攝時間",
@@ -253,8 +250,6 @@ const messages: Record<SiteLocale, Messages> = {
     loadingMoreLabel: "Loading",
     basicInfo: "Basic Info",
     fileName: "File Name",
-    note: "Note",
-    noNote: "No note",
     watermark: "Watermark",
     enabled: "Enabled",
     disabled: "Disabled",
@@ -264,6 +259,7 @@ const messages: Record<SiteLocale, Messages> = {
     photoParams: "Photo Params",
     imageInfo: "Image Info",
     advancedCameraInfo: "Advanced Camera Info",
+    histogram: "Histogram",
     noExif: "No EXIF information is available for this photo right now.",
     fullParams: "Full Params",
     takenAt: "Taken At",

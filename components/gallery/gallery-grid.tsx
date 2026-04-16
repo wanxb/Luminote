@@ -123,8 +123,7 @@ export function GalleryGrid({
           />
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/82 via-black/22 to-transparent p-3 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-            {photo.description ? <p className="text-sm text-white">{photo.description}</p> : null}
-            <div className="mt-1 flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               {formatTakenAt(photo.takenAt, site.locale) ? (
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/68">{formatTakenAt(photo.takenAt, site.locale)}</p>
               ) : <span />}

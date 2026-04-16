@@ -15,11 +15,16 @@ function buildSite(baseUrl, site) {
 
 function buildPhotoSummary(baseUrl, row) {
   const tags = JSON.parse(row.tags_json || "[]");
+  const originalUrl =
+    row.original_url && row.original_url.includes("/assets/original/")
+      ? resolveAssetUrl(baseUrl, row.original_url)
+      : undefined;
 
   return {
     id: row.id,
     thumbUrl: resolveAssetUrl(baseUrl, row.thumb_url),
     displayUrl: resolveAssetUrl(baseUrl, row.display_url),
+    originalUrl,
     watermarkedDisplayUrl: row.watermarked_display_url
       ? resolveAssetUrl(baseUrl, row.watermarked_display_url)
       : undefined,

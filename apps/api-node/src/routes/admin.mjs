@@ -140,14 +140,30 @@ export async function handleAdminRoute({
       page,
       pageSize,
     });
+    const checkedItems = await Promise.all(
+      result.items.map(async (photo) => {
+        const asset = await assetStorage.getPhotoAsset("display", photo.id);
+        if (asset) {
+          return photo;
+        }
+
+        await Promise.allSettled([
+          repository.deletePhoto(photo.id),
+          assetStorage.deletePhotoAssets(photo.id),
+        ]);
+        return null;
+      }),
+    );
+    const items = checkedItems.filter(Boolean);
+    const removedCount = result.items.length - items.length;
 
     sendJson(res, 200, {
-      items: result.items,
+      items,
       page,
       pageSize,
       hasMore: result.hasMore,
-      total: result.total,
-      unfilteredTotal: result.unfilteredTotal,
+      total: Math.max(0, result.total - removedCount),
+      unfilteredTotal: Math.max(0, result.unfilteredTotal - removedCount),
     });
     return true;
   }
@@ -234,6 +250,16 @@ export async function handleAdminRoute({
           watermarkedDisplay: watermarkedDisplayFiles[index] ?? undefined,
         });
 
+        if (!storedAssets.persisted) {
+          await Promise.allSettled([
+            repository.deletePhoto(created.id),
+            assetStorage.deletePhotoAssets(created.id),
+          ]);
+          throw new Error(
+            "图片存储失败，请检查 STORAGE_MODE 是否为 local，并确认上传目录可写。",
+          );
+        }
+
         if (storedAssets.originalUrl) {
           await repository.attachOriginalAsset(created.id, {
             originalFileName: fileName,
@@ -250,10 +276,13 @@ export async function handleAdminRoute({
       }
     }
 
-    sendJson(res, 200, {
-      ok: true,
+    const ok = uploaded.length > 0;
+
+    sendJson(res, ok ? 200 : 500, {
+      ok,
       uploaded,
       failed,
+      error: ok ? undefined : failed[0]?.error || "Upload failed",
     });
     return true;
   }

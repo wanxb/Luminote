@@ -258,28 +258,39 @@ export async function handleAdmin(request, env) {
                 error: `单次最多上传 ${siteConfig.maxUploadFiles} 张照片。`,
             }, { status: 400 });
         }
-        const uploaded = await createPhotos(env, new URL(request.url).origin, normalizedFileNames.map((fileName, index) => ({
-            ...(photoDrafts[index] ?? {}),
-            fileName,
-            originalFile: siteConfig.uploadOriginalEnabled && storeOriginalFiles
-                ? legacyFiles[index]
-                : undefined,
-            thumbnail: thumbnails[index],
-            displayFile: displayFiles[index],
-            watermarkedDisplayFile: watermarkedDisplayFiles[index],
-            exif: exifRecords[index],
-            description: photoDrafts[index]?.description ?? description,
-            tags: photoDrafts[index]?.tags ?? tags,
-            showDateInfo,
-            showCameraInfo,
-            showLocationInfo,
-            watermarkEnabled,
-        })));
-        return json({
-            ok: true,
-            uploaded,
-            failed: [],
-        });
+        try {
+            const uploaded = await createPhotos(env, new URL(request.url).origin, normalizedFileNames.map((fileName, index) => ({
+                ...(photoDrafts[index] ?? {}),
+                fileName,
+                originalFile: siteConfig.uploadOriginalEnabled && storeOriginalFiles
+                    ? legacyFiles[index]
+                    : undefined,
+                thumbnail: thumbnails[index],
+                displayFile: displayFiles[index],
+                watermarkedDisplayFile: watermarkedDisplayFiles[index],
+                exif: exifRecords[index],
+                description: photoDrafts[index]?.description ?? description,
+                tags: photoDrafts[index]?.tags ?? tags,
+                showDateInfo,
+                showCameraInfo,
+                showLocationInfo,
+                watermarkEnabled,
+            })));
+            return json({
+                ok: uploaded.length > 0,
+                uploaded,
+                failed: [],
+                error: uploaded.length === 0 ? "上传失败，请稍后再试。" : undefined,
+            }, { status: uploaded.length > 0 ? 200 : 500 });
+        }
+        catch (error) {
+            return json({
+                ok: false,
+                uploaded: [],
+                failed: [],
+                error: error instanceof Error ? error.message : "上传失败，请稍后再试。",
+            }, { status: 500 });
+        }
     }
     if (url.pathname === "/api/admin/photos" && request.method === "GET") {
         if (!isAuthenticated(request, env)) {

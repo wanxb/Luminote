@@ -31,7 +31,7 @@ type AdminPhotosTabProps = {
   onFileSelection: (event: ChangeEvent<HTMLInputElement>) => void;
   uploadNotice: string;
   maxTagsPerPhoto: number;
-  onPreview: (preview: { src: string; name: string } | null) => void;
+  onPreview: (preview: { src: string; srcs?: string[]; name: string } | null) => void;
   onRemoveQueuedFile: (id: string) => void;
   onToggleQueuedFileTag: (id: string, tagName: string) => void;
   uploadError: string;

@@ -21,6 +21,14 @@ function resolveAssetUrl(baseUrl, pathname) {
   return new URL(pathname, baseUrl).toString();
 }
 
+function resolvePhotoAssetUrl(baseUrl, variant, id, pathname) {
+  if (!pathname || String(pathname).includes("/mock-storage/")) {
+    return resolveAssetUrl(baseUrl, `/assets/${variant}/${id}`);
+  }
+
+  return resolveAssetUrl(baseUrl, pathname);
+}
+
 export function createSqliteAdminContentRepository(config) {
   return {
     async getSiteSettings() {
@@ -140,10 +148,15 @@ export function createSqliteAdminContentRepository(config) {
         .all(...values, pageSize, offset)
         .map((row) => ({
           id: row.id,
-          thumbUrl: resolveAssetUrl(config.publicBaseUrl, row.thumb_url),
-          displayUrl: resolveAssetUrl(config.publicBaseUrl, row.display_url),
+          thumbUrl: resolvePhotoAssetUrl(config.publicBaseUrl, "thumb", row.id, row.thumb_url),
+          displayUrl: resolvePhotoAssetUrl(config.publicBaseUrl, "display", row.id, row.display_url),
           watermarkedDisplayUrl: row.watermarked_display_url
-            ? resolveAssetUrl(config.publicBaseUrl, row.watermarked_display_url)
+            ? resolvePhotoAssetUrl(
+                config.publicBaseUrl,
+                "display-watermarked",
+                row.id,
+                row.watermarked_display_url,
+              )
             : undefined,
           watermarkEnabled: Boolean(row.watermark_enabled),
           isHidden: Boolean(row.is_hidden),

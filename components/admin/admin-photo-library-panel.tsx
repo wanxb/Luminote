@@ -8,6 +8,7 @@ import { uniqueTags } from "@/components/admin/admin-upload-utils";
 
 type PreviewTarget = {
   src: string;
+  srcs?: string[];
   name: string;
 };
 
@@ -56,6 +57,10 @@ type AdminPhotoLibraryPanelProps = {
   onNextPhotosPage: () => void | Promise<void>;
 };
 
+function isRealAssetSource(src: string | undefined) {
+  return Boolean(src) && !src!.includes("/mock-storage/");
+}
+
 export function AdminPhotoLibraryPanel({
   locale,
   appliedPhotoTagFilter,
@@ -101,6 +106,15 @@ export function AdminPhotoLibraryPanel({
   onNextPhotosPage,
 }: AdminPhotoLibraryPanelProps) {
   const copy = getAdminMessages(locale);
+  const getPreviewSources = (photo: PhotoSummary) =>
+    Array.from(
+      new Set(
+        [photo.displayUrl, photo.originalUrl, photo.watermarkedDisplayUrl, photo.thumbUrl].filter(
+          (src): src is string => isRealAssetSource(src),
+        ),
+      ),
+    );
+
   return (
     <section className="rounded-[28px] border border-black/5 bg-[rgba(255,255,255,0.32)] p-6 shadow-[0_18px_48px_rgba(96,82,58,0.08)] backdrop-blur-[2px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -229,6 +243,10 @@ export function AdminPhotoLibraryPanel({
             const isConfirmingDelete = deleteConfirmPhotoId === photo.id;
             const isDeleting = deletingIds.includes(photo.id);
             const isBusy = isUpdating || isDeleting;
+            const previewSources = getPreviewSources(photo);
+            const thumbSrc = isRealAssetSource(photo.thumbUrl)
+              ? photo.thumbUrl
+              : previewSources[0] ?? "";
 
             return (
               <div
@@ -261,7 +279,8 @@ export function AdminPhotoLibraryPanel({
                     type="button"
                     onClick={() =>
                       onPreview({
-                        src: photo.watermarkedDisplayUrl || photo.displayUrl || photo.thumbUrl,
+                        src: previewSources[0] ?? photo.thumbUrl,
+                        srcs: previewSources,
                         name: photo.description || copy.previewPhotoFallback(photo.id),
                       })
                     }
@@ -269,7 +288,15 @@ export function AdminPhotoLibraryPanel({
                     aria-label={copy.previewPhoto(photo.description || copy.previewPhotoFallback(photo.id))}
                   >
                     <img
-                      src={photo.thumbUrl}
+                      src={thumbSrc}
+                      onError={(event) => {
+                        if (
+                          isRealAssetSource(photo.displayUrl) &&
+                          event.currentTarget.src !== photo.displayUrl
+                        ) {
+                          event.currentTarget.src = photo.displayUrl;
+                        }
+                      }}
                       alt={photo.description || photo.id}
                       className="h-full w-full object-cover"
                     />

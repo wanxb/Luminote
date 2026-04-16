@@ -20,6 +20,7 @@ export type AdminSiteConfigPayload = {
   showImageInfo?: boolean;
   showAdvancedCameraInfo?: boolean;
   showLocationInfo?: boolean;
+  showHistogramInfo?: boolean;
   showDetailedExifInfo?: boolean;
   photographerAvatarUrl?: string;
   photographerName?: string;
@@ -56,6 +57,7 @@ type BuildAdminSiteConfigPayloadInput = {
   showImageInfo: boolean;
   showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
+  showHistogramInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
@@ -92,6 +94,7 @@ export function buildAdminSiteConfigPayload({
   showImageInfo,
   showAdvancedCameraInfo,
   showLocationInfo,
+  showHistogramInfo,
   showDetailedExifInfo,
   photographerAvatarUrl,
   photographerName,
@@ -179,6 +182,10 @@ export function buildAdminSiteConfigPayload({
 
   if (showLocationInfo !== config?.showLocationInfo) {
     payload.showLocationInfo = showLocationInfo;
+  }
+
+  if (showHistogramInfo !== config?.showHistogramInfo) {
+    payload.showHistogramInfo = showHistogramInfo;
   }
 
   if (showDetailedExifInfo !== config?.showDetailedExifInfo) {

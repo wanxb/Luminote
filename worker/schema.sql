@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS site_config (
   show_image_info INTEGER NOT NULL DEFAULT 1,
   show_advanced_camera_info INTEGER NOT NULL DEFAULT 1,
   show_location_info INTEGER NOT NULL DEFAULT 1,
+  show_histogram_info INTEGER NOT NULL DEFAULT 1,
   show_detailed_exif_info INTEGER NOT NULL DEFAULT 1,
   photographer_avatar_url TEXT NOT NULL DEFAULT '',
   photographer_name TEXT NOT NULL DEFAULT '',

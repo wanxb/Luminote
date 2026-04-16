@@ -1,7 +1,7 @@
 import type { Env } from "../index";
 
 type StoredVariant = "original" | "thumb" | "display" | "display-watermarked";
-type AssetVariant = "display" | "thumb" | "display-watermarked";
+type AssetVariant = "display" | "thumb" | "display-watermarked" | "original";
 
 function objectKey(id: string, variant: StoredVariant, extension = "jpg") {
   switch (variant) {
@@ -86,6 +86,21 @@ export async function storePhotoObjects(
     );
   }
 
+  const [storedThumb, storedDisplay] = await Promise.all([
+    payload.thumbnail ? env.PHOTOS_BUCKET.get(thumbKey) : Promise.resolve(null),
+    payload.display ? env.PHOTOS_BUCKET.get(displayKey) : Promise.resolve(null),
+  ]);
+
+  if ((payload.thumbnail && !storedThumb) || (payload.display && !storedDisplay)) {
+    return {
+      persisted: false,
+      originalKey: "",
+      thumbKey: "",
+      displayKey: "",
+      watermarkedDisplayKey: "",
+    };
+  }
+
   return {
     persisted: true,
     originalKey,
@@ -117,6 +132,19 @@ export async function getPhotoObject(
 
   if (variant === "display") {
     return env.PHOTOS_BUCKET.get(objectKey(id, "display"));
+  }
+
+  if (variant === "original") {
+    try {
+      const originals = await env.PHOTOS_BUCKET.list({
+        prefix: `originals/${id}.`,
+        limit: 1,
+      });
+      const originalKey = originals.objects[0]?.key;
+      return originalKey ? env.PHOTOS_BUCKET.get(originalKey) : null;
+    } catch {
+      return null;
+    }
   }
 
   return env.PHOTOS_BUCKET.get(objectKey(id, "display-watermarked"));

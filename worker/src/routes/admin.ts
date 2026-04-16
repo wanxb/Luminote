@@ -13,6 +13,7 @@ import {
 } from "../services/site-config-service";
 import {
   deleteAvatarObject,
+  getPhotoObject,
   storePhotographerAvatar,
 } from "../services/storage-service";
 import {
@@ -528,10 +529,14 @@ export async function handleAdmin(
     );
 
     return json({
-      ok: true,
+      ok: uploaded.uploaded.length > 0,
       uploaded: uploaded.uploaded,
       failed: uploaded.failed,
-    });
+      error:
+        uploaded.uploaded.length === 0
+          ? uploaded.failed[0]?.error ?? "Upload failed."
+          : undefined,
+    }, { status: uploaded.uploaded.length > 0 ? 200 : 500 });
   }
 
   if (url.pathname === "/api/admin/photos" && request.method === "GET") {
@@ -551,6 +556,14 @@ export async function handleAdmin(
         fallbackToBucket: false,
         hydrateBucketToDb: true,
       });
+      const checkedItems = await Promise.all(
+        result.items.map(async (photo) => {
+          const asset = await getPhotoObject(env, "display", photo.id);
+          return asset?.body ? photo : null;
+        }),
+      );
+      const items = checkedItems.filter((photo) => photo !== null);
+      const removedCount = result.items.length - items.length;
       const unfilteredResult = tag
         ? await listPhotos(env, new URL(request.url).origin, null, {
             includeHidden: true,
@@ -562,12 +575,15 @@ export async function handleAdmin(
         : null;
 
       return json({
-        items: result.items,
+        items,
         page,
         pageSize,
         hasMore: result.hasMore,
-        total: result.total,
-        unfilteredTotal: unfilteredResult?.total ?? result.total,
+        total: Math.max(0, result.total - removedCount),
+        unfilteredTotal: Math.max(
+          0,
+          (unfilteredResult?.total ?? result.total) - removedCount,
+        ),
       });
     } catch {
       const t = await getRequestMessages(env);

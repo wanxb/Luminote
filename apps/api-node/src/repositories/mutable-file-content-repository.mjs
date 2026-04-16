@@ -37,13 +37,26 @@ function resolveAssetUrl(baseUrl, pathname) {
   return new URL(pathname, baseUrl).toString();
 }
 
+function resolvePhotoAssetUrl(baseUrl, variant, id, pathname) {
+  if (!pathname || String(pathname).includes("/mock-storage/")) {
+    return resolveAssetUrl(baseUrl, `/assets/${variant}/${id}`);
+  }
+
+  return resolveAssetUrl(baseUrl, pathname);
+}
+
 function buildAdminPhoto(baseUrl, photo) {
   return {
     ...photo,
-    thumbUrl: resolveAssetUrl(baseUrl, photo.thumbUrl),
-    displayUrl: resolveAssetUrl(baseUrl, photo.displayUrl),
+    thumbUrl: resolvePhotoAssetUrl(baseUrl, "thumb", photo.id, photo.thumbUrl),
+    displayUrl: resolvePhotoAssetUrl(baseUrl, "display", photo.id, photo.displayUrl),
     watermarkedDisplayUrl: photo.watermarkedDisplayUrl
-      ? resolveAssetUrl(baseUrl, photo.watermarkedDisplayUrl)
+      ? resolvePhotoAssetUrl(
+          baseUrl,
+          "display-watermarked",
+          photo.id,
+          photo.watermarkedDisplayUrl,
+        )
       : undefined,
   };
 }

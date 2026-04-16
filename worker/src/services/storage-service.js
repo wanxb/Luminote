@@ -60,6 +60,19 @@ export async function storePhotoObjects(env, payload) {
             },
         });
     }
+    const [storedThumb, storedDisplay] = await Promise.all([
+        payload.thumbnail ? env.PHOTOS_BUCKET.get(thumbKey) : Promise.resolve(null),
+        payload.display ? env.PHOTOS_BUCKET.get(displayKey) : Promise.resolve(null),
+    ]);
+    if ((payload.thumbnail && !storedThumb) || (payload.display && !storedDisplay)) {
+        return {
+            persisted: false,
+            originalKey: "",
+            thumbKey: "",
+            displayKey: "",
+            watermarkedDisplayKey: "",
+        };
+    }
     return {
         persisted: true,
         originalKey,
@@ -83,6 +96,19 @@ export async function getPhotoObject(env, variant, id) {
     }
     if (variant === "display") {
         return env.PHOTOS_BUCKET.get(objectKey(id, "display"));
+    }
+    if (variant === "original") {
+        try {
+            const originals = await env.PHOTOS_BUCKET.list({
+                prefix: `originals/${id}.`,
+                limit: 1,
+            });
+            const originalKey = originals.objects[0]?.key;
+            return originalKey ? env.PHOTOS_BUCKET.get(originalKey) : null;
+        }
+        catch {
+            return null;
+        }
     }
     return env.PHOTOS_BUCKET.get(objectKey(id, "display-watermarked"));
 }

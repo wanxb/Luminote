@@ -27,6 +27,7 @@ type LocaleMessages = {
   invalidShowImageInfo: string;
   invalidShowAdvancedCameraInfo: string;
   invalidShowLocationInfo: string;
+  invalidShowHistogramInfo: string;
   invalidShowDetailedExifInfo: string;
   invalidPhotographerAvatarUrl: string;
   photographerAvatarUrlTooLong: (limit: number) => string;
@@ -114,6 +115,7 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowImageInfo: "图像信息显示开关格式错误。",
     invalidShowAdvancedCameraInfo: "进阶拍摄参数显示开关格式错误。",
     invalidShowLocationInfo: "位置信息显示开关格式错误。",
+    invalidShowHistogramInfo: "直方图显示开关格式错误。",
     invalidShowDetailedExifInfo: "完整参数显示开关格式错误。",
     invalidPhotographerAvatarUrl: "摄影师头像链接格式错误。",
     photographerAvatarUrlTooLong: (limit) =>
@@ -202,6 +204,7 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowImageInfo: "圖像資訊顯示開關格式錯誤。",
     invalidShowAdvancedCameraInfo: "進階拍攝參數顯示開關格式錯誤。",
     invalidShowLocationInfo: "位置資訊顯示開關格式錯誤。",
+    invalidShowHistogramInfo: "直方圖顯示開關格式錯誤。",
     invalidShowDetailedExifInfo: "完整參數顯示開關格式錯誤。",
     invalidPhotographerAvatarUrl: "攝影師頭像連結格式錯誤。",
     photographerAvatarUrlTooLong: (limit) =>
@@ -295,6 +298,7 @@ const messages: Record<SiteLocale, LocaleMessages> = {
     invalidShowAdvancedCameraInfo:
       "Invalid advanced camera info switch format.",
     invalidShowLocationInfo: "Invalid location info switch format.",
+    invalidShowHistogramInfo: "Invalid histogram switch format.",
     invalidShowDetailedExifInfo: "Invalid detailed EXIF switch format.",
     invalidPhotographerAvatarUrl: "Invalid photographer avatar URL format.",
     photographerAvatarUrlTooLong: (limit) =>

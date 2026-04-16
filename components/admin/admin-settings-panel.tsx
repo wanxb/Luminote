@@ -72,6 +72,8 @@ type AdminSettingsPanelProps = {
   onShowAdvancedCameraInfoChange: (value: boolean) => void;
   showLocationInfo: boolean;
   onShowLocationInfoChange: (value: boolean) => void;
+  showHistogramInfo: boolean;
+  onShowHistogramInfoChange: (value: boolean) => void;
   showDetailedExifInfo: boolean;
   onShowDetailedExifInfoChange: (value: boolean) => void;
   avatarInputRef: RefObject<HTMLInputElement | null>;
@@ -317,6 +319,8 @@ export function AdminSettingsPanel({
   onShowAdvancedCameraInfoChange,
   showLocationInfo,
   onShowLocationInfoChange,
+  showHistogramInfo,
+  onShowHistogramInfoChange,
   showDetailedExifInfo,
   onShowDetailedExifInfoChange,
   avatarInputRef,
@@ -638,6 +642,17 @@ export function AdminSettingsPanel({
                       title={copy.locationInfo}
                       checked={showLocationInfo}
                       onChange={onShowLocationInfoChange}
+                      disabled={!photoMetadataEnabled}
+                    />
+                    <ToggleRow
+                      title={
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          <span className="truncate">{copy.histogramInfo}</span>
+                          <InfoHint text={copy.histogramInfoDescription} />
+                        </span>
+                      }
+                      checked={showHistogramInfo}
+                      onChange={onShowHistogramInfoChange}
                       disabled={!photoMetadataEnabled}
                     />
                     <ToggleRow

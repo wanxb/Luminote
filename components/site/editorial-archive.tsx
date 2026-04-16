@@ -226,6 +226,7 @@ export function EditorialArchive({
         showImageInfo={site.showImageInfo}
         showAdvancedCameraInfo={site.showAdvancedCameraInfo}
         showLocationInfo={site.showLocationInfo}
+        showHistogramInfo={site.showHistogramInfo}
         showDetailedExifInfo={site.showDetailedExifInfo}
         activeIndex={selectedIndex}
         hasMorePhotos={hasMore}

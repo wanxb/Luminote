@@ -593,6 +593,7 @@ export function SpotlightHome({
         showImageInfo={site.showImageInfo}
         showAdvancedCameraInfo={site.showAdvancedCameraInfo}
         showLocationInfo={site.showLocationInfo}
+        showHistogramInfo={site.showHistogramInfo}
         showDetailedExifInfo={site.showDetailedExifInfo}
         activeIndex={selectedIndex !== null && selectedIndex >= 0 ? selectedIndex : null}
         hasMorePhotos={false}

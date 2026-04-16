@@ -17,6 +17,7 @@ export const DEFAULT_SHOW_CAMERA_INFO = true;
 export const DEFAULT_SHOW_IMAGE_INFO = true;
 export const DEFAULT_SHOW_ADVANCED_CAMERA_INFO = true;
 export const DEFAULT_SHOW_LOCATION_INFO = true;
+export const DEFAULT_SHOW_HISTOGRAM_INFO = true;
 export const DEFAULT_SHOW_DETAILED_EXIF_INFO = true;
 export const DEFAULT_PHOTOGRAPHER_AVATAR_URL = "";
 export const DEFAULT_PHOTOGRAPHER_NAME = "";
@@ -51,6 +52,7 @@ type SiteConfigRow = {
   show_image_info: number;
   show_advanced_camera_info: number;
   show_location_info: number;
+  show_histogram_info: number;
   show_detailed_exif_info: number;
   photographer_avatar_url: string;
   photographer_name: string;
@@ -86,6 +88,7 @@ export type SiteConfig = {
   showImageInfo: boolean;
   showAdvancedCameraInfo: boolean;
   showLocationInfo: boolean;
+  showHistogramInfo: boolean;
   showDetailedExifInfo: boolean;
   photographerAvatarUrl: string;
   photographerName: string;
@@ -124,6 +127,7 @@ type LegacySiteConfigRow = {
   show_image_info?: number;
   show_advanced_camera_info?: number;
   show_location_info?: number;
+  show_histogram_info?: number;
   show_detailed_exif_info?: number;
 };
 
@@ -152,6 +156,7 @@ function buildDefaultSiteConfig(env: Env): SiteConfig {
     showImageInfo: DEFAULT_SHOW_IMAGE_INFO,
     showAdvancedCameraInfo: DEFAULT_SHOW_ADVANCED_CAMERA_INFO,
     showLocationInfo: DEFAULT_SHOW_LOCATION_INFO,
+    showHistogramInfo: DEFAULT_SHOW_HISTOGRAM_INFO,
     showDetailedExifInfo: DEFAULT_SHOW_DETAILED_EXIF_INFO,
     photographerAvatarUrl: DEFAULT_PHOTOGRAPHER_AVATAR_URL,
     photographerName: DEFAULT_PHOTOGRAPHER_NAME,
@@ -190,6 +195,7 @@ function createSiteConfigTableStatement(tableName = "site_config") {
           show_image_info INTEGER NOT NULL DEFAULT 1,
           show_advanced_camera_info INTEGER NOT NULL DEFAULT 1,
           show_location_info INTEGER NOT NULL DEFAULT 1,
+          show_histogram_info INTEGER NOT NULL DEFAULT 1,
           show_detailed_exif_info INTEGER NOT NULL DEFAULT 1,
           photographer_avatar_url TEXT NOT NULL DEFAULT '',
           photographer_name TEXT NOT NULL DEFAULT '',
@@ -233,6 +239,7 @@ function bindSiteConfigInsert(
     config.showImageInfo ? 1 : 0,
     config.showAdvancedCameraInfo ? 1 : 0,
     config.showLocationInfo ? 1 : 0,
+    config.showHistogramInfo ? 1 : 0,
     config.showDetailedExifInfo ? 1 : 0,
     config.photographerAvatarUrl,
     config.photographerName,
@@ -272,6 +279,7 @@ function insertSiteConfigStatement(tableName = "site_config") {
           show_image_info,
           show_advanced_camera_info,
           show_location_info,
+          show_histogram_info,
           show_detailed_exif_info,
           photographer_avatar_url,
           photographer_name,
@@ -286,7 +294,7 @@ function insertSiteConfigStatement(tableName = "site_config") {
           photographer_custom_account,
           photographer_custom_account_url,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 }
 
 async function resolveInitialPasswordHash(env: Env) {
@@ -369,6 +377,7 @@ async function ensureSiteConfig(env: Env) {
         "ALTER TABLE site_config ADD COLUMN show_image_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_advanced_camera_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_location_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE site_config ADD COLUMN show_histogram_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN show_detailed_exif_info INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE site_config ADD COLUMN photographer_name TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE site_config ADD COLUMN photographer_bio TEXT NOT NULL DEFAULT ''",
@@ -481,6 +490,10 @@ function mapSiteConfigRowToConfig(
       row.show_location_info !== undefined
         ? Boolean(row.show_location_info)
         : defaults.showLocationInfo,
+    showHistogramInfo:
+      row.show_histogram_info !== undefined
+        ? Boolean(row.show_histogram_info)
+        : defaults.showHistogramInfo,
     showDetailedExifInfo:
       row.show_detailed_exif_info !== undefined
         ? Boolean(row.show_detailed_exif_info)
@@ -540,6 +553,7 @@ export async function getSiteConfig(env: Env): Promise<SiteConfig> {
         show_image_info,
         show_advanced_camera_info,
         show_location_info,
+        show_histogram_info,
         show_detailed_exif_info,
         photographer_avatar_url,
         photographer_name,
@@ -726,6 +740,11 @@ export async function updateSiteConfig(
   if (updates.showLocationInfo !== undefined) {
     statements.push("show_location_info = ?");
     values.push(updates.showLocationInfo ? 1 : 0);
+  }
+
+  if (updates.showHistogramInfo !== undefined) {
+    statements.push("show_histogram_info = ?");
+    values.push(updates.showHistogramInfo ? 1 : 0);
   }
 
   if (updates.showDetailedExifInfo !== undefined) {

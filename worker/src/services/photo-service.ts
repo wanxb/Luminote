@@ -9,6 +9,7 @@ import {
 
 type PersistedPhotoRow = {
   id: string;
+  original_url: string;
   thumb_url: string;
   display_url: string;
   watermarked_display_url: string | null;
@@ -32,6 +33,7 @@ type PhotoDetailRow = PersistedPhotoRow & {
 
 let ensurePhotoVisibilityColumnPromise: Promise<void> | null = null;
 let ensurePhotoSourceHashColumnPromise: Promise<void> | null = null;
+let ensurePhotoSchemaPromise: Promise<void> | null = null;
 
 type ExifPayload = {
   takenAt?: string;
@@ -62,6 +64,7 @@ type ExifPayload = {
     latitude?: number;
     longitude?: number;
     altitude?: string;
+    histogram?: number[];
     params?: Record<string, string>;
   };
 };
@@ -108,6 +111,7 @@ export type ListPhotosResult = {
     id: string;
     thumbUrl: string;
     displayUrl: string;
+    originalUrl?: string;
     watermarkedDisplayUrl?: string;
     watermarkEnabled: boolean;
     isHidden: boolean;
@@ -132,10 +136,41 @@ function buildMockAssetUrl(
 
 function buildAssetUrl(
   origin: string,
-  variant: "thumb" | "display" | "display-watermarked",
+  variant: "thumb" | "display" | "display-watermarked" | "original",
   id: string,
 ) {
   return `${origin}/assets/${variant}/${id}`;
+}
+
+function resolveStoredPhotoAssetUrl(
+  origin: string,
+  variant: "thumb" | "display" | "display-watermarked",
+  id: string,
+  value: string | null,
+) {
+  if (!value || value.includes("/mock-storage/")) {
+    return buildAssetUrl(origin, variant, id);
+  }
+
+  return value.startsWith("http") ? value : new URL(value, origin).toString();
+}
+
+function buildOriginalUrl(origin: string, id: string, originalUrl: string | null) {
+  if (!originalUrl) {
+    return undefined;
+  }
+
+  if (originalUrl.startsWith("originals/")) {
+    return buildAssetUrl(origin, "original", id);
+  }
+
+  if (originalUrl.includes("/assets/original/")) {
+    return originalUrl.startsWith("http")
+      ? originalUrl
+      : new URL(originalUrl, origin).toString();
+  }
+
+  return undefined;
 }
 
 function createPhotoId(index: number) {
@@ -260,6 +295,7 @@ function buildVisibleExif(
     visibleExif.altitude = rawExif.altitude;
   }
 
+  visibleExif.histogram = rawExif.histogram;
   visibleExif.params = filterExifParams(rawExif.params, options);
 
   return Object.keys(visibleExif).length > 0 ? visibleExif : undefined;
@@ -444,6 +480,91 @@ async function ensurePhotoSourceHashColumn(env: Env) {
   await ensurePhotoSourceHashColumnPromise;
 }
 
+async function ensurePhotoSchema(env: Env) {
+  if (!env.DB) {
+    return;
+  }
+
+  if (!ensurePhotoSchemaPromise) {
+    ensurePhotoSchemaPromise = (async () => {
+      await env.DB!.prepare(
+        `CREATE TABLE IF NOT EXISTS photos (
+          id TEXT PRIMARY KEY,
+          original_file_name TEXT NOT NULL DEFAULT '',
+          title TEXT,
+          description TEXT,
+          original_url TEXT NOT NULL DEFAULT '',
+          thumb_url TEXT NOT NULL DEFAULT '',
+          display_url TEXT NOT NULL DEFAULT '',
+          watermarked_display_url TEXT,
+          taken_at TEXT,
+          device TEXT,
+          lens TEXT,
+          location TEXT,
+          source_hash TEXT,
+          exif_json TEXT,
+          tags_json TEXT NOT NULL DEFAULT '[]',
+          is_hidden INTEGER NOT NULL DEFAULT 0,
+          show_camera_info INTEGER NOT NULL DEFAULT 1,
+          show_date_info INTEGER NOT NULL DEFAULT 1,
+          show_location_info INTEGER NOT NULL DEFAULT 1,
+          watermark_enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT ''
+        )`,
+      ).run();
+
+      const columnStatements = [
+        "ALTER TABLE photos ADD COLUMN original_file_name TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE photos ADD COLUMN title TEXT",
+        "ALTER TABLE photos ADD COLUMN description TEXT",
+        "ALTER TABLE photos ADD COLUMN original_url TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE photos ADD COLUMN thumb_url TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE photos ADD COLUMN display_url TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE photos ADD COLUMN watermarked_display_url TEXT",
+        "ALTER TABLE photos ADD COLUMN taken_at TEXT",
+        "ALTER TABLE photos ADD COLUMN device TEXT",
+        "ALTER TABLE photos ADD COLUMN lens TEXT",
+        "ALTER TABLE photos ADD COLUMN location TEXT",
+        "ALTER TABLE photos ADD COLUMN source_hash TEXT",
+        "ALTER TABLE photos ADD COLUMN exif_json TEXT",
+        "ALTER TABLE photos ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
+        "ALTER TABLE photos ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE photos ADD COLUMN show_camera_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE photos ADD COLUMN show_date_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE photos ADD COLUMN show_location_info INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE photos ADD COLUMN watermark_enabled INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE photos ADD COLUMN created_at TEXT NOT NULL DEFAULT ''",
+      ];
+
+      for (const statement of columnStatements) {
+        try {
+          await env.DB!.prepare(statement).run();
+        } catch {
+          // Ignore if the column already exists.
+        }
+      }
+
+      try {
+        await env.DB!.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_photos_created_at ON photos(created_at DESC)",
+        ).run();
+      } catch {
+        // Ignore index creation failures in externally managed databases.
+      }
+
+      try {
+        await env.DB!.prepare(
+          "CREATE INDEX IF NOT EXISTS idx_photos_source_hash ON photos(source_hash)",
+        ).run();
+      } catch {
+        // Ignore index creation failures in externally managed databases.
+      }
+    })();
+  }
+
+  await ensurePhotoSchemaPromise;
+}
+
 async function findExistingSourceHashes(env: Env, hashes: string[]) {
   if (!env.DB || hashes.length === 0) {
     return new Set<string>();
@@ -562,13 +683,13 @@ export async function listPhotos(
     return paginatePhotoItems(bucketItems, pageSize, offset);
   }
 
-  await ensurePhotoVisibilityColumn(env);
+  await ensurePhotoSchema(env);
 
   const conditions: string[] = [];
   const values: unknown[] = [];
   const countValues: unknown[] = [];
 
-  let query = `SELECT id, thumb_url, display_url, watermarked_display_url, watermark_enabled, is_hidden, taken_at, description, tags_json
+  let query = `SELECT id, original_url, thumb_url, display_url, watermarked_display_url, watermark_enabled, is_hidden, taken_at, description, tags_json
      FROM photos`;
 
   if (!options?.includeHidden) {
@@ -652,10 +773,17 @@ export async function listPhotos(
 
       const items = rows.slice(0, pageSize).map((row) => ({
         id: row.id,
-      thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
-      displayUrl:
-        row.display_url || buildMockAssetUrl(origin, "display", row.id),
-      watermarkedDisplayUrl: row.watermarked_display_url || undefined,
+      thumbUrl: resolveStoredPhotoAssetUrl(origin, "thumb", row.id, row.thumb_url),
+      displayUrl: resolveStoredPhotoAssetUrl(origin, "display", row.id, row.display_url),
+      originalUrl: buildOriginalUrl(origin, row.id, row.original_url),
+      watermarkedDisplayUrl: row.watermarked_display_url
+        ? resolveStoredPhotoAssetUrl(
+            origin,
+            "display-watermarked",
+            row.id,
+            row.watermarked_display_url,
+          )
+        : undefined,
       watermarkEnabled: Boolean(row.watermark_enabled),
       isHidden: Boolean(row.is_hidden),
       takenAt: row.taken_at ?? undefined,
@@ -686,7 +814,7 @@ export async function getPhotoById(
     return bucketPhoto ? { ...bucketPhoto, tags: [] } : null;
   }
 
-  await ensurePhotoVisibilityColumn(env);
+  await ensurePhotoSchema(env);
 
   let row: PhotoDetailRow | null = null;
 
@@ -694,6 +822,7 @@ export async function getPhotoById(
     row = await env.DB.prepare(
       `SELECT
         id,
+        original_url,
         thumb_url,
         display_url,
         watermarked_display_url,
@@ -733,9 +862,17 @@ export async function getPhotoById(
 
   return {
     id: row.id,
-    thumbUrl: row.thumb_url || buildMockAssetUrl(origin, "thumb", row.id),
-    displayUrl: row.display_url || buildMockAssetUrl(origin, "display", row.id),
-    watermarkedDisplayUrl: row.watermarked_display_url || undefined,
+    thumbUrl: resolveStoredPhotoAssetUrl(origin, "thumb", row.id, row.thumb_url),
+    displayUrl: resolveStoredPhotoAssetUrl(origin, "display", row.id, row.display_url),
+    originalUrl: buildOriginalUrl(origin, row.id, row.original_url),
+    watermarkedDisplayUrl: row.watermarked_display_url
+      ? resolveStoredPhotoAssetUrl(
+          origin,
+          "display-watermarked",
+          row.id,
+          row.watermarked_display_url,
+        )
+      : undefined,
     watermarkEnabled: Boolean(row.watermark_enabled),
     isHidden: Boolean(row.is_hidden),
     takenAt: row.show_date_info ? (row.taken_at ?? undefined) : undefined,
@@ -766,19 +903,15 @@ export async function createPhotos(
 
   if (!env.DB) {
     return {
-      uploaded: inputs.map((input, index) => ({
-        id: createPhotoId(index),
+      uploaded: [],
+      failed: inputs.map((input) => ({
         fileName: input.fileName,
-        watermarkEnabled: input.watermarkEnabled,
-        tags: input.tags,
-        persisted: false,
+        error: "图片数据库未绑定，无法保存上传记录。",
       })),
-      failed: [],
     };
   }
 
-  await ensurePhotoVisibilityColumn(env);
-  await ensurePhotoSourceHashColumn(env);
+  await ensurePhotoSchema(env);
   const t = getLocaleMessages((await getSiteConfig(env)).locale);
 
   const existingHashes = await findExistingSourceHashes(
@@ -834,6 +967,24 @@ export async function createPhotos(
       }),
     ),
   );
+
+  const missingStorage = storageResults
+    .map((storage, index) => ({ storage, input: acceptedInputs[index] }))
+    .filter(({ storage }) => !storage.persisted || !storage.displayKey);
+
+  if (missingStorage.length > 0) {
+    return {
+      uploaded: [],
+      failed: [
+        ...failed,
+        ...missingStorage.map(({ input }) => ({
+          fileName: input.fileName,
+          error: "图片存储失败，请检查开发环境对象存储绑定后重试。",
+        })),
+      ],
+    };
+  }
+
   const statements = created.map((photo, index) => {
     const input = acceptedInputs[index];
     const storage = storageResults[index];
@@ -984,7 +1135,7 @@ export async function updatePhotoById(
     };
   }
 
-  await ensurePhotoVisibilityColumn(env);
+  await ensurePhotoSchema(env);
 
   const existing = await env.DB.prepare(
     `SELECT id FROM photos WHERE id = ? LIMIT 1`,
@@ -1041,6 +1192,8 @@ export async function getPhotoCount(env: Env) {
   if (!env.DB) {
     return 0;
   }
+
+  await ensurePhotoSchema(env);
 
   const result = await env.DB.prepare(
     "SELECT COUNT(*) as count FROM photos",

@@ -1,4 +1,5 @@
 import type { PhotoDetail, PhotoSummary, SiteLocale } from "@/lib/api/types";
+import { defaultPhotoHistograms } from "@/lib/default-photo-histograms";
 
 type LocalizedText = Record<SiteLocale, string>;
 type LocalizedTags = Record<SiteLocale, string[]>;
@@ -403,7 +404,7 @@ const seeds: DefaultPhotoSeed[] = [
   },
   {
     id: "default_photo_032",
-    imageId: "photo-1501706362039-c6e8090c7c29",
+    imageId: "photo-1490750967868-88aa4486c946",
     takenAt: "2026-01-09T08:48:00Z",
     description: localizedText("花瓣边缘的微小水珠", "花瓣邊緣的微小水珠", "Tiny droplets along the edge of a petal"),
     tags: localizedTags(["macro", "nature"]),
@@ -519,6 +520,7 @@ function localizePhoto(photo: DefaultPhotoSeed, locale: SiteLocale): PhotoDetail
       orientation: orientationLabel,
       colorSpace: "sRGB",
       ...photo.exif,
+      histogram: defaultPhotoHistograms[photo.id],
       params: {
         Source: "Luminote default gallery",
         Profile: orientationLabel,

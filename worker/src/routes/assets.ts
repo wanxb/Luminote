@@ -2,7 +2,7 @@ import type { Env } from "../index";
 import { getAvatarObject, getPhotoObject } from "../services/storage-service";
 import { handleMockStorage } from "./mock-storage";
 
-type Variant = "thumb" | "display" | "display-watermarked";
+type Variant = "thumb" | "display" | "display-watermarked" | "original";
 
 type ParsedAsset =
   | {
@@ -39,7 +39,8 @@ function parsePath(pathname: string): ParsedAsset | null {
   if (
     (variant !== "thumb" &&
       variant !== "display" &&
-      variant !== "display-watermarked") ||
+      variant !== "display-watermarked" &&
+      variant !== "original") ||
     !id
   ) {
     return null;
@@ -86,17 +87,7 @@ export async function handleAssets(
   const object = await getPhotoObject(env, parsed.variant, parsed.id);
 
   if (!object?.body) {
-    const fallbackVariant =
-      parsed.variant === "thumb"
-        ? "thumb"
-        : parsed.variant === "display-watermarked"
-          ? "watermarked"
-          : "display";
-    return handleMockStorage(
-      new Request(
-        `${new URL(request.url).origin}/mock-storage/${fallbackVariant}/${parsed.id}`,
-      ),
-    );
+    return new Response("Photo asset not found", { status: 404 });
   }
 
   const headers = new Headers();

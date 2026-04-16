@@ -31,6 +31,7 @@ export type ExtractedExif = {
     latitude?: number;
     longitude?: number;
     altitude?: string;
+    histogram?: number[];
     params?: SerializedExifParams;
   };
 };
@@ -337,16 +338,63 @@ function collectExifParams(raw: RawExif): SerializedExifParams | undefined {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
+async function createHistogram(file: File) {
+  if (typeof createImageBitmap !== "function") {
+    return undefined;
+  }
+
+  let bitmap: ImageBitmap | null = null;
+
+  try {
+    bitmap = await createImageBitmap(file);
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(1, size / Math.max(bitmap.width, bitmap.height));
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+      return undefined;
+    }
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const buckets = new Array(64).fill(0) as number[];
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      const luminance =
+        0.2126 * pixels[index] +
+        0.7152 * pixels[index + 1] +
+        0.0722 * pixels[index + 2];
+      const bucket = Math.min(63, Math.floor((luminance / 256) * buckets.length));
+      buckets[bucket] += 1;
+    }
+
+    const max = Math.max(...buckets);
+    return max > 0
+      ? buckets.map((value) => Number((value / max).toFixed(3)))
+      : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    bitmap?.close();
+  }
+}
+
 export async function extractExif(file: File): Promise<ExtractedExif> {
-  const raw = (await exifr.parse(file, {
-    translateValues: false,
-    tiff: true,
-    exif: true,
-    gps: true,
-  })) as RawExif | null;
+  const [raw, histogram] = await Promise.all([
+    exifr.parse(file, {
+      translateValues: false,
+      tiff: true,
+      exif: true,
+      gps: true,
+    }) as Promise<RawExif | null>,
+    createHistogram(file),
+  ]);
 
   if (!raw) {
-    return { exif: {} };
+    return { exif: { histogram } };
   }
 
   const params = collectExifParams(raw);
@@ -382,6 +430,7 @@ export async function extractExif(file: File): Promise<ExtractedExif> {
       latitude: raw.latitude,
       longitude: raw.longitude,
       altitude: formatAltitude(raw.GPSAltitude),
+      histogram,
       params,
     },
   };

@@ -84,6 +84,11 @@ const server = createServer(async (req, res) => {
         return;
       }
 
+      if (variant !== "avatar") {
+        sendError(res, 404, "Photo asset not found");
+        return;
+      }
+
       const mockVariant =
         variant === "original"
           ? "display"
