@@ -91,7 +91,10 @@ export async function storePhotoObjects(
     payload.display ? env.PHOTOS_BUCKET.get(displayKey) : Promise.resolve(null),
   ]);
 
-  if ((payload.thumbnail && !storedThumb) || (payload.display && !storedDisplay)) {
+  if (
+    (payload.thumbnail && !storedThumb) ||
+    (payload.display && !storedDisplay)
+  ) {
     return {
       persisted: false,
       originalKey: "",
