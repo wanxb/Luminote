@@ -395,6 +395,15 @@ export function LightboxShell({
   const nextButtonClass = isImmersive
     ? `fixed right-5 top-[calc((100dvh-72px)/2)] z-[60] flex h-12 w-12 -translate-y-1/2 ${navigationButtonBase}`
     : `absolute right-5 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 lg:flex ${navigationButtonBase}`;
+  const shellGridClass = isImmersive
+    ? "grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_72px]"
+    : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)_72px]";
+  const stageClass = isImmersive
+    ? "col-span-full col-start-1 row-start-1 w-full"
+    : "lg:col-start-1 lg:row-start-1";
+  const thumbnailRailClass = isImmersive
+    ? "col-span-full col-start-1 row-start-2 w-full"
+    : "lg:col-start-1 lg:row-start-2";
 
   return (
     <div
@@ -405,10 +414,10 @@ export function LightboxShell({
       onClick={onClose}
     >
       <div
-        className={`grid h-screen w-screen overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${isImmersive ? "grid-rows-[minmax(0,1fr)_72px]" : "grid-rows-[minmax(0,1fr)_minmax(180px,42vh)] lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)_72px]"}`}
+        className={`grid h-[100dvh] w-[100dvw] overflow-hidden bg-[#0d0d0d] text-paper shadow-[0_36px_120px_rgba(0,0,0,0.72)] ${shellGridClass}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${isImmersive ? "col-start-1 row-start-1" : "lg:col-start-1 lg:row-start-1"}`}>
+        <section className={`relative min-h-0 overflow-hidden bg-[#0d0d0d] ${stageClass}`}>
           <div className="absolute inset-0">
             <Image
               src={photo.displayUrl}
@@ -434,9 +443,9 @@ export function LightboxShell({
             <button type="button" onClick={onClose} className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-xl text-paper/90 backdrop-blur-md transition hover:bg-black/34">×</button>
           ) : null}
 
-          <div className={`relative z-[1] flex h-full min-h-0 justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
+          <div className={`relative z-[1] flex h-full min-h-0 w-full justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
             <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
-              <img ref={displayImageRef} src={largeImageUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="block h-auto max-h-full w-auto max-w-full object-contain" />
+              <img ref={displayImageRef} src={largeImageUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="mx-auto block h-auto max-h-full w-auto max-w-full self-center justify-self-center object-contain object-center" />
               {watermarkEnabled && watermarkText && watermarkFrame ? (
                 <div className="pointer-events-none absolute z-[2]" style={{ top: watermarkFrame.top, left: watermarkFrame.left, width: watermarkFrame.width, height: watermarkFrame.height }}>
                   <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
@@ -487,7 +496,7 @@ export function LightboxShell({
         ) : null}
 
         {hasMultiple ? (
-          <div className={`hidden justify-center bg-[linear-gradient(180deg,rgba(18,18,18,0.84)_0%,rgba(10,10,10,0.9)_100%)] backdrop-blur-[24px] lg:flex ${isImmersive ? "col-start-1 row-start-2" : "lg:col-start-1 lg:row-start-2"}`}>
+          <div className={`hidden justify-center bg-[linear-gradient(180deg,rgba(18,18,18,0.84)_0%,rgba(10,10,10,0.9)_100%)] backdrop-blur-[24px] lg:flex ${thumbnailRailClass}`}>
             <div className="flex w-full min-w-0 max-w-full items-center gap-2.5 overflow-x-auto overflow-y-hidden px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {photos.map((item, index) => {
                 const isActive = index === activeIndex;
