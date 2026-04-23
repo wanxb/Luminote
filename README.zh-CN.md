@@ -1,139 +1,168 @@
 # Luminote
 
-[English](./README.md) | 简体中文
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-Luminote 是一个基于 Next.js 和 Cloudflare Workers 的轻量摄影作品站，面向摄影师和独立创作者。它提供公开图库、极简管理后台，以及基于 D1 和 R2 的部署模型。
+Luminote 是一个轻量级的摄影作品集与后台管理系统，基于 Next.js 构建，并同时支持两种后端运行形态：Cloudflare Worker 部署和自托管 Node.js 部署。
 
-## 包含内容
+## 预览图
 
-- 公开作品展示，支持 masonry、editorial、spotlight 三种首页布局
-- Lightbox 大图查看与照片元数据展示
-- 管理端批量上传、失败重试和标签选择
-- 标签池存储在 D1 中，不再依赖前端硬编码
-- D1 存元数据，R2 存图片资源
+![Preview 1](./images/1.png)
+![Preview 2](./images/2.png)
+![Preview 3](./images/3.png)
+![Preview 4](./images/4.png)
+![Preview 5](./images/5.png)
+![Preview 6](./images/6.png)
+
+## 项目概览
+
+- 面向公开访问的摄影站点，支持多种首页和画廊布局
+- 带登录的后台管理台，支持站点设置、标签管理、照片上传与编辑
+- 支持从 EXIF 中提取部分图片元数据
+- 通过共享领域服务和 API 契约，降低不同运行时之间的行为漂移
+- 在同一仓库中同时提供云端部署和自托管部署模式
 
 ## 技术栈
 
 - 前端：Next.js 15、React 18、TypeScript、Tailwind CSS
-- API：Cloudflare Workers
-- 存储：Cloudflare D1、R2
-- EXIF 解析：exifr
+- 共享包：`packages/core`、`packages/shared`
+- 云端 API：Cloudflare Workers、D1、R2
+- 自托管 API：Node.js、本地文件系统、SQLite 或 JSON 文件持久化
+- 图片元数据：`exifr`
 
-## 目录结构
+## 运行模式
+
+### Cloudflare 模式
+
+- Web 前端运行在 Next.js / OpenNext on Cloudflare
+- API 位于 `worker/`
+- 元数据存储在 D1
+- 图片资源存储在 R2
+
+### 自托管模式
+
+- Web 前端仍使用仓库根目录的 Next.js 应用
+- API 运行于 `apps/api-node/`
+- 图片文件存储在本地文件系统
+- 元数据可使用 JSON 文件或 SQLite
+
+## 项目结构
 
 ```text
-app/         Next.js App Router 页面
-components/  画廊、布局、灯箱、管理端 UI
-lib/         前端工具、API 客户端、上传辅助
-worker/      Worker API、schema、路由、服务
+app/                 Next.js App Router 页面
+components/          公共站点与后台 UI 组件
+lib/                 前端工具、API 客户端、上传辅助工具
+packages/core/       与运行时无关的领域服务
+packages/shared/     共享 API 类型与文本限制
+worker/              Cloudflare Worker API、路由、服务、数据结构
+apps/api-node/       自托管 Node.js API 运行时
+docs/                架构与部署文档
+public/              静态资源
 ```
 
-## 本地开发
+## 快速开始
 
-### 运行要求
+### 环境要求
 
 - Node.js 20+
 - npm
-- 如果需要真实的 D1 或 R2 部署，需准备 Cloudflare 账号
+- Cloudflare 账号，仅在 Cloudflare 部署时需要
+- Docker Desktop 或兼容运行时，仅在 Docker Compose 自托管时需要
 
-### 1. 安装依赖
+### 安装依赖
 
-仓库根目录：
+在仓库根目录执行：
 
 ```bash
 npm install
 ```
 
-Worker 目录：
+Cloudflare API 运行时：
 
 ```bash
 cd worker
 npm install
 ```
 
-创建仅本地使用的 Worker secrets：
+自托管 Node API：
 
 ```bash
-copy .dev.vars.example .dev.vars
+cd apps/api-node
+npm install
 ```
 
-### 2. 配置前端环境变量
+## 本地开发
 
-在 `.env.local` 中设置本地 API 地址：
+### 本地 Cloudflare 开发
+
+1. 在仓库根目录配置 `.env.local`：
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
 API_BASE_URL=http://127.0.0.1:8787
 ```
 
-### 3. 初始化本地数据库
+2. 在 `worker/` 中准备本地 Worker 密钥：
 
-使用 [worker/schema.sql](worker/schema.sql)：
+```bash
+copy .dev.vars.example .dev.vars
+```
+
+管理员密码哈希格式见 [docs/admin-password.md](docs/admin-password.md)。可通过 `cd worker && npm run hash-password -- "your-password"` 生成，并将完整的 `ADMIN_PASSWORD_HASH=pbkdf2_sha256$...` 写入 `.dev.vars`。
+
+3. 初始化本地 D1 数据库：
 
 ```bash
 cd worker
-npx wrangler --config wrangler.local.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
+npx wrangler --config wrangler.toml d1 execute luminote-dev --local --persist-to .wrangler/state/local-speed --file schema.sql
 ```
 
-这一步会创建本地 schema，并写入默认标签池。
-
-### 4. 启动服务
-
-前端：
+4. 启动 Web 应用和 Worker：
 
 ```bash
 npm run dev
 ```
 
-Worker：
-
 ```bash
 cd worker
 npm run dev
 ```
 
-本地地址：
+### 本地自托管开发
 
-```text
-前端:   http://localhost:3000
-Worker: http://127.0.0.1:8787
-```
-
-Worker 本地持久化目录：
-
-```text
-worker/.wrangler/state/local-speed
-```
-
-## 本地配置说明
-
-前端会读取 `NEXT_PUBLIC_API_BASE_URL` 和 `API_BASE_URL`。
-
-Worker 的本地默认值在 [worker/wrangler.local.toml](worker/wrangler.local.toml) 中。敏感信息或本地覆盖值建议写入 `worker/.dev.vars`，不要直接提交到 git。
-
-示例：
+1. 在仓库根目录配置 `.env.local`：
 
 ```dotenv
-ADMIN_PASSWORD=your-local-password
-ADMIN_SESSION_TOKEN=your-local-session-token
-WATERMARK_TEXT=© Your Name
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8788
+API_BASE_URL=http://127.0.0.1:8788
 ```
 
-## 数据说明
+2. 以以下任一模式启动 Node API。
 
-- 照片元数据存储在 D1
-- 图片变体在绑定 R2 时写入对象存储
-- 默认标签由 [worker/schema.sql](worker/schema.sql) 初始化
-- 公开站点通过 `GET /api/site/tags` 读取标签池
+文件模式：
 
-R2 对象路径约定：
+```bash
+cd apps/api-node
+set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=file
+set STORAGE_MODE=local
+npm run start
+```
 
-```text
-originals/{photoId}.{ext}
-thumbs/{photoId}.webp
-display/{photoId}.jpg
-display-watermarked/{photoId}.jpg
-avatars/{fileName}
+SQLite 模式：
+
+```bash
+cd apps/api-node
+set CONTENT_SOURCE=file
+set PERSISTENCE_DRIVER=sqlite
+set SQLITE_DB_FILE=apps/api-node/data/luminote.sqlite
+set STORAGE_MODE=local
+npm run start
+```
+
+3. 在仓库根目录启动前端：
+
+```bash
+npm run dev
 ```
 
 ## 常用命令
@@ -144,97 +173,31 @@ avatars/{fileName}
 - `npm run build`
 - `npm run start`
 - `npm run lint`
+- `npm run preview`
+- `npm run deploy`
 
-Worker 目录：
+`worker/`：
 
 - `npm run dev`
 - `npm run deploy`
 - `npm run sync:local`
 
-## 部署
+`apps/api-node/`：
 
-推荐正式环境结构：
+- `npm run dev`
+- `npm run start`
+- `npm run smoke`
+- `npm run smoke:file`
+- `npm run smoke:sqlite`
 
-- 前端部署到 Cloudflare Pages
-- API 部署到 Cloudflare Workers
-- D1 存元数据
-- R2 存资源文件
+## 文档
 
-### 1. 创建 Cloudflare 资源
+- [docs/technical-architecture.md](docs/technical-architecture.md)：技术架构
+- [docs/deployment-guide.md](docs/deployment-guide.md)：部署指南
+- [apps/api-node/README.selfhosted.md](apps/api-node/README.selfhosted.md)：Node 自托管补充说明
 
-先创建：
+## 推荐使用方式
 
-- 一个 D1 数据库
-- 一个 R2 Bucket
-- 一个 Worker
-- 一个 Pages 项目
-
-推荐命名：
-
-- D1：`luminote-prod`
-- R2：`luminote-assets`
-- 前端 Worker：`luminote`
-- API Worker：`luminote-api`
-- 前端域名：`https://luminote.bbing.xyz/`
-- API 域名：`https://luminote-api.bbing.xyz/`
-
-### 2. 更新 Worker 绑定
-
-先基于 [worker/wrangler.production.toml.example](worker/wrangler.production.toml.example) 在本机创建 `worker/wrangler.production.toml`，再在这份本地文件中配置真实的 D1 和 R2 绑定。管理员密码等敏感信息不要写进文件，改用 Wrangler 或 Cloudflare secrets。
-
-### 3. 执行生产 schema
-
-```bash
-cd worker
-npx wrangler --config wrangler.production.toml d1 execute your-d1-database-name --remote --file schema.sql
-```
-
-### 4. 配置 Worker secrets
-
-至少需要设置：
-
-- `SITE_TITLE`
-- `WATERMARK_ENABLED_BY_DEFAULT`
-- `WATERMARK_TEXT`
-- `ADMIN_PASSWORD`
-- `ADMIN_SESSION_TOKEN`
-
-示例：
-
-```bash
-cd worker
-npx wrangler --config wrangler.production.toml secret put ADMIN_PASSWORD
-npx wrangler --config wrangler.production.toml secret put ADMIN_SESSION_TOKEN
-```
-
-### 5. 先部署 Worker
-
-```bash
-cd worker
-npm run deploy
-```
-
-然后在本机基于 `.env.production.local.example` 创建 `.env.production.local`，再填入真实线上 Worker 地址。
-
-### 6. 部署前端
-
-在执行根目录部署脚本前，先在本机将 `wrangler.production.jsonc.example` 复制为 `wrangler.production.jsonc`。
-
-推荐的 Pages 设置：
-
-- Framework preset：`Next.js`
-- Build command：`npm run build`
-- Root directory：仓库根目录
-
-## 发布检查清单
-
-- 生产 D1 已执行 schema
-- R2 Bucket 已绑定且可写
-- Worker secrets 没有进入 git
-- Pages 环境变量已指向线上 API
-- 管理员密码已替换默认值
-- 至少验证过一次完整的生产上传流程
-
-## 文档说明
-
-当前 README 是项目主说明文档。后续如果再补充内部文档，仍应以这份文件作为统一入口，并保持内容与当前代码一致。
+- 如果你希望生产路径更贴近云原生方案，优先选择 Cloudflare 模式
+- 如果你希望部署在自己的服务器或局域网环境，选择自托管 Node 模式
+- 如果你想先走最简单的本地集成路径，建议先使用 Node API + SQLite
