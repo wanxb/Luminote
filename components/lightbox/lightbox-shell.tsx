@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
 import { getSiteMessages } from "@/lib/site-i18n";
 import type {
@@ -277,6 +277,7 @@ export function LightboxShell({
   const imageViewportRef = useRef<HTMLDivElement | null>(null);
   const displayImageRef = useRef<HTMLImageElement | null>(null);
   const activeThumbnailRef = useRef<HTMLButtonElement | null>(null);
+  const watermarkUpdateFrameRef = useRef<number | null>(null);
   const [watermarkFrame, setWatermarkFrame] = useState<{
     top: number;
     left: number;
@@ -341,7 +342,7 @@ export function LightboxShell({
       ? Object.entries(detail.exif.params).map(([label, value]) => ({ label, value }))
       : [];
 
-  function updateWatermarkFrame() {
+  const updateWatermarkFrame = useCallback(() => {
     const viewport = imageViewportRef.current;
     const image = displayImageRef.current;
     if (!viewport || !image) {
@@ -356,7 +357,18 @@ export function LightboxShell({
       width: imageRect.width,
       height: imageRect.height,
     });
-  }
+  }, []);
+
+  const scheduleWatermarkFrameUpdate = useCallback(() => {
+    if (watermarkUpdateFrameRef.current !== null) {
+      cancelAnimationFrame(watermarkUpdateFrameRef.current);
+    }
+
+    watermarkUpdateFrameRef.current = requestAnimationFrame(() => {
+      watermarkUpdateFrameRef.current = null;
+      updateWatermarkFrame();
+    });
+  }, [updateWatermarkFrame]);
 
   function handleImageClick(event: MouseEvent<HTMLImageElement>) {
     event.stopPropagation();
@@ -369,10 +381,40 @@ export function LightboxShell({
 
   useEffect(() => {
     if (!isOpen) return;
-    const onResize = () => updateWatermarkFrame();
+    const onResize = () => scheduleWatermarkFrameUpdate();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [isOpen, isImmersive, largeImageUrl]);
+  }, [isOpen, scheduleWatermarkFrameUpdate]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setWatermarkFrame(null);
+      return;
+    }
+
+    updateWatermarkFrame();
+    scheduleWatermarkFrameUpdate();
+
+    const image = displayImageRef.current;
+    const viewport = imageViewportRef.current;
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => scheduleWatermarkFrameUpdate())
+        : null;
+
+    if (observer) {
+      if (image) observer.observe(image);
+      if (viewport) observer.observe(viewport);
+    }
+
+    return () => {
+      observer?.disconnect();
+      if (watermarkUpdateFrameRef.current !== null) {
+        cancelAnimationFrame(watermarkUpdateFrameRef.current);
+        watermarkUpdateFrameRef.current = null;
+      }
+    };
+  }, [isOpen, isImmersive, largeImageUrl, scheduleWatermarkFrameUpdate, updateWatermarkFrame]);
 
   useEffect(() => {
     if (activeIndex === null || !hasMorePhotos || isLoadingMorePhotos || !onLoadMorePhotos) return;
@@ -445,7 +487,7 @@ export function LightboxShell({
 
           <div className={`relative z-[1] flex h-full min-h-0 w-full justify-center ${isImmersive ? "items-center px-3 sm:px-4 md:px-8 lg:px-10" : "items-stretch px-3 py-2 sm:px-4 md:px-8 lg:px-10 lg:py-3"}`}>
             <div ref={imageViewportRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
-              <img ref={displayImageRef} src={largeImageUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={updateWatermarkFrame} className="mx-auto block h-auto max-h-full w-auto max-w-full self-center justify-self-center object-contain object-center" />
+              <img ref={displayImageRef} src={largeImageUrl} alt={photo.description ?? photo.id} onClick={handleImageClick} onDoubleClick={handleImageDoubleClick} onLoad={scheduleWatermarkFrameUpdate} className="mx-auto block h-auto max-h-full w-auto max-w-full self-center justify-self-center object-contain object-center" />
               {watermarkEnabled && watermarkText && watermarkFrame ? (
                 <div className="pointer-events-none absolute z-[2]" style={{ top: watermarkFrame.top, left: watermarkFrame.left, width: watermarkFrame.width, height: watermarkFrame.height }}>
                   <WatermarkOverlay text={watermarkText} position={watermarkPosition} />
