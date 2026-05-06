@@ -259,7 +259,7 @@ export function AdminPhotoLibraryPanel({
                       : "border-black/5 bg-[rgba(245,240,228,0.2)]"
                 }`}
               >
-                <div className="flex items-center gap-4">
+                <div className="grid grid-cols-[auto_3rem_minmax(0,1fr)] items-start gap-3 sm:flex sm:items-center sm:gap-4">
                   <label className="flex shrink-0 cursor-pointer items-center">
                     <input
                       type="checkbox"
@@ -302,7 +302,7 @@ export function AdminPhotoLibraryPanel({
                     />
                   </button>
 
-                  <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                  <div className="flex min-w-0 flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-medium text-ink">
@@ -328,12 +328,12 @@ export function AdminPhotoLibraryPanel({
                       ) : null}
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center">
                       <button
                         type="button"
                         onClick={() => void onTogglePhotoHidden(photo)}
                         disabled={isBusy}
-                        className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
+                        className="min-w-0 rounded-lg border border-black/10 px-2 py-1.5 text-xs font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                       >
                         {isUpdating && editingPhotoId !== photo.id
                           ? copy.working
@@ -345,7 +345,7 @@ export function AdminPhotoLibraryPanel({
                         type="button"
                         onClick={() => (isEditing ? void onSavePhotoTags(photo) : onBeginPhotoTagEdit(photo))}
                         disabled={isBusy}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`min-w-0 rounded-lg px-2 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 ${
                           isEditing
                             ? "border border-[#c78f63] bg-[#c78f63] text-white hover:bg-[#b77f53]"
                             : "border border-black/10 text-ink hover:bg-mist"
@@ -357,7 +357,7 @@ export function AdminPhotoLibraryPanel({
                         type="button"
                         onClick={() => onHandleDeleteAction(photo.id)}
                         disabled={isDeleting}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`min-w-0 rounded-lg px-2 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 ${
                           isConfirmingDelete
                             ? "border border-red-500 bg-red-500 text-white hover:bg-red-600"
                             : "border border-red-200 text-red-600 hover:bg-red-50"
